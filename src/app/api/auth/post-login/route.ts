@@ -1,9 +1,9 @@
 /**
  * GET /api/auth/post-login
  *
- * Called by the client-side auth callback after session is established.
+ * Called after auth callback establishes the session.
  * Handles admin auto-creation, last_login_at tracking, and routing.
- * Returns { redirect: string } with the appropriate destination.
+ * Redirects the browser to the appropriate destination.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,13 +12,14 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail } from "@/lib/admin";
 
 export async function GET(request: NextRequest) {
+  const { origin } = request.nextUrl;
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ redirect: "/login" });
+    return NextResponse.redirect(`${origin}/login`);
   }
 
   // Use service client to bypass RLS for admin/affiliate DB operations
@@ -40,7 +41,7 @@ export async function GET(request: NextRequest) {
         email: user.email,
         has_password: false,
       });
-      return NextResponse.json({ redirect: "/setup-password" });
+      return NextResponse.redirect(`${origin}/setup-password`);
     }
 
     // Track last login
@@ -50,10 +51,10 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id);
 
     if (!admin.has_password) {
-      return NextResponse.json({ redirect: "/setup-password" });
+      return NextResponse.redirect(`${origin}/setup-password`);
     }
 
-    return NextResponse.json({ redirect: "/admin" });
+    return NextResponse.redirect(`${origin}/admin`);
   }
 
   // Affiliate flow
@@ -71,7 +72,7 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id);
 
     if (!affiliate.has_password) {
-      return NextResponse.json({ redirect: "/setup-password" });
+      return NextResponse.redirect(`${origin}/setup-password`);
     }
   }
 
@@ -82,5 +83,5 @@ export async function GET(request: NextRequest) {
       ? next
       : "/dashboard";
 
-  return NextResponse.json({ redirect: safeNext });
+  return NextResponse.redirect(`${origin}${safeNext}`);
 }
