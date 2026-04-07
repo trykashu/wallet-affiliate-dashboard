@@ -24,14 +24,14 @@ const GHL_API_VERSION = "2021-07-28";
 const PAGE_LIMIT = 100;
 
 const STAGE_MAP: Record<string, FunnelStatusSlug> = {
-  "646161a6-5828-45fb-aa54-afe4a934ff01": "signed_up",       // Waitlist
-  "f3c920bf-e4cf-484b-8668-78a5d4c32b98": "signed_up",       // Booked Call
-  "e401618b-380a-4251-ad29-af83ca4763f1": "signed_up",       // Sent Onboarding
-  "4dfbdc90-34bf-4fda-98bf-bd132d3e6ccb": "signed_up",       // Signed Up
-  "e6dbdff4-e956-4e9d-bf0e-ec6ac650021f": "transaction_run",  // TXN Run
-  "0d45590d-a3ca-4007-b4c1-e0e5e0593db0": "funds_in_wallet",  // Funds in Wallet
-  "c31b2be3-ae36-4ea1-b79c-bb4150dbe9f9": "ach_initiated",    // ACH Initiated
-  "cbe0c9e9-52a2-4ce3-a5f2-f881812fd11b": "funds_in_bank",    // Completed
+  "646161a6-5828-45fb-aa54-afe4a934ff01": "waitlist",          // Waitlist
+  "f3c920bf-e4cf-484b-8668-78a5d4c32b98": "booked_call",       // Booked Call
+  "e401618b-380a-4251-ad29-af83ca4763f1": "sent_onboarding",   // Sent Onboarding
+  "4dfbdc90-34bf-4fda-98bf-bd132d3e6ccb": "signed_up",         // Signed Up
+  "e6dbdff4-e956-4e9d-bf0e-ec6ac650021f": "transaction_run",   // TXN Run
+  "0d45590d-a3ca-4007-b4c1-e0e5e0593db0": "funds_in_wallet",   // Funds in Wallet
+  "c31b2be3-ae36-4ea1-b79c-bb4150dbe9f9": "ach_initiated",     // ACH Initiated
+  "cbe0c9e9-52a2-4ce3-a5f2-f881812fd11b": "funds_in_bank",     // Completed
 };
 
 // Stages at or after transaction_run (eligible for earnings)

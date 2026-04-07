@@ -2,8 +2,11 @@ import type { FunnelStatusSlug } from "@/types/database";
 import { funnelColor, funnelLabel } from "@/lib/funnel-colors";
 import { fmt } from "@/lib/fmt";
 
-/** The 5-stage funnel in order. */
+/** The 8-stage funnel in order. */
 const STAGES: FunnelStatusSlug[] = [
+  "waitlist",
+  "booked_call",
+  "sent_onboarding",
   "signed_up",
   "transaction_run",
   "funds_in_wallet",

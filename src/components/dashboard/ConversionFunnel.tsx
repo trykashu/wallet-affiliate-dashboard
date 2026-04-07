@@ -11,6 +11,9 @@ interface Props {
 }
 
 const FUNNEL_STAGES: FunnelStatusSlug[] = [
+  "waitlist",
+  "booked_call",
+  "sent_onboarding",
   "signed_up",
   "transaction_run",
   "funds_in_wallet",
@@ -246,7 +249,7 @@ export default function ConversionFunnel({ users, events, stageDurations }: Prop
 
       {/* Stage grid */}
       <div className="px-4 sm:px-6 py-4 sm:py-5">
-        <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid gap-2 sm:gap-3 grid-cols-2 sm:grid-cols-4 lg:grid-cols-8">
           {funnelData.map((stage, i) => {
             const prevReached = i === 0 ? funnelTop : funnelData[i - 1].reachedCount;
             const stageConversion = prevReached > 0 ? stage.reachedCount / prevReached : 0;

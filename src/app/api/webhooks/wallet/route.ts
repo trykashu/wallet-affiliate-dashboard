@@ -29,6 +29,9 @@ function verifyWebhookSecret(request: NextRequest): boolean {
 // --- Stage ordering for advancement logic ---
 
 const STAGE_ORDER: FunnelStatusSlug[] = [
+  "waitlist",
+  "booked_call",
+  "sent_onboarding",
   "signed_up",
   "transaction_run",
   "funds_in_wallet",

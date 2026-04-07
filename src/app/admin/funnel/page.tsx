@@ -42,7 +42,7 @@ export default async function AdminFunnelPage() {
     }
   }
 
-  const STAGES = ["signed_up", "transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank"];
+  const STAGES = ["waitlist", "booked_call", "sent_onboarding", "signed_up", "transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank"];
   for (let i = 1; i < STAGES.length; i++) {
     const from = STAGES[i - 1];
     const to = STAGES[i];

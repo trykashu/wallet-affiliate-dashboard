@@ -11,6 +11,9 @@ export const dynamic = "force-dynamic";
 
 /** Slugs ordered by funnel position (early to late). */
 const FUNNEL_ORDER: FunnelStatusSlug[] = [
+  "waitlist",
+  "booked_call",
+  "sent_onboarding",
   "signed_up",
   "transaction_run",
   "funds_in_wallet",
@@ -33,6 +36,9 @@ export default async function DashboardPage() {
 
   // ── 2. Compute stage counts (cumulative: each user at their current stage) ──
   const stageCounts: Record<FunnelStatusSlug, number> = {
+    waitlist: 0,
+    booked_call: 0,
+    sent_onboarding: 0,
     signed_up: 0,
     transaction_run: 0,
     funds_in_wallet: 0,

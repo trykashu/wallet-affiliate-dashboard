@@ -48,11 +48,14 @@ const USER_NAMES = [
 ];
 
 const STATUS_DISTRIBUTION: Record<FunnelStatusSlug, number> = {
-  signed_up:        8,
-  transaction_run:  7,
-  funds_in_wallet:  6,
-  ach_initiated:    5,
-  funds_in_bank:    4,
+  waitlist:          5,
+  booked_call:       4,
+  sent_onboarding:   3,
+  signed_up:         5,
+  transaction_run:   4,
+  funds_in_wallet:   3,
+  ach_initiated:     3,
+  funds_in_bank:     3,
 };
 
 function makeDate(daysAgo: number): string {
@@ -89,17 +92,21 @@ export const DEMO_REFERRED_USERS: ReferredUser[] = Object.entries(STATUS_DISTRIB
 // ── Funnel Statuses ─────────────────────────────────────────────────────────
 
 export const DEMO_FUNNEL_STATUSES: FunnelStatus[] = [
-  { id: "1", slug: "signed_up",        label: "Signed Up",        color: "#BBF7D0", sort_order: 1 },
-  { id: "2", slug: "transaction_run",   label: "Transaction Run",  color: "#4ADE80", sort_order: 2 },
-  { id: "3", slug: "funds_in_wallet",   label: "Funds in Wallet",  color: "#22C55E", sort_order: 3 },
-  { id: "4", slug: "ach_initiated",     label: "ACH Initiated",    color: "#16A34A", sort_order: 4 },
-  { id: "5", slug: "funds_in_bank",     label: "Funds in Bank",    color: "#00DE8F", sort_order: 5 },
+  { id: "1", slug: "waitlist",          label: "Waitlist",          color: "#E5E7EB", sort_order: 1 },
+  { id: "2", slug: "booked_call",       label: "Booked Call",       color: "#D1D5DB", sort_order: 2 },
+  { id: "3", slug: "sent_onboarding",   label: "Sent Onboarding",  color: "#9CA3AF", sort_order: 3 },
+  { id: "4", slug: "signed_up",         label: "Signed Up",        color: "#BBF7D0", sort_order: 4 },
+  { id: "5", slug: "transaction_run",   label: "Transaction Run",  color: "#4ADE80", sort_order: 5 },
+  { id: "6", slug: "funds_in_wallet",   label: "Funds in Wallet",  color: "#22C55E", sort_order: 6 },
+  { id: "7", slug: "ach_initiated",     label: "ACH Initiated",    color: "#16A34A", sort_order: 7 },
+  { id: "8", slug: "funds_in_bank",     label: "Funds in Bank",    color: "#00DE8F", sort_order: 8 },
 ];
 
 // ── Funnel Events ───────────────────────────────────────────────────────────
 
 const EVENT_STAGES: FunnelStatusSlug[] = [
-  "signed_up", "transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank",
+  "waitlist", "booked_call", "sent_onboarding", "signed_up",
+  "transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank",
 ];
 
 export const DEMO_FUNNEL_EVENTS: FunnelEvent[] = DEMO_REFERRED_USERS.slice(0, 15).map((u, i) => {

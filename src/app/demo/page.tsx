@@ -18,6 +18,9 @@ export default function DemoPage() {
 
   // Compute stage counts from demo users
   const stageCounts: Record<FunnelStatusSlug, number> = {
+    waitlist: 0,
+    booked_call: 0,
+    sent_onboarding: 0,
     signed_up: 0,
     transaction_run: 0,
     funds_in_wallet: 0,

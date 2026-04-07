@@ -5,6 +5,9 @@
 // --- Enums (string unions) ---
 
 export type FunnelStatusSlug =
+  | 'waitlist'
+  | 'booked_call'
+  | 'sent_onboarding'
   | 'signed_up'
   | 'transaction_run'
   | 'funds_in_wallet'

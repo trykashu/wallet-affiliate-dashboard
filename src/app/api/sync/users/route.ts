@@ -30,9 +30,10 @@ export const dynamic = "force-dynamic";
 const BATCH_SIZE = 50;
 
 const STATUS_MAP: Record<string, FunnelStatusSlug> = {
-  "Sent Onboarding": "signed_up",
+  "Waitlist": "waitlist",
+  "Booked Call": "booked_call",
+  "Sent Onboarding": "sent_onboarding",
   "Run Volume": "transaction_run",
-  "Booked Call": "signed_up",
 };
 
 function parseAmount(raw: unknown): number | null {
