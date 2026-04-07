@@ -4,6 +4,8 @@ import { createClient }        from "@/lib/supabase/server";
 import { isAdminEmail }        from "@/lib/admin";
 import { VIEW_AS_COOKIE }      from "@/lib/affiliate-context";
 import AppSidebar              from "@/components/layout/AppSidebar";
+import AutoRefresh             from "@/components/layout/AutoRefresh";
+import RealtimeRefresh         from "@/components/layout/RealtimeRefresh";
 import NotificationBell        from "@/components/layout/NotificationBell";
 import PageTitle               from "@/components/ui/PageTitle";
 import type { Affiliate }      from "@/types/database";
@@ -186,6 +188,9 @@ export default async function DashboardLayout({
         <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5 sm:space-y-7 animate-fade-in">
           {children}
         </main>
+
+        <AutoRefresh />
+        <RealtimeRefresh />
       </div>
     </div>
   );
