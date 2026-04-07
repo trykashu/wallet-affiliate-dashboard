@@ -1,6 +1,6 @@
 {
   "crons": [
     { "path": "/api/cron/refresh-leaderboard", "schedule": "0 0 1 * *" },
-    { "path": "/api/cron/check-mercury-payouts", "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/check-mercury-payouts", "schedule": "0 6 * * *" }
   ]
 }
