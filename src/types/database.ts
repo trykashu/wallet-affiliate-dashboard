@@ -160,6 +160,8 @@ export interface Admin {
   user_id: string;
   email: string;
   role: string;
+  has_password: boolean;
+  last_login_at: string | null;
   created_at: string;
 }
 
