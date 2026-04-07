@@ -1,6 +1,10 @@
 import { getAffiliateContext } from "@/lib/affiliate-context";
-import type { Earning } from "@/types/database";
+import { getCommissionRate } from "@/lib/tier";
+import { computeProjections } from "@/lib/projections";
+import type { Earning, ReferredUser } from "@/types/database";
 import EarningsCard from "@/components/dashboard/EarningsCard";
+import EarningsGraph from "@/components/dashboard/EarningsGraph";
+import RevenueProjection from "@/components/dashboard/RevenueProjection";
 import EarningsTable from "@/components/dashboard/EarningsTable";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +27,14 @@ export default async function EarningsPage() {
 
   const rows: EarningRow[] = (earningsRaw ?? []) as EarningRow[];
 
+  // ── Fetch referred users (for projections) ──────────────────
+  const { data: usersRaw } = await db
+    .from("referred_users")
+    .select("*")
+    .eq("affiliate_id", affiliateId);
+
+  const users: ReferredUser[] = (usersRaw ?? []) as ReferredUser[];
+
   // ── Compute summary totals ──────────────────────────────────
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -41,6 +53,34 @@ export default async function EarningsPage() {
   }
 
   const earningsSummary = { total, thisMonth, pending, paid };
+
+  // ── Compute monthly earnings totals (last 12 months) ────────
+  const monthlyMap = new Map<string, number>();
+
+  // Initialize the last 12 months with zeros
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    monthlyMap.set(key, 0);
+  }
+
+  // Sum earnings into month buckets
+  for (const e of rows) {
+    const d = new Date(e.created_at);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (monthlyMap.has(key)) {
+      monthlyMap.set(key, (monthlyMap.get(key) ?? 0) + (Number(e.amount) || 0));
+    }
+  }
+
+  const monthlyEarnings = Array.from(monthlyMap.entries()).map(([month, total]) => ({
+    month,
+    total,
+  }));
+
+  // ── Compute revenue projections ─────────────────────────────
+  const commissionRate = getCommissionRate(affiliate.tier);
+  const projections = computeProjections(users, rows, commissionRate);
 
   // ── Map earnings to table format ────────────────────────────
   const earningsWithUser = rows.map((e) => ({
@@ -65,6 +105,15 @@ export default async function EarningsPage() {
           referredVolume={affiliate.referred_volume_total}
         />
       </div>
+
+      {/* 12-month earnings history chart */}
+      <EarningsGraph data={monthlyEarnings} />
+
+      {/* Revenue projection chart */}
+      <RevenueProjection
+        projections={projections}
+        actuals={monthlyEarnings}
+      />
 
       {/* Earnings table */}
       <EarningsTable earnings={earningsWithUser} />
