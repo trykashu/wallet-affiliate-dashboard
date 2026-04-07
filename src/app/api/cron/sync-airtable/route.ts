@@ -1,9 +1,10 @@
 /**
  * GET /api/cron/sync-airtable
  *
- * Cron endpoint that runs both Airtable sync operations in sequence:
+ * Cron endpoint that runs all sync operations in sequence:
  * 1. Affiliates sync (must run first — users depend on affiliate lookup)
- * 2. Referred users sync
+ * 2. Referred users sync (Airtable Launch List)
+ * 3. HighLevel User Pipeline sync
  *
  * Validates CRON_SECRET before processing.
  */
@@ -62,6 +63,18 @@ export async function GET(request: NextRequest) {
         { error: "Users sync failed", details: results },
         { status: 500 },
       );
+    }
+
+    // Step 3: Sync referred users from HighLevel User Pipeline
+    const highlevelRes = await fetch(`${baseUrl}/api/sync/highlevel`, {
+      cache: "no-store",
+    });
+    const highlevelData = await highlevelRes.json();
+    results.highlevel = highlevelData;
+
+    if (!highlevelRes.ok) {
+      // HighLevel sync failure is non-fatal — log but continue
+      console.error("[cron/sync-airtable] HighLevel sync failed:", highlevelData);
     }
 
     return NextResponse.json({
