@@ -160,6 +160,20 @@ export const DEMO_EARNINGS_SUMMARY = {
   paid:      DEMO_EARNINGS.filter((e) => e.status === "paid").reduce((s, e) => s + e.amount, 0),
 };
 
+// ── Monthly Earnings (for demo earnings graph) ─────────────────────────────
+
+export const DEMO_MONTHLY_EARNINGS: { month: string; total: number }[] = (() => {
+  const now = new Date();
+  return Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+    const month = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    // Simulate growth: earlier months lower, recent months higher
+    const base = 200 + i * 80;
+    const variance = Math.round(Math.sin(i * 1.3) * 60);
+    return { month, total: Math.max(50, base + variance) };
+  });
+})();
+
 // ── Leaderboard ─────────────────────────────────────────────────────────────
 
 function currentPeriod(): string {

@@ -3,6 +3,8 @@ import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
+import AffiliateGrowthChart    from "@/components/admin/AffiliateGrowthChart";
+import UserConversionChart     from "@/components/admin/UserConversionChart";
 import type { Affiliate, ReferredUser, Earning, WebhookEvent } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -48,6 +50,10 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
+      {/* Trend charts */}
+      <AffiliateGrowthChart affiliates={affiliates} />
+      <UserConversionChart users={users} />
+
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
