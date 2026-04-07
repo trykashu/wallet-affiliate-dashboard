@@ -1,26 +1,293 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@layer base {
+  body {
+    background-color: #F4F6FB;
+    background-image:
+      radial-gradient(ellipse 120% 80% at -10% -20%, rgba(0,222,143,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 70% at 110% 110%, rgba(12,81,71,0.05) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 60% at 50% 0%, rgba(0,222,143,0.02) 0%, transparent 60%);
+    @apply text-gray-900 antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Refined scrollbars */
+  ::-webkit-scrollbar        { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track  { @apply bg-transparent; }
+  ::-webkit-scrollbar-thumb  { @apply bg-gray-300/60 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-gray-400/60; }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+  /* Smooth color transitions — avoids layout jank */
+  *, *::before, *::after {
+    transition-property: color, background-color, border-color, box-shadow, opacity;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  *[class*="transition-all"]  { transition-property: all; }
+  *[class*="transition-none"] { transition: none; }
+
+  /* Selection color */
+  ::selection {
+    background-color: rgba(0, 222, 143, 0.15);
+    color: #0C5147;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  /* ── Card system ─────────────────────────────────────────── */
+  .card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/60 rounded-3xl shadow-card;
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.7) 100%);
+  }
+
+  .card-hover {
+    @apply card transition-all duration-300
+           hover:border-white/80 hover:shadow-card-md hover:-translate-y-0.5;
+  }
+
+  /* Glass card — hero/banner areas */
+  .card-glass {
+    @apply bg-white/60 backdrop-blur-xl border border-white/50 rounded-3xl shadow-glass;
+  }
+
+  /* Solid card — no transparency */
+  .card-solid {
+    @apply bg-white border border-surface-200/80 rounded-3xl shadow-card;
+  }
+
+  /* ── Buttons ─────────────────────────────────────────────── */
+  .btn-primary {
+    @apply bg-brand-600 text-white font-semibold px-5 py-2.5 rounded-2xl
+           hover:bg-brand-700 active:scale-[0.97]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/40 focus-visible:ring-offset-2
+           transition-all duration-200 text-sm shadow-card;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-brand-900 font-semibold px-5 py-2.5 rounded-2xl
+           hover:bg-accent-600 active:scale-[0.97]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 focus-visible:ring-offset-2
+           transition-all duration-200 text-sm;
+  }
+
+  .btn-ghost {
+    @apply text-brand-400 hover:text-brand-600 hover:bg-brand-50
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/20
+           px-3.5 py-2 rounded-2xl
+           transition-all duration-200 text-sm;
+  }
+
+  .btn-secondary {
+    @apply border border-surface-200 text-brand-400 hover:text-brand-600
+           hover:border-brand-600/30 hover:bg-brand-50 px-5 py-2.5 rounded-2xl
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-600/20 focus-visible:ring-offset-2
+           transition-all duration-200 text-sm;
+  }
+
+  /* ── Sidebar nav items (on dark bg) ─────────────────────── */
+  .nav-item {
+    @apply flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-medium
+           text-white/50 hover:text-white hover:bg-white/[0.08]
+           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50
+           transition-all duration-200 cursor-pointer w-full text-left;
+  }
+
+  .nav-item-active {
+    @apply bg-white/[0.12] text-white;
+  }
+
+  .nav-section-label {
+    @apply px-3.5 mt-6 mb-2 text-[9px] font-bold uppercase tracking-[0.16em] text-white/20;
+  }
+
+  /* ── Input fields ────────────────────────────────────────── */
+  .input-base {
+    @apply bg-white border border-surface-200 rounded-2xl px-4 py-2.5
+           text-sm text-gray-900 placeholder-gray-400
+           focus:outline-none focus:ring-2 focus:ring-brand-600/20
+           focus:border-brand-600/50 transition-all shadow-inner-glow;
+  }
+
+  .input-error {
+    @apply input-base border-red-300 focus:ring-red-500/20 focus:border-red-500/50;
+  }
+
+  /* ── Badge variants ──────────────────────────────────────── */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  .badge-accent  { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-green   { @apply badge bg-emerald-50 text-emerald-700 border border-emerald-200; }
+  .badge-amber   { @apply badge bg-amber-50 text-amber-700 border border-amber-200; }
+  .badge-red     { @apply badge bg-red-50 text-red-700 border border-red-200; }
+  .badge-sky     { @apply badge bg-sky-50 text-sky-700 border border-sky-200; }
+  .badge-purple  { @apply badge bg-purple-50 text-purple-700 border border-purple-200; }
+
+  /* ── Table ───────────────────────────────────────────────── */
+  .th { @apply px-3 sm:px-5 py-3.5 text-left text-[11px] font-bold text-brand-400 uppercase tracking-wider; }
+  .td { @apply px-3 sm:px-5 py-3.5 sm:py-4 text-sm text-gray-700; }
+
+  /* ── Stat card ───────────────────────────────────────────── */
+  .stat-card {
+    @apply card p-5 sm:p-6
+           hover:shadow-card-md hover:border-white/80 hover:-translate-y-0.5
+           transition-all duration-300 cursor-default select-none;
+  }
+
+  .stat-card-accent {
+    @apply p-5 sm:p-6 rounded-3xl bg-white/80 backdrop-blur-sm select-none cursor-default
+           border border-accent/20
+           shadow-card-accent
+           hover:shadow-card-glow hover:-translate-y-0.5
+           transition-all duration-300;
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(0,222,143,0.04) 100%);
+  }
+
+  /* ── Divider ─────────────────────────────────────────────── */
+  .divider      { @apply border-t border-surface-200/60 my-1; }
+  .divider-dark { @apply border-t border-white/10 my-2; }
+
+  /* ── Card section header ──────────────────────────────────── */
+  .card-divider { @apply border-b border-surface-200/60; }
+
+  /* ── Accent top border ───────────────────────────────────── */
+  .accent-top {
+    @apply border-t-2;
+    border-top-color: #00DE8F;
+  }
+
+  /* ── Focus ring ──────────────────────────────────────────── */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600/50;
+  }
+
+  /* ── Section header inside cards ────────────────────────── */
+  .card-header {
+    @apply px-5 py-4 border-b border-surface-200/60 flex items-center justify-between;
+  }
+
+  .card-header-title {
+    @apply text-sm font-semibold text-gray-900;
+  }
+
+  .card-header-sub {
+    @apply text-xs text-brand-400 mt-0.5;
+  }
+}
+
+/* ── Dark scrollbars (sidebar, dark containers) ─────────── */
+.scrollbar-dark::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.12); border-radius: 9999px; }
+.scrollbar-dark::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+.scrollbar-dark::-webkit-scrollbar-track  { background: transparent; }
+
+/* ── Hidden scrollbar (mobile filter tabs) ───────────────── */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Chart line draw animation ────────────────────────────── */
+.chart-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: drawLine 1.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* ── Gradient text — brand teal → mint ───────────────────── */
+.text-gradient {
+  background: linear-gradient(135deg, #0C5147 0%, #00DE8F 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Mint-only gradient text (for earnings / positive numbers) */
+.text-gradient-mint {
+  background: linear-gradient(135deg, #00C07C 0%, #00DE8F 80%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Noise texture overlay ────────────────────────────────── */
+.noise-overlay::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-size: 128px 128px;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: 1;
+}
+
+/* ── Shimmer (pending states) ────────────────────────────── */
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.8) 50%,
+    rgba(255,255,255,0) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ── Custom @keyframes ───────────────────────────────────── */
+@keyframes drawLine {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes glowsweep {
+  0% { top: -2px; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 0.4; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Stagger helper classes ──────────────────────────────── */
+.stagger-1 { animation-delay: 0ms; }
+.stagger-2 { animation-delay: 80ms; }
+.stagger-3 { animation-delay: 160ms; }
+.stagger-4 { animation-delay: 240ms; }
+.stagger-5 { animation-delay: 320ms; }
+.stagger-6 { animation-delay: 400ms; }
+.stagger-7 { animation-delay: 480ms; }
+.stagger-8 { animation-delay: 560ms; }
+
+/* ── Print styles ─────────────────────────────────────── */
+@media print {
+  nav, aside, header, .no-print { display: none !important; }
+  main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+  body { background: white !important; }
+  .print-only { display: block !important; }
+}
+
+/* ── Ambient orb (decorative floating gradient blob) ──── */
+.ambient-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  pointer-events: none;
+  animation: orbDrift 20s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ambient-orb { animation: none !important; }
 }
