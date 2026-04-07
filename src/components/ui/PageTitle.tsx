@@ -11,6 +11,13 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/dashboard/referral-link":    { title: "Referral Links",  sub: "Share links for user recruitment"                  },
   "/dashboard/support":          { title: "Support",         sub: "Report issues, share feedback, or request features" },
   "/dashboard/profile":          { title: "My Profile",      sub: "Account & security settings"                       },
+  "/admin":                      { title: "Admin Overview",  sub: "Program stats and recent activity"                 },
+  "/admin/affiliates":           { title: "Affiliates",      sub: "Manage affiliate accounts and tiers"               },
+  "/admin/users":                { title: "Users",           sub: "All referred users across affiliates"              },
+  "/admin/funnel":               { title: "Funnel",          sub: "Conversion funnel analytics"                       },
+  "/admin/earnings":             { title: "Earnings",        sub: "Program-wide earnings and commissions"             },
+  "/admin/payouts":              { title: "Payouts",         sub: "Manage affiliate payouts"                          },
+  "/admin/settings":             { title: "Settings",        sub: "Program configuration"                             },
 };
 
 export default function PageTitle() {
