@@ -192,6 +192,20 @@ export interface WebhookEvent {
   processed_at: string | null;
 }
 
+export interface Transaction {
+  id: string;
+  referred_user_id: string | null;
+  affiliate_id: string | null;
+  airtable_record_id: string;
+  amount: number;
+  transaction_type: string;
+  transaction_external_id: string | null;
+  transaction_date: string | null;
+  email: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 // --- Supabase Row/Insert/Update helpers ---
 
 type WithOptionalId<T> = Omit<T, 'id' | 'created_at' | 'updated_at'> & {
@@ -271,6 +285,11 @@ export interface Database {
         Row: WebhookEvent;
         Insert: WithOptionalId<WebhookEvent>;
         Update: UpdatableFields<WebhookEvent>;
+      };
+      transactions: {
+        Row: Transaction;
+        Insert: WithOptionalId<Transaction>;
+        Update: UpdatableFields<Transaction>;
       };
     };
     Functions: {
