@@ -9,6 +9,7 @@ const ADMIN_NAV = [
   { label: "Overview",    href: "/admin",              icon: "grid"    as const, exact: true },
   { label: "Affiliates",  href: "/admin/affiliates",   icon: "users"   as const },
   { label: "Users",       href: "/admin/users",        icon: "link"    as const },
+  { label: "Transactions", href: "/admin/transactions", icon: "dollar"  as const },
   { label: "Funnel",      href: "/admin/funnel",       icon: "chart"   as const },
   { label: "Earnings",    href: "/admin/earnings",     icon: "wallet"  as const },
   { label: "Payouts",     href: "/admin/payouts",      icon: "dollar"  as const },

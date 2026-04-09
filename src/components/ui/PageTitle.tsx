@@ -14,6 +14,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/admin":                      { title: "Admin Overview",  sub: "Program stats and recent activity"                 },
   "/admin/affiliates":           { title: "Affiliates",      sub: "Manage affiliate accounts and tiers"               },
   "/admin/users":                { title: "Users",           sub: "All referred users across affiliates"              },
+  "/admin/transactions":         { title: "Transactions",    sub: "All transaction volume across affiliates"          },
   "/admin/funnel":               { title: "Funnel",          sub: "Conversion funnel analytics"                       },
   "/admin/earnings":             { title: "Earnings",        sub: "Program-wide earnings and commissions"             },
   "/admin/payouts":              { title: "Payouts",         sub: "Manage affiliate payouts"                          },

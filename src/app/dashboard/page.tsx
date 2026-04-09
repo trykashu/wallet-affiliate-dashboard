@@ -1,4 +1,5 @@
 import { getAffiliateContext } from "@/lib/affiliate-context";
+import { fmt } from "@/lib/fmt";
 import type { FunnelStatusSlug, ReferredUser } from "@/types/database";
 import StatsRow from "@/components/dashboard/StatsRow";
 import ReferralLinkCard from "@/components/dashboard/ReferralLinkCard";
@@ -107,11 +108,22 @@ export default async function DashboardPage() {
     paid:      sum(earningsPaid),
   };
 
-  // ── 5. Referral link ────────────────────────────────────────
+  // ── 5. Total Transfer In volume ──────────────────────────────
+  const { data: volumeRows } = await db
+    .from("transactions")
+    .select("amount")
+    .eq("affiliate_id", affiliateId)
+    .eq("transaction_type", "Transfer In");
+  const totalVolume = (volumeRows ?? []).reduce(
+    (acc: number, r: { amount: number }) => acc + (r.amount ?? 0),
+    0
+  );
+
+  // ── 6. Referral link ────────────────────────────────────────
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
   const referralUrl = `${appUrl}/r/${affiliate.attribution_id}`;
 
-  // ── 6. Greeting + hero stats ─────────────────────────────────
+  // ── 7. Greeting + hero stats ─────────────────────────────────
   const hour = now.getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -165,6 +177,10 @@ export default async function DashboardPage() {
             <div className="text-center bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-2xl px-6 py-3.5">
               <p className="text-display-sm text-accent tabular-nums">{transactedCount}</p>
               <p className="text-white/35 text-[11px] font-medium mt-1 tracking-wide uppercase">Transacted</p>
+            </div>
+            <div className="text-center bg-white/[0.06] backdrop-blur-sm border border-white/[0.08] rounded-2xl px-6 py-3.5">
+              <p className="text-display-sm text-white tabular-nums">{fmt.currencyCompact(totalVolume)}</p>
+              <p className="text-white/35 text-[11px] font-medium mt-1 tracking-wide uppercase">Volume</p>
             </div>
           </div>
         </div>

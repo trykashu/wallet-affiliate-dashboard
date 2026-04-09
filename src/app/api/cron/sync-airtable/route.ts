@@ -5,6 +5,7 @@
  * 1. Affiliates sync (must run first — users depend on affiliate lookup)
  * 2. Referred users sync (Airtable Launch List)
  * 3. HighLevel User Pipeline sync
+ * 4. Transactions sync
  *
  * Validates CRON_SECRET before processing.
  */
@@ -75,6 +76,18 @@ export async function GET(request: NextRequest) {
     if (!highlevelRes.ok) {
       // HighLevel sync failure is non-fatal — log but continue
       console.error("[cron/sync-airtable] HighLevel sync failed:", highlevelData);
+    }
+
+    // Step 4: Sync transactions
+    const transactionsRes = await fetch(`${baseUrl}/api/sync/transactions`, {
+      cache: "no-store",
+    });
+    const transactionsData = await transactionsRes.json();
+    results.transactions = transactionsData;
+
+    if (!transactionsRes.ok) {
+      // Transactions sync failure is non-fatal — log but continue
+      console.error("[cron/sync-airtable] Transactions sync failed:", transactionsData);
     }
 
     return NextResponse.json({
