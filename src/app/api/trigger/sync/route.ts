@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { isAdminEmail } from "@/lib/admin";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
@@ -9,14 +11,24 @@ function verifyApiKey(request: NextRequest): boolean {
     request.nextUrl.searchParams.get("key") ??
     "";
   const expected = process.env.AIRTABLE_WEBHOOK_SECRET ?? "";
-  if (!expected) return false;
+  if (!expected || !key) return false;
   const a = Buffer.from(key);
   const b = Buffer.from(expected);
   if (a.length !== b.length) {
-    crypto.timingSafeEqual(a, a); // burn constant time on length mismatch
+    crypto.timingSafeEqual(a, a);
     return false;
   }
   return crypto.timingSafeEqual(a, b);
+}
+
+async function verifyAdmin(): Promise<boolean> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    return !!user && isAdminEmail(user.email);
+  } catch {
+    return false;
+  }
 }
 
 type SyncType = "affiliates" | "transactions" | "all";
@@ -41,7 +53,11 @@ async function runSync(
 }
 
 export async function GET(request: NextRequest) {
-  if (!verifyApiKey(request)) {
+  // Auth: API key (for external triggers) OR admin session (for dashboard buttons)
+  const hasApiKey = verifyApiKey(request);
+  const isAdmin = !hasApiKey ? await verifyAdmin() : false;
+
+  if (!hasApiKey && !isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

@@ -5,6 +5,7 @@ import { isAdminEmail }        from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
 import AffiliateGrowthChart    from "@/components/admin/AffiliateGrowthChart";
 import UserConversionChart     from "@/components/admin/UserConversionChart";
+import SyncButtons             from "@/components/admin/SyncButtons";
 import type { Affiliate, ReferredUser, Earning, WebhookEvent } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +82,9 @@ export default async function AdminOverviewPage() {
           accentColor="brand"
         />
       </div>
+
+      {/* Data sync controls */}
+      <SyncButtons />
 
       {/* Recent webhook events */}
       <div className="card overflow-hidden">
