@@ -1,11 +1,12 @@
 import { getAffiliateContext } from "@/lib/affiliate-context";
 import { getCommissionRate } from "@/lib/tier";
 import { computeProjections } from "@/lib/projections";
-import type { Earning, ReferredUser } from "@/types/database";
+import type { Earning, ReferredUser, Transaction } from "@/types/database";
 import EarningsCard from "@/components/dashboard/EarningsCard";
 import EarningsGraph from "@/components/dashboard/EarningsGraph";
 import RevenueProjection from "@/components/dashboard/RevenueProjection";
 import EarningsTable from "@/components/dashboard/EarningsTable";
+import TransactionLedger from "@/components/dashboard/TransactionLedger";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,23 @@ export default async function EarningsPage() {
     .eq("affiliate_id", affiliateId);
 
   const users: ReferredUser[] = (usersRaw ?? []) as ReferredUser[];
+
+  // ── Fetch transactions with user info ──────────────────────
+  const { data: txnRaw } = await db
+    .from("transactions")
+    .select("*, referred_users(full_name, email)")
+    .eq("affiliate_id", affiliateId)
+    .order("transaction_date", { ascending: false });
+
+  interface TxnRow extends Transaction {
+    referred_users: { full_name: string; email: string } | null;
+  }
+  const txnRows: TxnRow[] = (txnRaw ?? []) as TxnRow[];
+  const transactionsWithUser = txnRows.map((t) => ({
+    ...t,
+    user_name: t.referred_users?.full_name ?? null,
+    user_email: t.referred_users?.email ?? null,
+  }));
 
   // ── Compute summary totals ──────────────────────────────────
   const now = new Date();
@@ -114,6 +132,9 @@ export default async function EarningsPage() {
         projections={projections}
         actuals={monthlyEarnings}
       />
+
+      {/* Transaction ledger */}
+      <TransactionLedger transactions={transactionsWithUser} />
 
       {/* Earnings table */}
       <EarningsTable earnings={earningsWithUser} />
