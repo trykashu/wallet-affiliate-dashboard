@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
 import PayoutBatchManager      from "@/components/admin/PayoutBatchManager";
+import BankDetailsUpload       from "@/components/admin/BankDetailsUpload";
 import type { PayoutRow, PendingAffiliatePayout } from "@/components/admin/PayoutBatchManager";
 import type { Payout, Earning, Affiliate, PayoutSettings } from "@/types/database";
 
@@ -92,6 +93,8 @@ export default async function AdminPayoutsPage() {
           <p className="text-[10px] text-brand-400 mt-1.5">{allPayouts.filter((p) => p.status === "completed").length} completed payouts</p>
         </div>
       </div>
+
+      <BankDetailsUpload />
 
       <PayoutBatchManager payouts={payoutRows} pendingPayouts={pendingPayouts} />
     </div>
