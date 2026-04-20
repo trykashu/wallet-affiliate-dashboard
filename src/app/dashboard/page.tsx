@@ -138,12 +138,6 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* Referral link */}
-      <ReferralLinkCard
-        url={referralUrl}
-        description="Share this link to earn commission on users that you refer who deposit funds into the wallet."
-      />
-
       {/* Stats row */}
       <StatsRow users={users} />
 
@@ -155,8 +149,14 @@ export default async function DashboardPage() {
         events={funnelEvents}
       />
 
-      {/* Recent Activity */}
-      <RecentActivity events={events} />
+      {/* Referral link + Recent Activity */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <ReferralLinkCard
+          url={referralUrl}
+          description="Share this link to earn commission on users that you refer who deposit funds into the wallet."
+        />
+        <RecentActivity events={events} />
+      </div>
     </>
   );
 }
