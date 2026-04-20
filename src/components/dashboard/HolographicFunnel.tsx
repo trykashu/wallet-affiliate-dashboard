@@ -25,9 +25,6 @@ const FUNNEL_STAGES = [
   "sent_onboarding",
   "signed_up",
   "transaction_run",
-  "funds_in_wallet",
-  "ach_initiated",
-  "funds_in_bank",
 ] as const;
 
 const STAGE_INDEX: Record<string, number> = {};
@@ -38,10 +35,10 @@ FUNNEL_STAGES.forEach((s, i) => {
 const EXIT_STAGES: readonly string[] = [];
 
 /** Vertical position of each stage label (fraction of funnel height) */
-const STAGE_PCTS = [0.04, 0.17, 0.30, 0.43, 0.56, 0.69, 0.82, 0.96];
+const STAGE_PCTS = [0.10, 0.30, 0.50, 0.70, 0.90];
 
-/** Ring boundary positions — 9 lines create 8 equal bands */
-const RING_PCTS = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0];
+/** Ring boundary positions — 6 lines create 5 equal bands */
+const RING_PCTS = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
 
 function formatHours(h: number): string {
   if (h < 1) return `${Math.round(h * 60)}m`;
@@ -150,7 +147,7 @@ export default function HolographicFunnel({
   }, [users, statuses, stageDurations, events]);
 
   /* ── Derived metrics ─────────────────────────────────── */
-  const lastStageName = "funds_in_bank";
+  const lastStageName = "transaction_run";
   const lastStageReached =
     funnelData.find((s) => s.slug === lastStageName)?.reachedCount ?? 0;
   const overallConversion =
@@ -488,7 +485,7 @@ export default function HolographicFunnel({
       {/* ── Main: Canvas (left) + Metrics (right) ────── */}
       <div className="flex flex-col lg:flex-row">
         {/* ── LEFT: Canvas holographic funnel ──────────── */}
-        <div className="relative lg:w-[440px] xl:w-[500px] flex-shrink-0 min-h-[540px] sm:min-h-[640px]">
+        <div className="relative lg:w-[440px] xl:w-[500px] flex-shrink-0 min-h-[420px] sm:min-h-[500px]">
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full"
@@ -496,7 +493,7 @@ export default function HolographicFunnel({
         </div>
 
         {/* ── RIGHT: Stage Metrics (aligned to connector lines) ── */}
-        <div className="flex-1 relative min-h-[540px] sm:min-h-[640px]">
+        <div className="flex-1 relative min-h-[420px] sm:min-h-[500px]">
           {funnelData.map((stage, i) => {
             const yPos = stageYPositions[i];
             const prevReached =
