@@ -38,7 +38,7 @@ FUNNEL_STAGES.forEach((s, i) => {
 const EXIT_STAGES: readonly string[] = [];
 
 /** Vertical position of each stage label (fraction of funnel height) */
-const STAGE_PCTS = [0.06, 0.19, 0.32, 0.44, 0.56, 0.69, 0.81, 0.94];
+const STAGE_PCTS = [0.04, 0.17, 0.30, 0.43, 0.56, 0.69, 0.82, 0.96];
 
 /** Ring boundary positions — 9 lines create 8 equal bands */
 const RING_PCTS = [0, 0.125, 0.25, 0.375, 0.5, 0.625, 0.75, 0.875, 1.0];
@@ -189,10 +189,11 @@ export default function HolographicFunnel({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animRef = useRef<number>(0);
   const tRef = useRef(0);
-  const particlesRef = useRef(createFunnelParticles(50));
+  const particlesRef = useRef(createFunnelParticles(80));
   const cssSizeRef = useRef({ w: 0, h: 0 });
   const stageColorsRef = useRef<string[]>([]);
   const [stageYPositions, setStageYPositions] = useState<number[]>([]);
+  const frameCountRef = useRef(0);
 
   // Keep stage colors in sync
   useEffect(() => {
@@ -202,11 +203,11 @@ export default function HolographicFunnel({
   /* ── Canvas drawing ──────────────────────────────────── */
   const drawFrame = useCallback(
     (ctx: CanvasRenderingContext2D, W: number, H: number, t: number) => {
-      const cx = W / 2; // Funnel centered in canvas
+      const cx = W / 2;
       const cy = H / 2 - 10;
-      const topR = Math.min(W, H) * 0.36;
+      const topR = Math.min(W, H) * 0.38;
       const botR = Math.min(W, H) * 0.10;
-      const fh = Math.min(W, H) * 0.62;
+      const fh = Math.min(W, H) * 0.78;
       const tilt = 0.32;
       const spokeCount = 20;
       const segs = 80;
@@ -218,11 +219,10 @@ export default function HolographicFunnel({
         const rad = topR + (botR - topR) * pct;
         const ypos = cy - fh / 2 + pct * fh;
         const ep = 0.5 + 0.5 * Math.sin(t * 2 - pct * 5);
-        const alpha = 0.5 + 0.35 * ep;
+        const alpha = 0.6 + 0.35 * ep;
         const stageIdx = Math.min(Math.floor(ri), colors.length - 1);
         const color = colors[stageIdx] || "#00DE8F";
 
-        // Parse hex color for rgba
         const r = parseInt(color.slice(1, 3), 16);
         const g = parseInt(color.slice(3, 5), 16);
         const b = parseInt(color.slice(5, 7), 16);
@@ -238,9 +238,9 @@ export default function HolographicFunnel({
         ctx.lineWidth = 1.2;
         ctx.stroke();
 
-        // Glow pass
+        // Glow pass — brighter on dark bg
         ctx.lineWidth = 5;
-        ctx.strokeStyle = `rgba(${r},${g},${b},${0.06 * ep})`;
+        ctx.strokeStyle = `rgba(${r},${g},${b},${0.15 * ep})`;
         ctx.beginPath();
         for (let i = 0; i <= segs; i++) {
           const a = (i / segs) * Math.PI * 2;
@@ -260,8 +260,8 @@ export default function HolographicFunnel({
         const alpha = 0.08 + 0.5 * brightness;
         const col =
           s % 3 === 0
-            ? `rgba(0,190,120,${alpha})`
-            : `rgba(12,81,71,${alpha})`;
+            ? `rgba(0,222,143,${alpha})`
+            : `rgba(0,150,100,${alpha})`;
         ctx.beginPath();
         for (let ri = 0; ri < RING_PCTS.length; ri++) {
           const pct = RING_PCTS[ri];
@@ -272,7 +272,7 @@ export default function HolographicFunnel({
           ri === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
         }
         ctx.strokeStyle = col;
-        ctx.lineWidth = 0.3 + 1.2 * brightness;
+        ctx.lineWidth = 0.5 + 1.5 * brightness;
         ctx.stroke();
       }
 
@@ -293,7 +293,7 @@ export default function HolographicFunnel({
         const size = p.size * (1 - p.pct * 0.5);
 
         const g = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
-        g.addColorStop(0, `rgba(0,190,120,${p.alpha * fade * 0.7})`);
+        g.addColorStop(0, `rgba(0,222,143,${p.alpha * fade * 0.9})`);
         g.addColorStop(1, "rgba(0,222,143,0)");
         ctx.beginPath();
         ctx.arc(x, y, size * 3, 0, Math.PI * 2);
@@ -301,7 +301,7 @@ export default function HolographicFunnel({
         ctx.fill();
         ctx.beginPath();
         ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,160,100,${p.alpha * fade})`;
+        ctx.fillStyle = `rgba(0,222,143,${p.alpha * fade})`;
         ctx.fill();
       }
 
@@ -320,18 +320,16 @@ export default function HolographicFunnel({
 
         // Circle on the front face — rightmost point of the ellipse ring
         const circleX = cx + rad;
-        const circleY = ypos; // center of ellipse at tilt=0 on right edge
+        const circleY = ypos;
         const circleR = 5 + pulse * 2;
 
-        // Connector line from circle to right edge of canvas
+        // Connector line — solid, thin, subtle on dark
         ctx.beginPath();
         ctx.moveTo(circleX + circleR + 4, circleY);
         ctx.lineTo(W, circleY);
-        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.12 + 0.08 * pulse})`;
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 5]);
+        ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.15 + 0.05 * pulse})`;
+        ctx.lineWidth = 0.8;
         ctx.stroke();
-        ctx.setLineDash([]);
 
         // Outer glow of circle
         const glow = ctx.createRadialGradient(circleX, circleY, 0, circleX, circleY, circleR * 3);
@@ -342,28 +340,28 @@ export default function HolographicFunnel({
         ctx.fillStyle = glow;
         ctx.fill();
 
-        // Circle ring
+        // Circle ring — dark fill on dark bg
         ctx.beginPath();
         ctx.arc(circleX, circleY, circleR, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fillStyle = "rgba(8,12,10,0.95)";
         ctx.fill();
         ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.8 + 0.2 * pulse})`;
         ctx.lineWidth = 2.5;
         ctx.stroke();
 
-        // Inner dot
+        // Inner dot — stage color at full opacity
         ctx.beginPath();
         ctx.arc(circleX, circleY, circleR * 0.35, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${cr},${cg},${cb},${0.9})`;
+        ctx.fillStyle = `rgba(${cr},${cg},${cb},1)`;
         ctx.fill();
       }
       // ── Tip glow ────────────────────────────────────
       const tipY = cy + fh / 2;
       const tp = 0.6 + 0.4 * Math.sin(t * 3);
       const tipG = ctx.createRadialGradient(cx, tipY, 0, cx, tipY, botR * 3);
-      tipG.addColorStop(0, `rgba(0,222,143,${0.4 * tp})`);
+      tipG.addColorStop(0, `rgba(0,222,143,${0.6 * tp})`);
       tipG.addColorStop(0.4, `rgba(12,81,71,${0.1 * tp})`);
-      tipG.addColorStop(1, "rgba(255,255,255,0)");
+      tipG.addColorStop(1, "rgba(8,12,10,0)");
       ctx.beginPath();
       ctx.arc(cx, tipY, botR * 3, 0, Math.PI * 2);
       ctx.fillStyle = tipG;
@@ -389,17 +387,22 @@ export default function HolographicFunnel({
       return;
     }
 
-    // Fade trail — matches card white bg
-    ctx.fillStyle = "rgba(255,255,255,0.30)";
+    // Fade trail — dark bg
+    ctx.fillStyle = "rgba(8,12,10,0.25)";
     ctx.fillRect(0, 0, W, H);
 
     const yPositions = drawFrame(ctx, W, H, tRef.current);
     tRef.current += 0.012;
 
-    // Emit Y positions once for right panel alignment
-    if (!yPosEmittedRef.current && yPositions && yPositions.length > 0) {
-      yPosEmittedRef.current = true;
-      setStageYPositions(yPositions);
+    // Emit Y positions for the first 30 frames (settling) and on resize reset
+    frameCountRef.current++;
+    if (frameCountRef.current < 30 || !yPosEmittedRef.current) {
+      if (yPositions && yPositions.length > 0) {
+        setStageYPositions(yPositions);
+        if (frameCountRef.current >= 30) {
+          yPosEmittedRef.current = true;
+        }
+      }
     }
 
     animRef.current = requestAnimationFrame(animate);
@@ -421,10 +424,11 @@ export default function HolographicFunnel({
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.scale(dpr, dpr);
-        ctx.fillStyle = "#FFFFFF";
+        ctx.fillStyle = "#080C0A";
         ctx.fillRect(0, 0, rect.width, rect.height);
       }
-      yPosEmittedRef.current = false; // Re-emit on resize
+      yPosEmittedRef.current = false;
+      frameCountRef.current = 0;
     };
 
     resize();
@@ -472,7 +476,11 @@ export default function HolographicFunnel({
             <span className="font-semibold text-gray-700 tabular-nums">
               {fmt.count(funnelTop)}
             </span>{" "}
-            total users
+            users &middot;{" "}
+            <span className="font-semibold text-gray-700 tabular-nums">
+              {overallConversion.toFixed(1)}%
+            </span>{" "}
+            end-to-end
           </p>
         </div>
       </div>
@@ -480,7 +488,7 @@ export default function HolographicFunnel({
       {/* ── Main: Canvas (left) + Metrics (right) ────── */}
       <div className="flex flex-col lg:flex-row">
         {/* ── LEFT: Canvas holographic funnel ──────────── */}
-        <div className="relative lg:w-[440px] xl:w-[500px] flex-shrink-0 min-h-[420px] sm:min-h-[480px]">
+        <div className="relative lg:w-[440px] xl:w-[500px] flex-shrink-0 min-h-[540px] sm:min-h-[640px] bg-[#080C0A] rounded-2xl">
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full"
@@ -488,7 +496,7 @@ export default function HolographicFunnel({
         </div>
 
         {/* ── RIGHT: Stage Metrics (aligned to connector lines) ── */}
-        <div className="flex-1 relative min-h-[420px] sm:min-h-[480px]">
+        <div className="flex-1 relative min-h-[540px] sm:min-h-[640px]">
           {funnelData.map((stage, i) => {
             const yPos = stageYPositions[i];
             const prevReached =
@@ -507,7 +515,7 @@ export default function HolographicFunnel({
             return (
               <div
                 key={stage.slug}
-                className="flex items-center gap-3 px-5 sm:px-8"
+                className="flex items-center gap-2 px-4 sm:px-6"
                 style={
                   yPos != null
                     ? { position: "absolute", top: `${yPos}px`, left: 0, right: 0, transform: "translateY(-50%)" }
@@ -515,7 +523,7 @@ export default function HolographicFunnel({
                 }
               >
                 <div
-                  className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 border-2"
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold flex-shrink-0 border-2"
                   style={{
                     borderColor: stage.color,
                     color: stage.color,
@@ -527,7 +535,7 @@ export default function HolographicFunnel({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold text-gray-800 uppercase tracking-wide truncate">
+                    <span className="text-[11px] font-semibold text-gray-800 uppercase tracking-wider truncate">
                       {stage.label}
                     </span>
                     <span className="text-sm font-bold text-gray-900 tabular-nums flex-shrink-0">
@@ -535,8 +543,8 @@ export default function HolographicFunnel({
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className="flex-1 h-1.5 bg-surface-200/80 rounded-full overflow-hidden">
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <div className="flex-1 h-1 bg-surface-200/80 rounded-full overflow-hidden">
                       <div
                         className="h-full rounded-full transition-all duration-700"
                         style={{
@@ -576,7 +584,7 @@ export default function HolographicFunnel({
       {/* ── Summary Footer ───────────────────────────────── */}
       <div className="px-4 sm:px-6 py-4 border-t border-surface-200/60 bg-surface-50/60">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div>
+          <div className="bg-surface-50/80 rounded-xl px-4 py-3 border border-surface-200/40">
             <p className="text-[10px] uppercase tracking-[0.1em] text-brand-400 font-medium mb-1">
               Overall Conversion
             </p>
@@ -584,7 +592,7 @@ export default function HolographicFunnel({
               {overallConversion.toFixed(1)}%
             </p>
           </div>
-          <div>
+          <div className="bg-surface-50/80 rounded-xl px-4 py-3 border border-surface-200/40">
             <p className="text-[10px] uppercase tracking-[0.1em] text-brand-400 font-medium mb-1">
               Total Drop-Off
             </p>
@@ -592,7 +600,7 @@ export default function HolographicFunnel({
               {totalDropOff.toLocaleString()}
             </p>
           </div>
-          <div>
+          <div className="bg-surface-50/80 rounded-xl px-4 py-3 border border-surface-200/40">
             <p className="text-[10px] uppercase tracking-[0.1em] text-brand-400 font-medium mb-1">
               Avg Stage Conversion
             </p>
@@ -600,7 +608,7 @@ export default function HolographicFunnel({
               {avgStageConversion.toFixed(1)}%
             </p>
           </div>
-          <div>
+          <div className="bg-surface-50/80 rounded-xl px-4 py-3 border border-surface-200/40">
             <p className="text-[10px] uppercase tracking-[0.1em] text-brand-400 font-medium mb-1">
               Funnel Health
             </p>
