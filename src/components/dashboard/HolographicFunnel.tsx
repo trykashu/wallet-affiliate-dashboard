@@ -20,7 +20,6 @@ interface Props {
 
 /* ── Constants ─────────────────────────────────────────── */
 const FUNNEL_STAGES = [
-  "waitlist",
   "booked_call",
   "sent_onboarding",
   "signed_up",
@@ -35,10 +34,10 @@ FUNNEL_STAGES.forEach((s, i) => {
 const EXIT_STAGES: readonly string[] = [];
 
 /** Vertical position of each stage label (fraction of funnel height) */
-const STAGE_PCTS = [0.10, 0.30, 0.50, 0.70, 0.90];
+const STAGE_PCTS = [0.12, 0.38, 0.62, 0.88];
 
-/** Ring boundary positions — 6 lines create 5 equal bands */
-const RING_PCTS = [0, 0.2, 0.4, 0.6, 0.8, 1.0];
+/** Ring boundary positions — 5 lines create 4 equal bands */
+const RING_PCTS = [0, 0.25, 0.5, 0.75, 1.0];
 
 function formatHours(h: number): string {
   if (h < 1) return `${Math.round(h * 60)}m`;
@@ -147,7 +146,7 @@ export default function HolographicFunnel({
   }, [users, statuses, stageDurations, events]);
 
   /* ── Derived metrics ─────────────────────────────────── */
-  const lastStageName = "transaction_run";
+  const lastStageName = FUNNEL_STAGES[FUNNEL_STAGES.length - 1];
   const lastStageReached =
     funnelData.find((s) => s.slug === lastStageName)?.reachedCount ?? 0;
   const overallConversion =
@@ -200,11 +199,11 @@ export default function HolographicFunnel({
   /* ── Canvas drawing ──────────────────────────────────── */
   const drawFrame = useCallback(
     (ctx: CanvasRenderingContext2D, W: number, H: number, t: number) => {
-      const cx = W / 2;
-      const cy = H / 2 - 10;
-      const topR = Math.min(W, H) * 0.30;
-      const botR = Math.min(W, H) * 0.08;
-      const fh = H * 0.80;
+      const cx = W * 0.45;
+      const cy = H / 2;
+      const topR = W * 0.38;
+      const botR = W * 0.10;
+      const fh = H * 0.82;
       const tilt = 0.32;
       const spokeCount = 20;
       const segs = 80;
@@ -485,7 +484,7 @@ export default function HolographicFunnel({
       {/* ── Main: Canvas (left) + Metrics (right) ────── */}
       <div className="flex flex-col lg:flex-row">
         {/* ── LEFT: Canvas holographic funnel ──────────── */}
-        <div className="relative lg:w-[260px] xl:w-[300px] flex-shrink-0 h-[320px] sm:h-[360px]">
+        <div className="relative w-full lg:w-[42%] flex-shrink-0 h-[260px] sm:h-[300px]">
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full"
@@ -493,7 +492,7 @@ export default function HolographicFunnel({
         </div>
 
         {/* ── RIGHT: Stage Metrics (aligned to connector lines) ── */}
-        <div className="flex-1 relative h-[320px] sm:h-[360px]">
+        <div className="flex-1 relative h-[260px] sm:h-[300px]">
           {funnelData.map((stage, i) => {
             const yPos = stageYPositions[i];
             const prevReached =
