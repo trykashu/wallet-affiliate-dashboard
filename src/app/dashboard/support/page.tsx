@@ -68,7 +68,7 @@ export default function SupportPage() {
           <div className="space-y-4">
             <FaqItem
               q="How do I earn commissions?"
-              a="Gold and Platinum tier partners earn a commission on the first transaction each referred user completes. Gold tier earns 5% of Kashu's fee, Platinum earns 10%. Whitelabel partners earn on every transaction a client runs."
+              a="Earn commission on users that you refer who deposit funds into the wallet. Gold tier earns 5% of Kashu's fee, Platinum earns 10%. Whitelabel partners earn on every transaction a client runs."
             />
             <FaqItem
               q="How do I reach Platinum tier?"
@@ -80,7 +80,7 @@ export default function SupportPage() {
             />
             <FaqItem
               q="How does attribution work?"
-              a="When someone clicks your unique referral link and signs up for a Kashu Wallet account, they are permanently attributed to you. You earn a commission on their first transaction."
+              a="When someone clicks your unique referral link and signs up for a Kashu Wallet account, they are permanently attributed to you. You earn commission when they deposit funds into the wallet."
             />
             <FaqItem
               q="Can I have multiple referral links?"

@@ -17,13 +17,13 @@ export default async function ReferralLinkPage() {
       <div className="animate-reveal-up">
         <h1 className="text-2xl font-bold text-gray-900">Referral Link</h1>
         <p className="text-sm text-brand-400 mt-1">
-          Share your unique referral link to earn a commission on your referred users' first transaction.
+          Share your unique referral link to earn commission on users that you refer who deposit funds into the wallet.
         </p>
       </div>
 
       <ReferralLinkCard
         url={referralUrl}
-        description="Share this link to earn a commission on the first transaction each referred user completes."
+        description="Share this link to earn commission on users that you refer who deposit funds into the wallet."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -60,7 +60,7 @@ export default async function ReferralLinkPage() {
               },
               {
                 title: "Earn commissions",
-                desc: "Gold and Platinum tier partners earn a commission on the first transaction each referred user completes.",
+                desc: "Earn commission on users that you refer who deposit funds into the wallet.",
                 icon: (
                   <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
