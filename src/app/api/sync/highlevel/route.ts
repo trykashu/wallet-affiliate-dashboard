@@ -11,7 +11,7 @@
 
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { calculateEarning } from "@/lib/tier";
+import { calculateEarning, calculateKashuFee } from "@/lib/tier";
 import type { FunnelStatusSlug, AffiliateTier } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -225,7 +225,7 @@ export async function GET() {
         phone: opp.contact?.phone || null,
         status_slug: stageSlug,
         first_transaction_amount: isEarningEligible && monetaryValue ? monetaryValue : null,
-        first_transaction_fee: isEarningEligible && monetaryValue ? monetaryValue : null,
+        first_transaction_fee: isEarningEligible && monetaryValue ? calculateKashuFee(monetaryValue) : null,
         first_transaction_at: isEarningEligible && monetaryValue ? new Date().toISOString() : null,
         created_at: opp.createdAt,
       });
@@ -320,7 +320,7 @@ export async function GET() {
     let earningsCreated = 0;
     for (const row of rows) {
       if (!EARNING_ELIGIBLE_STAGES.has(row.status_slug)) continue;
-      if (!row.first_transaction_fee || row.first_transaction_fee <= 0) continue;
+      if (!row.first_transaction_amount || row.first_transaction_amount <= 0) continue;
 
       const referredUserId = upsertedLookup[row.wallet_user_id];
       if (!referredUserId) continue;
@@ -336,14 +336,16 @@ export async function GET() {
       if (existingEarning && existingEarning.length > 0) continue;
 
       const tier = affiliateTiers[row.affiliate_id] || "gold";
-      const earningAmount = calculateEarning(row.first_transaction_fee, tier);
+      const tpv = row.first_transaction_amount!;
+      const kashuFee = calculateKashuFee(tpv);
+      const earningAmount = calculateEarning(tpv, tier);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (db as any).from("earnings").insert({
         affiliate_id: row.affiliate_id,
         referred_user_id: referredUserId,
         amount: earningAmount,
-        transaction_fee_amount: row.first_transaction_fee,
+        transaction_fee_amount: kashuFee,
         tier_at_earning: tier,
         status: "pending",
       });

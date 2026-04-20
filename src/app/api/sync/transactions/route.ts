@@ -10,14 +10,13 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords } from "@/lib/airtable";
-import { calculateEarning, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
+import { calculateEarning, calculateKashuFee, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
 import type { AffiliateTier, FunnelStatusSlug } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
 const AIRTABLE_TABLE_ID = "tblyWtDBeiZAqDm8P";
 const BATCH_SIZE = 50;
-const KASHU_TAKE_RATE = 0.015;
 
 // Funnel stages ordered for "is before" comparison
 const STAGE_ORDER: FunnelStatusSlug[] = [
@@ -301,13 +300,13 @@ export async function GET() {
     let funnelEventsCreated = 0;
 
     for (const update of firstTxnUpdates) {
-      const fee = update.amount * KASHU_TAKE_RATE;
+      const kashuFee = calculateKashuFee(update.amount); // 8.5% of TPV
 
       // Update referred_user with first transaction info
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updatePayload: Record<string, unknown> = {
         first_transaction_amount: update.amount,
-        first_transaction_fee: fee,
+        first_transaction_fee: kashuFee,
         first_transaction_at: update.date || new Date().toISOString(),
       };
 
@@ -345,7 +344,7 @@ export async function GET() {
         // Create earning
         const aff = affiliateById.get(update.affiliateId);
         const tier: AffiliateTier = aff?.tier || "gold";
-        const earningAmount = calculateEarning(fee, tier);
+        const earningAmount = calculateEarning(update.amount, tier);
 
         // Check if earning already exists for this referred_user
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -363,7 +362,7 @@ export async function GET() {
               affiliate_id: update.affiliateId,
               referred_user_id: update.referredUserId,
               amount: earningAmount,
-              transaction_fee_amount: fee,
+              transaction_fee_amount: kashuFee,
               tier_at_earning: tier,
               status: "pending",
             });

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
-import { calculateEarning, getTierForVolume } from "@/lib/tier";
+import { calculateEarning, calculateKashuFee, getTierForVolume } from "@/lib/tier";
 import {
   checkUserMilestone,
   checkEarningsMilestone,
@@ -202,16 +202,16 @@ async function handleTransactionCompleted(
     );
   }
 
-  const transactionFee = data.transaction_fee ?? 0;
   const transactionAmount = data.transaction_amount ?? 0;
-  const earningAmount = calculateEarning(transactionFee, affiliate.tier);
+  const kashuFee = calculateKashuFee(transactionAmount); // 8.5% of TPV
+  const earningAmount = calculateEarning(transactionAmount, affiliate.tier);
 
   // Update referred_user with first transaction data
   await db
     .from("referred_users")
     .update({
       first_transaction_amount: transactionAmount,
-      first_transaction_fee: transactionFee,
+      first_transaction_fee: kashuFee,
       first_transaction_at: new Date().toISOString(),
       status_slug: "transaction_run" as FunnelStatusSlug,
     })
@@ -222,7 +222,7 @@ async function handleTransactionCompleted(
     affiliate_id: affiliate.id,
     referred_user_id: referredUser.id,
     amount: earningAmount,
-    transaction_fee_amount: transactionFee,
+    transaction_fee_amount: kashuFee,
     tier_at_earning: affiliate.tier,
     status: "pending" as const,
   });
@@ -293,7 +293,7 @@ async function handleTransactionCompleted(
     affiliate_id: affiliate.id,
     type: "earning_credited" as const,
     title: "New earning from referral transaction",
-    body: `You earned $${earningAmount.toFixed(2)} from a referred user's transaction fee of $${transactionFee.toFixed(2)}.`,
+    body: `You earned $${earningAmount.toFixed(2)} from a referred user's transaction of $${transactionAmount.toFixed(2)}.`,
   });
 }
 
