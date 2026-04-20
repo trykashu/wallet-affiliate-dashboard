@@ -249,7 +249,7 @@ async function handleTransactionCompleted(
         affiliate_id: affiliate.id,
         type: "tier_upgrade" as const,
         title: "Congratulations! You've been upgraded to Platinum!",
-        body: "Your referred volume has crossed $250K. You now earn 10% commission on transaction fees.",
+        body: "Your referred volume has crossed $250K. You now earn 10% of Kashu's fee on the first transaction each referred user completes.",
       });
     }
   }

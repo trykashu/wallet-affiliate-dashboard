@@ -17,13 +17,13 @@ export default async function ReferralLinkPage() {
       <div className="animate-reveal-up">
         <h1 className="text-2xl font-bold text-gray-900">Referral Link</h1>
         <p className="text-sm text-brand-400 mt-1">
-          Share your unique referral link to earn commissions on every transaction.
+          Share your unique referral link to earn a commission on your referred users' first transaction.
         </p>
       </div>
 
       <ReferralLinkCard
         url={referralUrl}
-        description="Share this link to earn commissions on every transaction your users complete."
+        description="Share this link to earn a commission on the first transaction each referred user completes."
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

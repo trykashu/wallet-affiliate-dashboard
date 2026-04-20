@@ -96,7 +96,7 @@ export default function DemoPage() {
       {/* Referral link */}
       <ReferralLinkCard
         url={referralUrl}
-        description="Share this link to earn commissions on every transaction your users complete."
+        description="Share this link to earn a commission on the first transaction each referred user completes."
       />
 
       {/* Stats row */}

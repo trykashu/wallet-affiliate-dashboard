@@ -80,7 +80,7 @@ export default function SupportPage() {
             />
             <FaqItem
               q="How does attribution work?"
-              a="When someone clicks your unique referral link and signs up for a Kashu Wallet account, they are permanently attributed to you. You earn commissions on all their future transactions."
+              a="When someone clicks your unique referral link and signs up for a Kashu Wallet account, they are permanently attributed to you. You earn a commission on their first transaction."
             />
             <FaqItem
               q="Can I have multiple referral links?"
