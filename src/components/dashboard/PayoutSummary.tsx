@@ -6,10 +6,9 @@ import type { Earning, Payout } from "@/types/database";
 interface Props {
   earnings: Earning[];
   payouts:  Payout[];
-  onRequestPayout: () => void;
 }
 
-export default function PayoutSummary({ earnings, payouts, onRequestPayout }: Props) {
+export default function PayoutSummary({ earnings, payouts }: Props) {
   const totalApproved = earnings
     .filter((e) => e.status === "approved")
     .reduce((s, e) => s + e.amount, 0);
@@ -25,25 +24,16 @@ export default function PayoutSummary({ earnings, payouts, onRequestPayout }: Pr
   const available = Math.max(0, totalApproved - totalPaid - totalPending);
 
   const stats = [
-    { label: "Available to Withdraw", value: fmt.currency(available),  highlight: true  },
-    { label: "Pending Payout",        value: fmt.currency(totalPending), highlight: false },
-    { label: "Total Paid Out",        value: fmt.currency(totalPaid),    highlight: false },
+    { label: "Available Balance",  value: fmt.currency(available),     highlight: true  },
+    { label: "Pending Payout",     value: fmt.currency(totalPending),  highlight: false },
+    { label: "Total Paid Out",     value: fmt.currency(totalPaid),     highlight: false },
   ];
 
   return (
     <div className="card p-5">
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <h3 className="text-sm font-semibold text-gray-900">Payout Summary</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Approved earnings less completed payouts</p>
-        </div>
-        <button
-          onClick={onRequestPayout}
-          disabled={available <= 0}
-          className="btn-primary text-xs px-3 py-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Request Payout
-        </button>
+      <div className="mb-5">
+        <h3 className="text-sm font-semibold text-gray-900">Payout Summary</h3>
+        <p className="text-xs text-brand-400 mt-0.5">Approved earnings less completed payouts</p>
       </div>
 
       <div className="grid grid-cols-3 gap-4">
@@ -56,6 +46,10 @@ export default function PayoutSummary({ earnings, payouts, onRequestPayout }: Pr
           </div>
         ))}
       </div>
+
+      <p className="text-xs text-brand-400 mt-4">
+        Payouts are processed automatically on the 15th of each month.
+      </p>
     </div>
   );
 }

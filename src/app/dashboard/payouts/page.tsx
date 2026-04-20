@@ -58,7 +58,7 @@ export default async function PayoutsPage() {
       <div className="animate-reveal-up">
         <h1 className="text-2xl font-bold text-gray-900">Payouts</h1>
         <p className="text-sm text-brand-400 mt-1">
-          Manage your payout accounts and request withdrawals.
+          Track your earnings and upcoming payouts.
         </p>
       </div>
 

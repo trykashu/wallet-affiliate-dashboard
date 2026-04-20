@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { PayoutAccount } from "@/types/database";
 
 interface Props {
@@ -14,48 +13,13 @@ const PROVIDER_LABELS: Record<string, string> = {
 };
 
 export default function PayoutAccountCard({ account }: Props) {
-  const [connecting, setConnecting] = useState(false);
-
-  async function handleConnect() {
-    setConnecting(true);
-    try {
-      const res = await fetch("/api/payouts/stripe-connect");
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-    } catch {
-      setConnecting(false);
-    }
-  }
-
   if (!account || !account.is_verified) {
     return (
       <div className="card p-5">
         <h3 className="text-sm font-semibold text-gray-900 mb-1">Payout Account</h3>
-        <p className="text-xs text-brand-400 mb-4">
-          Connect a bank account to receive payouts via Stripe.
+        <p className="text-xs text-brand-400">
+          No payout account on file. Bank details will be collected when you sign your agreement.
         </p>
-        <button
-          onClick={handleConnect}
-          disabled={connecting}
-          className="btn-primary text-sm w-full flex items-center justify-center gap-2 disabled:opacity-60"
-        >
-          {connecting ? (
-            <>
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
-              Redirecting…
-            </>
-          ) : (
-            <>
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
-              </svg>
-              Connect with Stripe
-            </>
-          )}
-        </button>
       </div>
     );
   }
@@ -75,9 +39,7 @@ export default function PayoutAccountCard({ account }: Props) {
           </p>
           <p className="text-xs text-brand-400">
             {PROVIDER_LABELS[account.provider]} ·{" "}
-            <span className={account.is_verified ? "text-accent" : "text-amber-400"}>
-              {account.is_verified ? "verified" : "pending"}
-            </span>
+            <span className="text-accent">verified</span>
           </p>
         </div>
       </div>

@@ -28,7 +28,7 @@ export default function PayoutHistory({ payouts, affiliateName = "Affiliate" }: 
 
       {payouts.length === 0 ? (
         <div className="px-5 py-12 text-center">
-          <p className="text-sm text-brand-400">No payouts yet — request your first payout above.</p>
+          <p className="text-sm text-brand-400">No payouts yet. Payouts are processed automatically on the 15th of each month.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
