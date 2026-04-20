@@ -148,7 +148,6 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
               <th className="th">Date</th>
               <th className="th hidden sm:table-cell">Affiliate</th>
               <th className="th hidden md:table-cell">User</th>
-              <th className="th hidden lg:table-cell">Txn Fee</th>
               <th className="th hidden lg:table-cell">Tier</th>
               <th className="th">Commission</th>
               <th className="th">Status</th>
@@ -179,9 +178,6 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
                   <span className="text-xs text-gray-600">{e.referred_user_name}</span>
                 </td>
                 <td className="td hidden lg:table-cell">
-                  <span className="text-sm text-gray-900 tabular-nums">{fmt.currency(e.transaction_fee_amount)}</span>
-                </td>
-                <td className="td hidden lg:table-cell">
                   <TierBadge tier={e.tier_at_earning} />
                 </td>
                 <td className="td">
@@ -194,7 +190,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={pendingIds.length > 0 ? 8 : 7} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={pendingIds.length > 0 ? 7 : 6} className="px-5 py-10 text-center text-sm text-brand-400">
                   No earnings match the current filter.
                 </td>
               </tr>

@@ -132,7 +132,6 @@ export default function EarningsTable({ earnings }: Props) {
             <tr className="border-b border-surface-200/60 bg-gray-50/60">
               <th className="th">Date</th>
               <th className="th">User</th>
-              <th className="th hidden sm:table-cell text-right">Txn Fee</th>
               <th className="th hidden md:table-cell">Tier</th>
               <th className="th text-right">Commission</th>
               <th className="th">Status</th>
@@ -141,7 +140,7 @@ export default function EarningsTable({ earnings }: Props) {
           <tbody className="divide-y divide-surface-200/60">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center">
+                <td colSpan={5} className="px-5 py-12 text-center">
                   <div className="w-10 h-10 mx-auto mb-3 rounded-2xl bg-surface-100 flex items-center justify-center">
                     <svg className="w-5 h-5 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
@@ -164,9 +163,6 @@ export default function EarningsTable({ earnings }: Props) {
                       <p className="text-sm font-medium text-gray-900 truncate max-w-[180px]" title={earning.user_name}>
                         {earning.user_name}
                       </p>
-                    </td>
-                    <td className="td text-sm text-brand-400 hidden sm:table-cell text-right tabular-nums">
-                      {fmt.currency(Number(earning.transaction_fee_amount))}
                     </td>
                     <td className="td hidden md:table-cell">
                       <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${tierStyle.className}`}>

@@ -121,6 +121,7 @@ export async function GET() {
     const rows: TxnRow[] = [];
     let skippedNoReferrer = 0;
     let skippedNoMatch = 0;
+    let skippedNotTransferIn = 0;
     const unmatchedReferrers: string[] = [];
 
     // Track which affiliates have Transfer In transactions for volume update
@@ -163,6 +164,13 @@ export async function GET() {
       // Parse fields
       const amount = Number(fields["Amount"]) || 0;
       const transactionType = (fields["Transaction Type"] as string) || "Unknown";
+
+      // Only sync Transfer In transactions
+      if (transactionType !== "Transfer In") {
+        skippedNotTransferIn++;
+        continue;
+      }
+
       const transactionId = (fields["Transaction ID"] as string) || null;
       const dateTxn = (fields["Date Txn Started"] as string) || null;
       const emailArr = fields["Email"] as string[] | undefined;
@@ -378,6 +386,7 @@ export async function GET() {
       matched: rows.length,
       skipped_no_referrer: skippedNoReferrer,
       skipped_no_match: skippedNoMatch,
+      skipped_not_transfer_in: skippedNotTransferIn,
       unmatched_referrers: unmatchedReferrers.length > 0 ? unmatchedReferrers : undefined,
       upserted,
       volume_updated: volumeUpdated,

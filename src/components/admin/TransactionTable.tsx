@@ -27,7 +27,6 @@ export default function TransactionTable({
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [affiliateFilter, setAffiliateFilter] = useState<string>("all");
 
   function toggleSort(key: SortKey) {
@@ -46,10 +45,9 @@ export default function TransactionTable({
           (tx.transaction_external_id?.toLowerCase().includes(q) ?? false)
       );
     }
-    if (typeFilter !== "all") list = list.filter((tx) => tx.transaction_type === typeFilter);
     if (affiliateFilter !== "all") list = list.filter((tx) => tx.affiliate_id === affiliateFilter);
     return list;
-  }, [transactions, search, typeFilter, affiliateFilter]);
+  }, [transactions, search, affiliateFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -62,13 +60,6 @@ export default function TransactionTable({
       return sortDir === "desc" ? bDate - aDate : aDate - bDate;
     });
   }, [filtered, sortKey, sortDir]);
-
-  // Unique transaction types from data
-  const txTypes = useMemo(() => {
-    const set = new Set<string>();
-    for (const tx of transactions) set.add(tx.transaction_type);
-    return Array.from(set).sort();
-  }, [transactions]);
 
   function SortBtn({ col, label }: { col: SortKey; label: string }) {
     const active = sortKey === col;
@@ -85,21 +76,6 @@ export default function TransactionTable({
     );
   }
 
-  function TypeBadge({ type }: { type: string }) {
-    const isIn = type === "Transfer In";
-    return (
-      <span
-        className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
-          isIn
-            ? "bg-green-50 text-green-700 border-green-200"
-            : "bg-amber-50 text-amber-700 border-amber-200"
-        }`}
-      >
-        {type}
-      </span>
-    );
-  }
-
   return (
     <div className="card overflow-hidden">
       {/* Header */}
@@ -107,7 +83,7 @@ export default function TransactionTable({
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Transactions</h3>
           <p className="text-xs text-brand-400 mt-0.5">
-            {search || typeFilter !== "all" || affiliateFilter !== "all"
+            {search || affiliateFilter !== "all"
               ? `${sorted.length} of ${transactions.length}`
               : transactions.length}{" "}
             transactions
@@ -127,16 +103,6 @@ export default function TransactionTable({
               className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
             />
           </div>
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="text-xs rounded-lg border border-gray-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
-          >
-            <option value="all">All types</option>
-            {txTypes.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
           <select
             value={affiliateFilter}
             onChange={(e) => setAffiliateFilter(e.target.value)}
@@ -159,7 +125,6 @@ export default function TransactionTable({
               <th className="th hidden sm:table-cell">User Email</th>
               <th className="th hidden md:table-cell">Affiliate</th>
               <th className="th"><SortBtn col="amount" label="Amount" /></th>
-              <th className="th">Type</th>
               <th className="th hidden lg:table-cell">Transaction ID</th>
             </tr>
           </thead>
@@ -182,9 +147,6 @@ export default function TransactionTable({
                     {fmt.currency(tx.amount)}
                   </span>
                 </td>
-                <td className="td">
-                  <TypeBadge type={tx.transaction_type} />
-                </td>
                 <td className="td hidden lg:table-cell">
                   <span className="text-[11px] text-brand-400 font-mono">
                     {tx.transaction_external_id
@@ -198,7 +160,7 @@ export default function TransactionTable({
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={5} className="px-5 py-10 text-center text-sm text-brand-400">
                   No transactions match the current filters.
                 </td>
               </tr>
@@ -209,7 +171,7 @@ export default function TransactionTable({
 
       <div className="px-5 py-3 border-t border-surface-200/60 bg-surface-50/60">
         <p className="text-xs text-brand-400">
-          {search || typeFilter !== "all" || affiliateFilter !== "all"
+          {search || affiliateFilter !== "all"
             ? `${sorted.length} of ${transactions.length}`
             : transactions.length}{" "}
           transactions total

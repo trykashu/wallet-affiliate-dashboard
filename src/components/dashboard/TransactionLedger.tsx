@@ -13,32 +13,16 @@ interface Props {
   transactions: TransactionWithUser[];
 }
 
-const TYPE_STYLES: Record<string, { label: string; className: string }> = {
-  "Transfer In": {
-    label: "Transfer In",
-    className: "bg-emerald-50 text-emerald-700 border border-emerald-200",
-  },
-  "Transfer Out": {
-    label: "Transfer Out",
-    className: "bg-amber-50 text-amber-700 border border-amber-200",
-  },
-};
-
 export default function TransactionLedger({ transactions }: Props) {
-  const [filter, setFilter] = useState<"all" | "Transfer In" | "Transfer Out">("all");
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   const filtered = useMemo(() => {
-    const result = filter === "all"
-      ? transactions
-      : transactions.filter((t) => t.transaction_type === filter);
-
-    return [...result].sort((a, b) => {
+    return [...transactions].sort((a, b) => {
       const aDate = a.transaction_date ? new Date(a.transaction_date).getTime() : 0;
       const bDate = b.transaction_date ? new Date(b.transaction_date).getTime() : 0;
       return sortOrder === "desc" ? bDate - aDate : aDate - bDate;
     });
-  }, [transactions, filter, sortOrder]);
+  }, [transactions, sortOrder]);
 
   const totalIn = useMemo(
     () => transactions.filter((t) => t.transaction_type === "Transfer In").reduce((s, t) => s + t.amount, 0),
@@ -72,27 +56,6 @@ export default function TransactionLedger({ transactions }: Props) {
             </p>
           </div>
 
-          {/* Filter */}
-          <div className="flex gap-1.5">
-            {(["all", "Transfer In", "Transfer Out"] as const).map((val) => {
-              const isActive = filter === val;
-              const label = val === "all" ? "All" : val;
-              return (
-                <button
-                  key={val}
-                  onClick={() => setFilter(val)}
-                  className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                    isActive
-                      ? "bg-brand-600 text-white"
-                      : "bg-surface-100 text-brand-400 hover:text-gray-900"
-                  }`}
-                >
-                  {label}
-                </button>
-              );
-            })}
-          </div>
-
           {/* Sort */}
           <button
             onClick={() => setSortOrder((s) => (s === "desc" ? "asc" : "desc"))}
@@ -114,17 +77,11 @@ export default function TransactionLedger({ transactions }: Props) {
               <th className="th">Date</th>
               <th className="th">User</th>
               <th className="th text-right">Amount</th>
-              <th className="th hidden sm:table-cell">Type</th>
               <th className="th hidden md:table-cell">Transaction ID</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-200/60">
-            {filtered.map((txn) => {
-              const typeStyle = TYPE_STYLES[txn.transaction_type] ?? {
-                label: txn.transaction_type,
-                className: "bg-gray-50 text-gray-700 border border-gray-200",
-              };
-              return (
+            {filtered.map((txn) => (
                 <tr key={txn.id} className="hover:bg-surface-50/80 transition-colors duration-100">
                   <td className="td text-xs text-brand-400 whitespace-nowrap">
                     {txn.transaction_date ? fmt.date(txn.transaction_date) : "—"}
@@ -142,19 +99,13 @@ export default function TransactionLedger({ transactions }: Props) {
                   <td className="td text-sm font-semibold text-gray-900 text-right tabular-nums">
                     {fmt.currency(txn.amount)}
                   </td>
-                  <td className="td hidden sm:table-cell">
-                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${typeStyle.className}`}>
-                      {typeStyle.label}
-                    </span>
-                  </td>
                   <td className="td hidden md:table-cell">
                     <span className="text-xs text-brand-400 font-mono truncate max-w-[150px] block">
                       {txn.transaction_external_id || "—"}
                     </span>
                   </td>
                 </tr>
-              );
-            })}
+            ))}
           </tbody>
         </table>
       </div>
