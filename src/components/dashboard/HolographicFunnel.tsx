@@ -202,9 +202,9 @@ export default function HolographicFunnel({
     (ctx: CanvasRenderingContext2D, W: number, H: number, t: number) => {
       const cx = W / 2;
       const cy = H / 2 - 10;
-      const topR = Math.min(W, H) * 0.38;
-      const botR = Math.min(W, H) * 0.10;
-      const fh = Math.min(W, H) * 0.78;
+      const topR = Math.min(W, H) * 0.30;
+      const botR = Math.min(W, H) * 0.08;
+      const fh = H * 0.80;
       const tilt = 0.32;
       const spokeCount = 20;
       const segs = 80;
@@ -485,7 +485,7 @@ export default function HolographicFunnel({
       {/* ── Main: Canvas (left) + Metrics (right) ────── */}
       <div className="flex flex-col lg:flex-row">
         {/* ── LEFT: Canvas holographic funnel ──────────── */}
-        <div className="relative lg:w-[440px] xl:w-[500px] flex-shrink-0 min-h-[420px] sm:min-h-[500px]">
+        <div className="relative lg:w-[260px] xl:w-[300px] flex-shrink-0 h-[320px] sm:h-[360px]">
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full"
@@ -493,7 +493,7 @@ export default function HolographicFunnel({
         </div>
 
         {/* ── RIGHT: Stage Metrics (aligned to connector lines) ── */}
-        <div className="flex-1 relative min-h-[420px] sm:min-h-[500px]">
+        <div className="flex-1 relative h-[320px] sm:h-[360px]">
           {funnelData.map((stage, i) => {
             const yPos = stageYPositions[i];
             const prevReached =
