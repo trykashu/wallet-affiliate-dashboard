@@ -45,10 +45,9 @@ export default function LoginForm({ initialError }: LoginFormProps) {
       setStatus("error");
       setErrorMsg(error.message);
     } else {
+      // Post-login returns a redirect — navigate to it directly
       const next = getRedirectTarget();
-      const res = await fetch(`/api/auth/post-login?next=${encodeURIComponent(next)}`);
-      const data = await res.json();
-      window.location.href = data.redirect || next;
+      window.location.href = `/api/auth/post-login?next=${encodeURIComponent(next)}`;
     }
   }
 
@@ -280,7 +279,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
           <p className="mt-8 text-center text-sm text-gray-500">
             New to Kashu Wallet Affiliates?{" "}
             <a
-              href="https://payments.kashupay.com/wallet-affiliate-application"
+              href="https://www.kashupay.com/affiliates"
               target="_blank"
               rel="noopener noreferrer"
               className="text-brand-600 hover:text-brand-700 font-semibold transition-colors"

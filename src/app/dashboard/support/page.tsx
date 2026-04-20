@@ -68,7 +68,7 @@ export default function SupportPage() {
           <div className="space-y-4">
             <FaqItem
               q="How do I earn commissions?"
-              a="Earn commission on users that you refer who deposit funds into the wallet. Gold tier earns 5% of Kashu's fee, Platinum earns 10%. Whitelabel partners earn on every transaction a client runs."
+              a="You earn commission on users that you refer who deposit funds into the wallet. Gold tier earns 5% of Kashu's fee, Platinum tier earns 10%."
             />
             <FaqItem
               q="How do I reach Platinum tier?"
