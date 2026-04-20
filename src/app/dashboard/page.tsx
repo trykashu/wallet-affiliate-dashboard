@@ -1,26 +1,13 @@
 import { getAffiliateContext } from "@/lib/affiliate-context";
 import { fmt } from "@/lib/fmt";
-import type { FunnelStatusSlug, ReferredUser } from "@/types/database";
+import type { FunnelStatusSlug, ReferredUser, FunnelEvent, FunnelStatus, StageDuration } from "@/types/database";
 import StatsRow from "@/components/dashboard/StatsRow";
 import ReferralLinkCard from "@/components/dashboard/ReferralLinkCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
 import type { RecentEvent } from "@/components/dashboard/RecentActivity";
-import EarningsCard from "@/components/dashboard/EarningsCard";
-import FunnelChart from "@/components/dashboard/FunnelChart";
+import HolographicFunnel from "@/components/dashboard/HolographicFunnel";
 
 export const dynamic = "force-dynamic";
-
-/** Slugs ordered by funnel position (early to late). */
-const FUNNEL_ORDER: FunnelStatusSlug[] = [
-  "waitlist",
-  "booked_call",
-  "sent_onboarding",
-  "signed_up",
-  "transaction_run",
-  "funds_in_wallet",
-  "ach_initiated",
-  "funds_in_bank",
-];
 
 export default async function DashboardPage() {
   const ctx = await getAffiliateContext();
@@ -35,24 +22,29 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false });
   const users: ReferredUser[] = (usersRaw ?? []) as ReferredUser[];
 
-  // ── 2. Compute stage counts (cumulative: each user at their current stage) ──
-  const stageCounts: Record<FunnelStatusSlug, number> = {
-    waitlist: 0,
-    booked_call: 0,
-    sent_onboarding: 0,
-    signed_up: 0,
-    transaction_run: 0,
-    funds_in_wallet: 0,
-    ach_initiated: 0,
-    funds_in_bank: 0,
-  };
-  for (const u of users) {
-    if (stageCounts[u.status_slug] !== undefined) {
-      stageCounts[u.status_slug]++;
-    }
+  // ── 2. Fetch funnel statuses ─────────────────────────────────
+  const { data: statusesRaw } = await db
+    .from("funnel_statuses")
+    .select("*")
+    .order("sort_order", { ascending: true });
+  const funnelStatuses: FunnelStatus[] = (statusesRaw ?? []) as FunnelStatus[];
+
+  // ── 3. Fetch funnel events for this affiliate's users ───────
+  const userIds = users.map((u) => u.id);
+  let funnelEvents: FunnelEvent[] = [];
+  if (userIds.length > 0) {
+    const { data: funnelEventsRaw } = await db
+      .from("funnel_events")
+      .select("id, referred_user_id, from_status, to_status, created_at")
+      .in("referred_user_id", userIds)
+      .order("created_at", { ascending: true });
+    funnelEvents = (funnelEventsRaw ?? []) as FunnelEvent[];
   }
 
-  // ── 3. Fetch recent funnel events (last 10) ─────────────────
+  // ── 4. Compute stage durations from funnel events ───────────
+  const stageDurations = computeStageDurations(funnelEvents);
+
+  // ── 5. Fetch recent funnel events (last 10) ─────────────────
   const { data: eventsRaw } = await db
     .from("funnel_events")
     .select("id, from_status, to_status, created_at, referred_users(full_name)")
@@ -67,48 +59,7 @@ export default async function DashboardPage() {
     (e) => e.referred_users !== null
   );
 
-  // ── 4. Fetch earnings summary ───────────────────────────────
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-
-  const [
-    { data: earningsAll },
-    { data: earningsMonth },
-    { data: earningsPending },
-    { data: earningsPaid },
-  ] = await Promise.all([
-    db
-      .from("earnings")
-      .select("amount")
-      .eq("affiliate_id", affiliateId),
-    db
-      .from("earnings")
-      .select("amount")
-      .eq("affiliate_id", affiliateId)
-      .gte("created_at", monthStart),
-    db
-      .from("earnings")
-      .select("amount")
-      .eq("affiliate_id", affiliateId)
-      .eq("status", "pending"),
-    db
-      .from("earnings")
-      .select("amount")
-      .eq("affiliate_id", affiliateId)
-      .eq("status", "paid"),
-  ]);
-
-  const sum = (rows: { amount: number }[] | null) =>
-    (rows ?? []).reduce((acc, r) => acc + (r.amount ?? 0), 0);
-
-  const earningsSummary = {
-    total:     sum(earningsAll),
-    thisMonth: sum(earningsMonth),
-    pending:   sum(earningsPending),
-    paid:      sum(earningsPaid),
-  };
-
-  // ── 5. Total Transfer In volume ──────────────────────────────
+  // ── 6. Total Transfer In volume ──────────────────────────────
   const { data: volumeRows } = await db
     .from("transactions")
     .select("amount")
@@ -119,11 +70,12 @@ export default async function DashboardPage() {
     0
   );
 
-  // ── 6. Referral link ────────────────────────────────────────
+  const now = new Date();
+  // ── 7. Referral link ────────────────────────────────────────
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
   const referralUrl = `https://signup.kashupay.com?referrer=${affiliate.attribution_id}`;
 
-  // ── 7. Greeting + hero stats ─────────────────────────────────
+  // ── 8. Greeting + hero stats ─────────────────────────────────
   const hour = now.getHours();
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
@@ -195,22 +147,50 @@ export default async function DashboardPage() {
       {/* Stats row */}
       <StatsRow users={users} />
 
-      {/* Funnel + Activity + Earnings grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-1">
-          <FunnelChart stageCounts={stageCounts} total={users.length} />
-        </div>
-        <div className="lg:col-span-1">
-          <RecentActivity events={events} />
-        </div>
-        <div className="lg:col-span-1">
-          <EarningsCard
-            summary={earningsSummary}
-            tier={affiliate.tier}
-            referredVolume={affiliate.referred_volume_total}
-          />
-        </div>
-      </div>
+      {/* Holographic Funnel */}
+      <HolographicFunnel
+        users={users}
+        statuses={funnelStatuses}
+        stageDurations={stageDurations}
+        events={funnelEvents}
+      />
+
+      {/* Recent Activity */}
+      <RecentActivity events={events} />
     </>
   );
+}
+
+/**
+ * Compute average time users spend at each stage before transitioning.
+ * Returns array of { status_slug, avg_hours }.
+ */
+function computeStageDurations(events: FunnelEvent[]): StageDuration[] {
+  const eventsByUser: Record<string, FunnelEvent[]> = {};
+  for (const e of events) {
+    if (!eventsByUser[e.referred_user_id]) eventsByUser[e.referred_user_id] = [];
+    eventsByUser[e.referred_user_id].push(e);
+  }
+
+  const durationSums: Record<string, { total: number; count: number }> = {};
+
+  for (const userEvents of Object.values(eventsByUser)) {
+    for (let i = 1; i < userEvents.length; i++) {
+      const prev = userEvents[i - 1];
+      const curr = userEvents[i];
+      if (prev.to_status) {
+        const hours = (new Date(curr.created_at).getTime() - new Date(prev.created_at).getTime()) / (1000 * 60 * 60);
+        if (hours >= 0 && hours < 8760) {
+          if (!durationSums[prev.to_status]) durationSums[prev.to_status] = { total: 0, count: 0 };
+          durationSums[prev.to_status].total += hours;
+          durationSums[prev.to_status].count++;
+        }
+      }
+    }
+  }
+
+  return Object.entries(durationSums).map(([slug, { total, count }]) => ({
+    status_slug: slug,
+    avg_hours: count > 0 ? total / count : 0,
+  }));
 }

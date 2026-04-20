@@ -9,6 +9,7 @@ import type {
   FunnelStatus,
   FunnelEvent,
   FunnelStatusSlug,
+  StageDuration,
   Earning,
   LeaderboardSnapshot,
 } from "@/types/database";
@@ -120,6 +121,19 @@ export const DEMO_FUNNEL_EVENTS: FunnelEvent[] = DEMO_REFERRED_USERS.slice(0, 15
     created_at:       makeDate(i * 2),
   };
 });
+
+// ── Stage Durations ────────────────────────────────────────────────────────
+
+export const DEMO_STAGE_DURATIONS: StageDuration[] = [
+  { status_slug: "waitlist", avg_hours: 48 },
+  { status_slug: "booked_call", avg_hours: 24 },
+  { status_slug: "sent_onboarding", avg_hours: 12 },
+  { status_slug: "signed_up", avg_hours: 6 },
+  { status_slug: "transaction_run", avg_hours: 72 },
+  { status_slug: "funds_in_wallet", avg_hours: 2 },
+  { status_slug: "ach_initiated", avg_hours: 36 },
+  { status_slug: "funds_in_bank", avg_hours: 4 },
+];
 
 // ── Recent Events (for activity feed) ───────────────────────────────────────
 

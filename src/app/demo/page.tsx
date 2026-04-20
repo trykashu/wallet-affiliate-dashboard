@@ -3,35 +3,19 @@ import {
   DEMO_AFFILIATE,
   DEMO_REFERRED_USERS,
   DEMO_RECENT_EVENTS,
-  DEMO_EARNINGS_SUMMARY,
+  DEMO_FUNNEL_STATUSES,
+  DEMO_FUNNEL_EVENTS,
+  DEMO_STAGE_DURATIONS,
 } from "@/lib/demo-data";
 import StatsRow from "@/components/dashboard/StatsRow";
 import ReferralLinkCard from "@/components/dashboard/ReferralLinkCard";
 import RecentActivity from "@/components/dashboard/RecentActivity";
-import FunnelChart from "@/components/dashboard/FunnelChart";
-import EarningsCard from "@/components/dashboard/EarningsCard";
+import HolographicFunnel from "@/components/dashboard/HolographicFunnel";
 
 export const dynamic = "force-dynamic";
 
 export default function DemoPage() {
   const users = DEMO_REFERRED_USERS;
-
-  // Compute stage counts from demo users
-  const stageCounts: Record<FunnelStatusSlug, number> = {
-    waitlist: 0,
-    booked_call: 0,
-    sent_onboarding: 0,
-    signed_up: 0,
-    transaction_run: 0,
-    funds_in_wallet: 0,
-    ach_initiated: 0,
-    funds_in_bank: 0,
-  };
-  for (const u of users) {
-    if (stageCounts[u.status_slug] !== undefined) {
-      stageCounts[u.status_slug]++;
-    }
-  }
 
   const referralUrl = `https://signup.kashupay.com?referrer=${DEMO_AFFILIATE.attribution_id}`;
 
@@ -102,22 +86,16 @@ export default function DemoPage() {
       {/* Stats row */}
       <StatsRow users={users} />
 
-      {/* Funnel + Activity + Earnings grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-        <div className="lg:col-span-1">
-          <FunnelChart stageCounts={stageCounts} total={users.length} />
-        </div>
-        <div className="lg:col-span-1">
-          <RecentActivity events={DEMO_RECENT_EVENTS} />
-        </div>
-        <div className="lg:col-span-1">
-          <EarningsCard
-            summary={DEMO_EARNINGS_SUMMARY}
-            tier={DEMO_AFFILIATE.tier}
-            referredVolume={DEMO_AFFILIATE.referred_volume_total}
-          />
-        </div>
-      </div>
+      {/* Holographic Funnel */}
+      <HolographicFunnel
+        users={users}
+        statuses={DEMO_FUNNEL_STATUSES}
+        stageDurations={DEMO_STAGE_DURATIONS}
+        events={DEMO_FUNNEL_EVENTS}
+      />
+
+      {/* Recent Activity */}
+      <RecentActivity events={DEMO_RECENT_EVENTS} />
     </>
   );
 }
