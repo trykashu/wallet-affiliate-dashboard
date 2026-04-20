@@ -7,7 +7,6 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/dashboard/users":            { title: "Users",           sub: "Track referred users through the funnel"           },
   "/dashboard/earnings":         { title: "Earnings",        sub: "Commissions, residuals, and payout history"        },
   "/dashboard/payouts":          { title: "Payouts",         sub: "Manage withdrawals and payout accounts"            },
-  "/dashboard/analytics":        { title: "Analytics",       sub: "Leaderboards, rankings, and performance trends"    },
   "/dashboard/referral-link":    { title: "Referral Links",  sub: "Share links for user recruitment"                  },
   "/dashboard/support":          { title: "Support",         sub: "Report issues, share feedback, or request features" },
   "/dashboard/profile":          { title: "My Profile",      sub: "Account & security settings"                       },
