@@ -15,6 +15,9 @@ const SettingsSchema = z.object({
   min_payout_amount: z.number().min(1).max(10000),
   default_provider: z.enum(["mercury", "stripe_connect", "manual"]),
   auto_approve_earnings: z.boolean(),
+  max_single_payout: z.number().min(100).max(100000),
+  max_daily_aggregate: z.number().min(1000).max(1000000),
+  max_batch_size: z.number().int().min(1).max(100),
 });
 
 export async function POST(request: NextRequest) {

@@ -20,6 +20,9 @@ export default function AdminSettingsForm({
   const [minPayout, setMinPayout] = useState(settings?.min_payout_amount ?? 25);
   const [provider, setProvider] = useState<PayoutProvider>(settings?.default_provider ?? "mercury");
   const [autoApprove, setAutoApprove] = useState(settings?.auto_approve_earnings ?? false);
+  const [maxSinglePayout, setMaxSinglePayout] = useState(settings?.max_single_payout ?? 5000);
+  const [maxDailyAggregate, setMaxDailyAggregate] = useState(settings?.max_daily_aggregate ?? 25000);
+  const [maxBatchSize, setMaxBatchSize] = useState(settings?.max_batch_size ?? 10);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -34,6 +37,9 @@ export default function AdminSettingsForm({
           min_payout_amount: minPayout,
           default_provider: provider,
           auto_approve_earnings: autoApprove,
+          max_single_payout: maxSinglePayout,
+          max_daily_aggregate: maxDailyAggregate,
+          max_batch_size: maxBatchSize,
         }),
       });
       if (!res.ok) throw new Error("Failed");
@@ -45,7 +51,7 @@ export default function AdminSettingsForm({
     } finally {
       setSaving(false);
     }
-  }, [minPayout, provider, autoApprove, router]);
+  }, [minPayout, provider, autoApprove, maxSinglePayout, maxDailyAggregate, maxBatchSize, router]);
 
   return (
     <div className="grid gap-6 max-w-2xl">
@@ -131,6 +137,87 @@ export default function AdminSettingsForm({
           {saved && (
             <span className="text-xs text-accent font-medium">Settings saved successfully.</span>
           )}
+        </div>
+      </div>
+
+      {/* Payout Safety Limits Card */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-1">
+          <svg className="w-4 h-4 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
+          </svg>
+          <h3 className="text-sm font-semibold text-gray-900">Payout Safety Limits</h3>
+        </div>
+        <p className="text-[10px] text-brand-400 mb-5">
+          These limits prevent unauthorized or excessive payouts via the Mercury API. All Mercury API calls are logged to the payout audit trail.
+        </p>
+
+        <div className="space-y-5">
+          {/* Max single payout */}
+          <div>
+            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+              Max Single Payout ($)
+            </label>
+            <div className="relative max-w-xs">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-400">$</span>
+              <input
+                type="number"
+                min={100}
+                max={100000}
+                step={100}
+                value={maxSinglePayout}
+                onChange={(e) => setMaxSinglePayout(Number(e.target.value))}
+                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900
+                           focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+              />
+            </div>
+            <p className="text-[10px] text-brand-400 mt-1">
+              Individual payouts exceeding this amount will be blocked and logged.
+            </p>
+          </div>
+
+          {/* Max daily aggregate */}
+          <div>
+            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+              Max Daily Aggregate ($)
+            </label>
+            <div className="relative max-w-xs">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-400">$</span>
+              <input
+                type="number"
+                min={1000}
+                max={1000000}
+                step={1000}
+                value={maxDailyAggregate}
+                onChange={(e) => setMaxDailyAggregate(Number(e.target.value))}
+                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900
+                           focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+              />
+            </div>
+            <p className="text-[10px] text-brand-400 mt-1">
+              Total payouts in a 24-hour rolling window cannot exceed this amount.
+            </p>
+          </div>
+
+          {/* Max batch size */}
+          <div>
+            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+              Max Batch Size
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={100}
+              step={1}
+              value={maxBatchSize}
+              onChange={(e) => setMaxBatchSize(Number(e.target.value))}
+              className="max-w-xs w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900
+                         focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+            />
+            <p className="text-[10px] text-brand-400 mt-1">
+              Maximum number of payouts to process in a single batch execution.
+            </p>
+          </div>
         </div>
       </div>
 

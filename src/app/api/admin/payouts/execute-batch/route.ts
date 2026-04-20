@@ -24,6 +24,12 @@ export async function POST() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any;
 
+  // Load safety limits
+  const { data: settings } = await svc.from("payout_settings").select("*").single();
+  const maxSingle = settings?.max_single_payout ?? 5000;
+  const maxDaily = settings?.max_daily_aggregate ?? 25000;
+  const maxBatch = settings?.max_batch_size ?? 10;
+
   // Get all requested payouts
   const { data: requestedPayouts, error: fetchError } = await svc
     .from("payouts")
@@ -35,14 +41,38 @@ export async function POST() {
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 
-  const payouts: Payout[] = requestedPayouts ?? [];
+  let payoutsToExecute: Payout[] = requestedPayouts ?? [];
 
-  if (payouts.length === 0) {
+  if (payoutsToExecute.length === 0) {
     return NextResponse.json({ success: true, executed_count: 0, message: "No requested payouts to execute." });
   }
 
+  // Enforce batch size limit
+  if (payoutsToExecute.length > maxBatch) {
+    payoutsToExecute = payoutsToExecute.slice(0, maxBatch);
+  }
+
+  // Daily aggregate check — reject entire batch if it would exceed
+  const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: recentPayouts } = await svc
+    .from("payouts")
+    .select("amount")
+    .in("status", ["processing", "completed"])
+    .gte("updated_at", twentyFourHoursAgo);
+  const dailyTotal = (recentPayouts ?? []).reduce((s: number, p: { amount: number }) => s + p.amount, 0);
+  const batchTotal = payoutsToExecute.reduce((s, p) => s + p.amount, 0);
+
+  if (dailyTotal + batchTotal > maxDaily) {
+    return NextResponse.json({
+      error: "Daily payout limit would be exceeded",
+      daily_total: dailyTotal,
+      batch_total: batchTotal,
+      limit: maxDaily,
+    }, { status: 403 });
+  }
+
   // Get payout accounts for affiliates
-  const affiliateIds = [...new Set(payouts.map((p) => p.affiliate_id))];
+  const affiliateIds = [...new Set(payoutsToExecute.map((p) => p.affiliate_id))];
   const { data: accounts } = await svc
     .from("payout_accounts")
     .select("*")
@@ -56,9 +86,23 @@ export async function POST() {
   }
 
   let executedCount = 0;
+  let blockedCount = 0;
   const errors: string[] = [];
 
-  for (const payout of payouts) {
+  for (const payout of payoutsToExecute) {
+    // Per-payout max check — skip payouts over the limit
+    if (payout.amount > maxSingle) {
+      await svc.from("payout_audit_log").insert({
+        payout_id: payout.id,
+        affiliate_id: payout.affiliate_id,
+        action: "BLOCKED_OVER_SINGLE_LIMIT",
+        amount: payout.amount,
+        initiated_by: user.id,
+      });
+      blockedCount++;
+      continue;
+    }
+
     const account = accountsByAffiliate.get(payout.affiliate_id);
 
     if (!account || !account.provider_id) {
@@ -71,13 +115,39 @@ export async function POST() {
       continue;
     }
 
+    // Semantic idempotency key
+    const period = payout.period || new Date().toISOString().slice(0, 7);
+    const idempotencyKey = `payout_${payout.affiliate_id}_${period}_${payout.id}`;
+
+    // Audit log: attempt
+    await svc.from("payout_audit_log").insert({
+      payout_id: payout.id,
+      affiliate_id: payout.affiliate_id,
+      action: "MERCURY_SEND_ATTEMPT",
+      amount: payout.amount,
+      initiated_by: user.id,
+      request_payload: { recipientId: account.provider_id, amount: payout.amount, idempotencyKey },
+    });
+
     try {
       const result = await sendACHTransfer({
         recipientId: account.provider_id,
         amount: payout.amount,
-        idempotencyKey: `payout-${payout.id}`,
+        idempotencyKey,
         note: `Affiliate commission payout - ${payout.period ?? "manual"}`,
         externalMemo: "Kashu Wallet Affiliate Commission",
+      });
+
+      // Audit log: success
+      await svc.from("payout_audit_log").insert({
+        payout_id: payout.id,
+        affiliate_id: payout.affiliate_id,
+        action: "MERCURY_SEND_SUCCESS",
+        amount: payout.amount,
+        mercury_transaction_id: result.id,
+        mercury_status: result.status,
+        initiated_by: user.id,
+        response_payload: result as unknown as Record<string, unknown>,
       });
 
       // Update payout with Mercury reference
@@ -93,7 +163,19 @@ export async function POST() {
 
       executedCount++;
     } catch (err) {
-      console.error(`[admin/payouts/execute-batch] Mercury transfer failed for payout ${payout.id}:`, err instanceof Error ? err.message : "unknown");
+      const errorMessage = err instanceof Error ? err.message : "unknown";
+      console.error(`[admin/payouts/execute-batch] Mercury transfer failed for payout ${payout.id}:`, errorMessage);
+
+      // Audit log: failure
+      await svc.from("payout_audit_log").insert({
+        payout_id: payout.id,
+        affiliate_id: payout.affiliate_id,
+        action: "MERCURY_SEND_FAILED",
+        amount: payout.amount,
+        initiated_by: user.id,
+        error_message: errorMessage,
+      });
+
       await svc
         .from("payouts")
         .update({ status: "failed", updated_at: new Date().toISOString() })
@@ -109,8 +191,9 @@ export async function POST() {
     action: "admin.payout_batch_executed",
     resourceType: "payouts",
     metadata: {
-      total: payouts.length,
+      total: payoutsToExecute.length,
       executed: executedCount,
+      blocked: blockedCount,
       failed: errors.length,
     },
   });
@@ -118,6 +201,7 @@ export async function POST() {
   return NextResponse.json({
     success: true,
     executed_count: executedCount,
+    blocked_count: blockedCount,
     failed_count: errors.length,
     errors: errors.length > 0 ? errors : undefined,
   });
