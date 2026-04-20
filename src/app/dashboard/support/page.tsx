@@ -72,7 +72,7 @@ export default function SupportPage() {
             />
             <FaqItem
               q="How do I reach Platinum tier?"
-              a="Reach $250,000 in total referred transaction volume to unlock Platinum tier, which doubles your commission rate from 5% to 10%."
+              a="Reach $100,000 in lifetime referred volume to unlock Platinum tier, which doubles your commission rate from 5% to 10%."
             />
             <FaqItem
               q="When do I get paid?"

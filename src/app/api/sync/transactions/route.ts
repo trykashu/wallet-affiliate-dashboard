@@ -263,7 +263,7 @@ export async function GET() {
 
       if (!error) volumeUpdated++;
 
-      // Check tier upgrade: volume >= $250K, currently gold, not overridden
+      // Check tier upgrade: volume >= $100K, currently gold, not overridden
       const aff = affiliateById.get(affiliateId);
       if (
         aff &&

@@ -249,7 +249,7 @@ async function handleTransactionCompleted(
         affiliate_id: affiliate.id,
         type: "tier_upgrade" as const,
         title: "Congratulations! You've been upgraded to Platinum!",
-        body: "Your referred volume has crossed $250K. You now earn 10% of Kashu's fee on users that you refer who deposit funds into the wallet.",
+        body: "Your lifetime volume has crossed $100K. You now earn 10% of Kashu's fee on users that you refer who deposit funds into the wallet.",
       });
     }
   }

@@ -65,7 +65,7 @@ function RankChange({ affiliateId, currentRank, prevRankMap }: {
 
 /** Infer tier from volume for display purposes */
 function tierFromVolume(volume: number): AffiliateTier {
-  return volume >= 250_000 ? "platinum" : "gold";
+  return volume >= 100_000 ? "platinum" : "gold";
 }
 
 export default function LeaderboardTable({ snapshots, previousSnapshots, currentAffiliateId, totalCount, periods, currentPeriod }: Props) {

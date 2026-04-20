@@ -15,7 +15,7 @@
 
 import type { AffiliateTier } from "@/types/database";
 
-export const TIER_THRESHOLDS = { platinum: 250_000 } as const;
+export const TIER_THRESHOLDS = { platinum: 100_000 } as const;
 
 /** Kashu's fee as a percentage of TPV. */
 export const KASHU_FEE_RATES = {

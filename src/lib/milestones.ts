@@ -23,7 +23,7 @@ export const EARNINGS_MILESTONES = [
 ];
 
 export const VOLUME_MILESTONES = [
-  { amount: 250_000, title: "Platinum upgrade — $250K volume!", body: "Your referred users have generated $250K in volume. Welcome to Platinum!" },
+  { amount: 100_000, title: "Platinum upgrade — $100K volume!", body: "Your referred users have generated $100K in lifetime volume. Welcome to Platinum!" },
 ];
 
 /**

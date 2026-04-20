@@ -150,7 +150,7 @@ export default function AdminSettingsForm({
               <span className="w-2 h-2 rounded-full bg-purple-400" />
               <span className="text-xs font-medium text-gray-700">Platinum</span>
             </div>
-            <span className="text-xs text-brand-400">{fmt.currencyCompact(250000)} referred volume</span>
+            <span className="text-xs text-brand-400">{fmt.currencyCompact(100000)} referred volume</span>
           </div>
         </div>
         <p className="text-[10px] text-brand-400 mt-3">
