@@ -97,6 +97,11 @@ export interface Earning {
   updated_at: string;
 }
 
+export interface StageDuration {
+  status_slug: string;
+  avg_hours: number;
+}
+
 export interface Notification {
   id: string;
   affiliate_id: string;
