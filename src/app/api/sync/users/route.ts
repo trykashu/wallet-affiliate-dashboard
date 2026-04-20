@@ -4,20 +4,10 @@
  * Fetches all records from the Airtable Launch List table and upserts them
  * into the `referred_users` Supabase table.
  *
- * Field mapping:
- *   Referrer                     → match affiliates.attribution_id → affiliate_id
- *   Client Name                  → full_name
- *   Email                        → email
- *   Phone                        → phone
- *   Status                       → status_slug (mapped)
- *   Estimated Amount             → first_transaction_amount
- *   Official Amount Liquidated   → first_transaction_fee
- *   Contact ID                   → wallet_user_id (upsert key; falls back to Airtable record ID)
- *   Date Added                   → created_at
- *
  * Only syncs records that have a Referrer matching an existing affiliate.
- * Creates earnings for records with Official Amount Liquidated > 0.
- * Logs funnel events for stage transitions.
+ * Status mapping is best-effort — defaults to "signed_up" if unknown.
+ * The key fact is that a user was referred; pipeline status will be
+ * refined later by HighLevel sync and transaction sync.
  */
 
 import { NextResponse } from "next/server";
@@ -30,31 +20,29 @@ export const dynamic = "force-dynamic";
 const BATCH_SIZE = 50;
 
 const STATUS_MAP: Record<string, FunnelStatusSlug> = {
-  "Waitlist": "waitlist",
+  Waitlist: "waitlist",
   "Booked Call": "booked_call",
   "Sent Onboarding": "sent_onboarding",
+  "Signed Up": "signed_up",
   "Run Volume": "transaction_run",
 };
 
-function parseAmount(raw: unknown): number | null {
-  if (typeof raw === "number" && isFinite(raw) && raw >= 0) return raw;
-  if (typeof raw === "string") {
-    const n = parseFloat(raw);
-    if (isFinite(n) && n >= 0) return n;
-  }
+const DEFAULT_STATUS: FunnelStatusSlug = "signed_up";
+
+/** Extract first value from a lookup array field, or return as string. */
+function extractLookup(val: unknown): string | null {
+  if (Array.isArray(val)) return val[0]?.toString() || null;
+  if (typeof val === "string" && val.length > 0) return val;
   return null;
 }
 
 interface UserRow {
   wallet_user_id: string;
   affiliate_id: string;
-  full_name: string;
-  email: string;
+  full_name: string | null;
+  email: string | null;
   phone: string | null;
   status_slug: FunnelStatusSlug;
-  first_transaction_amount: number | null;
-  first_transaction_fee: number | null;
-  first_transaction_at: string | null;
   created_at?: string;
 }
 
@@ -64,41 +52,30 @@ function buildUserRow(
 ): UserRow | null {
   const f = rec.fields;
 
-  // Must have a Referrer that matches an affiliate
-  const referrer = (f["Referrer"] as string) || null;
+  // Referrer is a lookup field (array) — extract first value
+  const referrer = extractLookup(f["Referrer"]);
   if (!referrer) return null;
+
+  // Match referrer to affiliate by attribution_id
   const affiliateId = affiliateLookup[referrer];
   if (!affiliateId) return null;
 
-  const fullName = (f["Client Name"] as string) || null;
-  if (!fullName) return null;
-
-  const email = (f["Email"] as string) || null;
-  if (!email) return null;
-
-  const statusRaw = (f["Status"] as string) || null;
-  const statusSlug = statusRaw ? STATUS_MAP[statusRaw] : undefined;
-  if (!statusSlug) return null;
-
+  // Use Contact ID as the upsert key, fall back to Airtable record ID
   const walletUserId = (f["Contact ID"] as string) || rec.id;
 
-  const transactionAmount = parseAmount(f["Estimated Amount"]);
-  const transactionFee = parseAmount(f["Official Amount Liquidated"]);
+  // Best-effort status mapping — default to signed_up if unknown
+  const statusRaw = (f["Status"] as string) || null;
+  const statusSlug = statusRaw ? (STATUS_MAP[statusRaw] ?? DEFAULT_STATUS) : DEFAULT_STATUS;
 
   const row: UserRow = {
     wallet_user_id: walletUserId,
     affiliate_id: affiliateId,
-    full_name: fullName,
-    email,
+    full_name: (f["Client Name"] as string) || null,
+    email: extractLookup(f["Email"]) || (f["Email"] as string) || null,
     phone: (f["Phone"] as string) || null,
     status_slug: statusSlug,
-    first_transaction_amount: transactionAmount,
-    first_transaction_fee: transactionFee,
-    first_transaction_at:
-      transactionFee && transactionFee > 0 ? new Date().toISOString() : null,
   };
 
-  // Preserve original created_at from Airtable
   const dateAdded = f["Date Added"] as string | undefined;
   if (dateAdded) {
     row.created_at = new Date(dateAdded).toISOString();
@@ -119,7 +96,6 @@ export async function GET() {
   }
 
   try {
-    // Fetch all records from Airtable
     const { records, apiCalls } = await fetchAllRecords(baseId, tableId);
 
     // Build affiliate lookup: attribution_id → affiliate UUID
@@ -134,19 +110,31 @@ export async function GET() {
       if (a.attribution_id) affiliateLookup[a.attribution_id] = a.id;
     }
 
-    // Build rows
+    // Build rows — only records with a valid Referrer matching an affiliate
     const rows: UserRow[] = [];
-    let skipped = 0;
+    let skippedNoReferrer = 0;
+    let skippedNoMatch = 0;
+    const unmatchedReferrers: string[] = [];
+
     for (const rec of records) {
+      const referrer = extractLookup(rec.fields["Referrer"]);
+      if (!referrer) {
+        skippedNoReferrer++;
+        continue;
+      }
+
       const row = buildUserRow(rec, affiliateLookup);
       if (row) {
         rows.push(row);
       } else {
-        skipped++;
+        skippedNoMatch++;
+        if (!unmatchedReferrers.includes(referrer)) {
+          unmatchedReferrers.push(referrer);
+        }
       }
     }
 
-    // Load existing referred_users for change detection (funnel events)
+    // Load existing referred_users for change detection
     const walletIds = rows.map((r) => r.wallet_user_id);
     const existingLookup: Record<string, { id: string; status_slug: string }> = {};
 
@@ -166,10 +154,8 @@ export async function GET() {
       }
     }
 
-    // Batch upsert referred_users
+    // Batch upsert
     let upserted = 0;
-    const upsertErrors: string[] = [];
-
     for (let i = 0; i < rows.length; i += BATCH_SIZE) {
       const batch = rows.slice(i, i + BATCH_SIZE);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -177,14 +163,10 @@ export async function GET() {
         .from("referred_users")
         .upsert(batch, { onConflict: "wallet_user_id" });
 
-      if (error) {
-        upsertErrors.push(error.message);
-      } else {
-        upserted += batch.length;
-      }
+      if (!error) upserted += batch.length;
     }
 
-    // After upsert, re-fetch to get IDs for funnel events and earnings
+    // Re-fetch IDs for funnel events
     const upsertedLookup: Record<string, string> = {};
     for (let i = 0; i < walletIds.length; i += BATCH_SIZE) {
       const batch = walletIds.slice(i, i + BATCH_SIZE);
@@ -199,7 +181,7 @@ export async function GET() {
       }
     }
 
-    // Log funnel events for stage transitions
+    // Log funnel events for new records and stage changes
     const funnelEvents: Record<string, unknown>[] = [];
     for (const row of rows) {
       const existing = existingLookup[row.wallet_user_id];
@@ -207,14 +189,12 @@ export async function GET() {
       if (!referredUserId) continue;
 
       if (!existing) {
-        // New record — log initial stage
         funnelEvents.push({
           referred_user_id: referredUserId,
           from_status: null,
           to_status: row.status_slug,
         });
       } else if (existing.status_slug !== row.status_slug) {
-        // Stage changed — log transition
         funnelEvents.push({
           referred_user_id: referredUserId,
           from_status: existing.status_slug,
@@ -231,55 +211,16 @@ export async function GET() {
       if (!error) funnelEventsCreated += batch.length;
     }
 
-    // Create earnings for records with Official Amount Liquidated > 0
-    let earningsCreated = 0;
-    for (const row of rows) {
-      if (!row.first_transaction_fee || row.first_transaction_fee <= 0) continue;
-
-      const referredUserId = upsertedLookup[row.wallet_user_id];
-      if (!referredUserId) continue;
-
-      // Check if earning already exists for this referred_user
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existingEarning } = await (db as any)
-        .from("earnings")
-        .select("id")
-        .eq("referred_user_id", referredUserId)
-        .limit(1);
-
-      if (existingEarning && existingEarning.length > 0) continue;
-
-      // Look up affiliate tier for commission calculation
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: affiliate } = await (db as any)
-        .from("affiliates")
-        .select("tier")
-        .eq("id", row.affiliate_id)
-        .single();
-
-      const tier = affiliate?.tier || "gold";
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (db as any).from("earnings").insert({
-        affiliate_id: row.affiliate_id,
-        referred_user_id: referredUserId,
-        amount: row.first_transaction_fee,
-        transaction_fee_amount: row.first_transaction_fee,
-        tier_at_earning: tier,
-        status: "pending",
-      });
-
-      if (!error) earningsCreated++;
-    }
-
     return NextResponse.json({
       success: true,
       total_fetched: records.length,
+      with_referrer: rows.length + skippedNoMatch,
+      matched: rows.length,
+      skipped_no_referrer: skippedNoReferrer,
+      skipped_no_match: skippedNoMatch,
+      unmatched_referrers: unmatchedReferrers.length > 0 ? unmatchedReferrers : undefined,
       upserted,
-      skipped,
       funnel_events_created: funnelEventsCreated,
-      earnings_created: earningsCreated,
-      errors: upsertErrors.length > 0 ? upsertErrors : undefined,
       api_calls: apiCalls,
     });
   } catch (err) {
