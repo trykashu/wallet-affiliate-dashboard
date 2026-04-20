@@ -1,67 +1,26 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import type { ReferredUser, FunnelStatus, FunnelStatusSlug } from "@/types/database";
+import type { ReferredUser } from "@/types/database";
 import { fmt } from "@/lib/fmt";
-import { funnelColor, funnelLabel, funnelLabelColor } from "@/lib/funnel-colors";
 
 interface Props {
   users: ReferredUser[];
-  funnelStatuses: FunnelStatus[];
 }
 
-// -- Helpers ------------------------------------------------------------------
-
-function StatusBadge({ slug }: { slug: FunnelStatusSlug }) {
-  const bg = funnelColor(slug);
-  const label = funnelLabel(slug);
-  const labelClr = funnelLabelColor(slug);
-  return (
-    <span
-      className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
-      style={{
-        backgroundColor: bg + "22",
-        color: labelClr,
-        border: `1px solid ${bg}44`,
-      }}
-    >
-      <span
-        className="w-1.5 h-1.5 rounded-full mr-1.5 flex-shrink-0"
-        style={{ backgroundColor: bg }}
-      />
-      {label}
-    </span>
-  );
-}
-
-// -- Component ----------------------------------------------------------------
-
-export default function UserTable({ users, funnelStatuses }: Props) {
-  const [activeFilter, setActiveFilter] = useState<FunnelStatusSlug | "all">("all");
+export default function UserTable({ users }: Props) {
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [search, setSearch] = useState("");
 
-  // Build filter options from funnel_statuses (sorted by sort_order)
-  const filterOptions = useMemo(() => {
-    const sorted = [...funnelStatuses].sort((a, b) => a.sort_order - b.sort_order);
-    return [
-      { label: "All", value: "all" as const },
-      ...sorted.map((s) => ({ label: s.label, value: s.slug })),
-    ];
-  }, [funnelStatuses]);
-
   const filtered = useMemo(() => {
-    let result =
-      activeFilter === "all"
-        ? users
-        : users.filter((u) => u.status_slug === activeFilter);
+    let result = users;
 
     if (search.trim()) {
       const q = search.toLowerCase();
       result = result.filter(
         (u) =>
-          u.full_name.toLowerCase().includes(q) ||
-          u.email.toLowerCase().includes(q)
+          (u.full_name ?? "").toLowerCase().includes(q) ||
+          (u.email ?? "").toLowerCase().includes(q)
       );
     }
 
@@ -70,20 +29,7 @@ export default function UserTable({ users, funnelStatuses }: Props) {
       const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
       return sortOrder === "desc" ? bDate - aDate : aDate - bDate;
     });
-  }, [users, activeFilter, sortOrder, search]);
-
-  const countByStatus = useMemo(() => {
-    const counts: Record<string, number> = { all: users.length };
-    for (const u of users) counts[u.status_slug] = (counts[u.status_slug] ?? 0) + 1;
-    return counts;
-  }, [users]);
-
-  const hasActiveFilters = !!search || activeFilter !== "all";
-
-  function clearAll() {
-    setSearch("");
-    setActiveFilter("all");
-  }
+  }, [users, sortOrder, search]);
 
   if (users.length === 0) {
     return (
@@ -104,7 +50,10 @@ export default function UserTable({ users, funnelStatuses }: Props) {
       {/* Header */}
       <div className="px-5 py-4 border-b border-surface-200/60">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-          <h3 className="text-sm font-semibold text-gray-900 flex-1">All Users</h3>
+          <h3 className="text-sm font-semibold text-gray-900 flex-1">
+            Referred Users
+            <span className="ml-2 text-xs font-normal text-brand-400">{users.length} total</span>
+          </h3>
 
           {/* Search */}
           <div className="relative">
@@ -133,32 +82,6 @@ export default function UserTable({ users, funnelStatuses }: Props) {
             {sortOrder === "desc" ? "Newest first" : "Oldest first"}
           </button>
         </div>
-
-        {/* Status filter tabs */}
-        <div className="flex gap-0.5 overflow-x-auto mt-3 -mb-[1px] scrollbar-none">
-          {filterOptions.map((opt) => {
-            const count = countByStatus[opt.value] ?? 0;
-            if (opt.value !== "all" && count === 0) return null;
-            const isActive = activeFilter === opt.value;
-            return (
-              <button
-                key={opt.value}
-                onClick={() => setActiveFilter(opt.value)}
-                className={`whitespace-nowrap px-3 py-2 text-xs font-medium border-b-2 transition-all duration-150
-                  ${isActive
-                    ? "border-accent text-gray-900"
-                    : "border-transparent text-brand-400 hover:text-brand-600 hover:border-surface-200/80"
-                  }`}
-              >
-                {opt.label}
-                <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold
-                  ${isActive ? "bg-accent/15 text-accent" : "bg-surface-100 text-brand-500"}`}>
-                  {count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
       </div>
 
       {/* Table */}
@@ -169,22 +92,15 @@ export default function UserTable({ users, funnelStatuses }: Props) {
               <th className="th">Name</th>
               <th className="th hidden md:table-cell">Email</th>
               <th className="th hidden lg:table-cell">Phone</th>
-              <th className="th">Status</th>
-              <th className="th hidden sm:table-cell text-right">First Txn</th>
-              <th className="th hidden sm:table-cell">Signed Up</th>
+              <th className="th hidden sm:table-cell">Referred</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-200/60">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-5 py-12 text-center">
-                  <div className="w-10 h-10 mx-auto mb-3 rounded-2xl bg-surface-100 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
-                    </svg>
-                  </div>
+                <td colSpan={4} className="px-5 py-12 text-center">
                   <p className="text-sm font-medium text-gray-900">No results</p>
-                  <p className="text-xs text-brand-400 mt-0.5">No users match the current filters.</p>
+                  <p className="text-xs text-brand-400 mt-0.5">No users match your search.</p>
                 </td>
               </tr>
             ) : (
@@ -194,32 +110,24 @@ export default function UserTable({ users, funnelStatuses }: Props) {
                     <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center flex-shrink-0">
                         <span className="text-xs font-bold text-brand-600">
-                          {user.full_name.charAt(0).toUpperCase()}
+                          {(user.full_name ?? "?").charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate" title={user.full_name}>
-                          {user.full_name}
+                        <p className="text-sm font-medium text-gray-900 truncate" title={user.full_name ?? ""}>
+                          {user.full_name ?? "—"}
                         </p>
-                        <p className="text-xs text-brand-400 mt-0.5 truncate md:hidden" title={user.email}>
-                          {user.email}
+                        <p className="text-xs text-brand-400 mt-0.5 truncate md:hidden" title={user.email ?? ""}>
+                          {user.email ?? "—"}
                         </p>
                       </div>
                     </div>
                   </td>
-                  <td className="td text-sm text-brand-400 hidden md:table-cell truncate max-w-[200px]" title={user.email}>
-                    {user.email}
+                  <td className="td text-sm text-brand-400 hidden md:table-cell truncate max-w-[200px]" title={user.email ?? ""}>
+                    {user.email ?? "—"}
                   </td>
                   <td className="td text-sm text-brand-400 hidden lg:table-cell whitespace-nowrap">
-                    {user.phone ?? "\u2014"}
-                  </td>
-                  <td className="td">
-                    <StatusBadge slug={user.status_slug} />
-                  </td>
-                  <td className="td text-sm text-brand-400 hidden sm:table-cell text-right tabular-nums">
-                    {user.first_transaction_amount != null
-                      ? fmt.currency(Number(user.first_transaction_amount))
-                      : "\u2014"}
+                    {user.phone ?? "—"}
                   </td>
                   <td className="td text-xs text-brand-400 hidden sm:table-cell">
                     {fmt.date(user.created_at)}
@@ -237,9 +145,9 @@ export default function UserTable({ users, funnelStatuses }: Props) {
           Showing <span className="text-gray-900 font-medium">{filtered.length}</span> of{" "}
           <span className="text-gray-900 font-medium">{users.length}</span> users
         </p>
-        {hasActiveFilters && (
-          <button onClick={clearAll} className="text-xs text-accent hover:text-accent/80 transition-colors">
-            Clear all filters
+        {search && (
+          <button onClick={() => setSearch("")} className="text-xs text-accent hover:text-accent/80 transition-colors">
+            Clear search
           </button>
         )}
       </div>
