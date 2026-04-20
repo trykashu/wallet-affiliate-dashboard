@@ -121,7 +121,7 @@ export default async function DashboardPage() {
 
   // ── 6. Referral link ────────────────────────────────────────
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
-  const referralUrl = `https://app.kashupay.com?promo=${affiliate.attribution_id}`;
+  const referralUrl = `https://signup.kashupay.com?referrer=${affiliate.attribution_id}`;
 
   // ── 7. Greeting + hero stats ─────────────────────────────────
   const hour = now.getHours();

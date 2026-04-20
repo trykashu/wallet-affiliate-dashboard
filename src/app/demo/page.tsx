@@ -33,7 +33,7 @@ export default function DemoPage() {
     }
   }
 
-  const referralUrl = `https://app.kashupay.com?promo=${DEMO_AFFILIATE.attribution_id}`;
+  const referralUrl = `https://signup.kashupay.com?referrer=${DEMO_AFFILIATE.attribution_id}`;
 
   const hour = new Date().getHours();
   const greeting =
