@@ -159,8 +159,26 @@ export interface PayoutSettings {
   min_payout_amount: number;
   default_provider: PayoutProvider;
   auto_approve_earnings: boolean;
+  max_single_payout: number;
+  max_daily_aggregate: number;
+  max_batch_size: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface PayoutAuditLog {
+  id: string;
+  payout_id: string | null;
+  affiliate_id: string | null;
+  action: string;
+  amount: number | null;
+  mercury_transaction_id: string | null;
+  mercury_status: string | null;
+  request_payload: Record<string, unknown> | null;
+  response_payload: Record<string, unknown> | null;
+  error_message: string | null;
+  initiated_by: string | null;
+  created_at: string;
 }
 
 export interface Admin {
@@ -275,6 +293,11 @@ export interface Database {
         Row: PayoutSettings;
         Insert: WithOptionalId<PayoutSettings>;
         Update: UpdatableFields<PayoutSettings>;
+      };
+      payout_audit_log: {
+        Row: PayoutAuditLog;
+        Insert: WithOptionalId<PayoutAuditLog>;
+        Update: UpdatableFields<PayoutAuditLog>;
       };
       admins: {
         Row: Admin;
