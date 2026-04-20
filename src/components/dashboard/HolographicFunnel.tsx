@@ -260,8 +260,8 @@ export default function HolographicFunnel({
         const alpha = 0.08 + 0.5 * brightness;
         const col =
           s % 3 === 0
-            ? `rgba(0,222,143,${alpha})`
-            : `rgba(0,150,100,${alpha})`;
+            ? `rgba(0,190,120,${alpha})`
+            : `rgba(12,81,71,${alpha})`;
         ctx.beginPath();
         for (let ri = 0; ri < RING_PCTS.length; ri++) {
           const pct = RING_PCTS[ri];
@@ -293,7 +293,7 @@ export default function HolographicFunnel({
         const size = p.size * (1 - p.pct * 0.5);
 
         const g = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
-        g.addColorStop(0, `rgba(0,222,143,${p.alpha * fade * 0.9})`);
+        g.addColorStop(0, `rgba(0,190,120,${p.alpha * fade * 0.7})`);
         g.addColorStop(1, "rgba(0,222,143,0)");
         ctx.beginPath();
         ctx.arc(x, y, size * 3, 0, Math.PI * 2);
@@ -301,7 +301,7 @@ export default function HolographicFunnel({
         ctx.fill();
         ctx.beginPath();
         ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,222,143,${p.alpha * fade})`;
+        ctx.fillStyle = `rgba(0,160,100,${p.alpha * fade})`;
         ctx.fill();
       }
 
@@ -343,7 +343,7 @@ export default function HolographicFunnel({
         // Circle ring — dark fill on dark bg
         ctx.beginPath();
         ctx.arc(circleX, circleY, circleR, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(8,12,10,0.95)";
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
         ctx.fill();
         ctx.strokeStyle = `rgba(${cr},${cg},${cb},${0.8 + 0.2 * pulse})`;
         ctx.lineWidth = 2.5;
@@ -361,7 +361,7 @@ export default function HolographicFunnel({
       const tipG = ctx.createRadialGradient(cx, tipY, 0, cx, tipY, botR * 3);
       tipG.addColorStop(0, `rgba(0,222,143,${0.6 * tp})`);
       tipG.addColorStop(0.4, `rgba(12,81,71,${0.1 * tp})`);
-      tipG.addColorStop(1, "rgba(8,12,10,0)");
+      tipG.addColorStop(1, "rgba(255,255,255,0)");
       ctx.beginPath();
       ctx.arc(cx, tipY, botR * 3, 0, Math.PI * 2);
       ctx.fillStyle = tipG;
@@ -388,7 +388,7 @@ export default function HolographicFunnel({
     }
 
     // Fade trail — dark bg
-    ctx.fillStyle = "rgba(8,12,10,0.25)";
+    ctx.fillStyle = "rgba(255,255,255,0.30)";
     ctx.fillRect(0, 0, W, H);
 
     const yPositions = drawFrame(ctx, W, H, tRef.current);
@@ -424,7 +424,7 @@ export default function HolographicFunnel({
       const ctx = canvas.getContext("2d");
       if (ctx) {
         ctx.scale(dpr, dpr);
-        ctx.fillStyle = "#080C0A";
+        ctx.fillStyle = "#FFFFFF";
         ctx.fillRect(0, 0, rect.width, rect.height);
       }
       yPosEmittedRef.current = false;
@@ -488,7 +488,7 @@ export default function HolographicFunnel({
       {/* ── Main: Canvas (left) + Metrics (right) ────── */}
       <div className="flex flex-col lg:flex-row">
         {/* ── LEFT: Canvas holographic funnel ──────────── */}
-        <div className="relative lg:w-[440px] xl:w-[500px] flex-shrink-0 min-h-[540px] sm:min-h-[640px] bg-[#080C0A] rounded-2xl">
+        <div className="relative lg:w-[440px] xl:w-[500px] flex-shrink-0 min-h-[540px] sm:min-h-[640px]">
           <canvas
             ref={canvasRef}
             className="absolute inset-0 w-full h-full"
