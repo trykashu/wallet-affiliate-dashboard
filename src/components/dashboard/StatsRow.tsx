@@ -9,11 +9,11 @@ interface CardDef {
   label: string;
   value: string;
   sub: string;
-  variant: "default" | "accent" | "pipeline" | "rate";
+  variant: "default" | "accent" | "rate";
   icon: React.ReactNode;
 }
 
-const STAGGER = ["stagger-1", "stagger-2", "stagger-3", "stagger-4"];
+const STAGGER = ["stagger-1", "stagger-2", "stagger-3"];
 
 /** Slugs that count as "transacted" (transaction_run or later in the funnel) */
 const TRANSACTED_SLUGS = ["transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank"];
@@ -21,7 +21,6 @@ const TRANSACTED_SLUGS = ["transaction_run", "funds_in_wallet", "ach_initiated",
 export default function StatsRow({ users }: Props) {
   const total      = users.length;
   const transacted = users.filter((u) => TRANSACTED_SLUGS.includes(u.status_slug)).length;
-  const completed  = users.filter((u) => u.status_slug === "funds_in_bank").length;
   const convRate   = total > 0 ? transacted / total : 0;
 
   const cards: CardDef[] = [
@@ -40,21 +39,10 @@ export default function StatsRow({ users }: Props) {
       label:   "Transacted",
       value:   fmt.count(transacted),
       sub:     "ran a transaction",
-      variant: "pipeline",
-      icon: (
-        <svg className="w-[18px] h-[18px]" aria-hidden="true" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
-        </svg>
-      ),
-    },
-    {
-      label:   "Completed",
-      value:   fmt.count(completed),
-      sub:     "funds in bank",
       variant: "accent",
       icon: (
         <svg className="w-[18px] h-[18px]" aria-hidden="true" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" />
         </svg>
       ),
     },
@@ -72,25 +60,18 @@ export default function StatsRow({ users }: Props) {
   ];
 
   return (
-    <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-5">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-5">
       {cards.map((card, idx) => {
-        const isAccent   = card.variant === "accent";
-        const isPipeline = card.variant === "pipeline";
-        const isRate     = card.variant === "rate";
+        const isAccent = card.variant === "accent";
+        const isRate   = card.variant === "rate";
 
         const iconClass = isAccent
           ? "bg-accent/10 text-accent border-accent/15"
-          : isPipeline
-          ? "bg-brand-50 text-brand-600 border-brand-100"
           : isRate
           ? "bg-brand-50 text-brand-600 border-brand-100"
           : "bg-surface-100 text-brand-500 border-surface-200";
 
-        const valueClass = isAccent
-          ? "text-gradient"
-          : isRate
-          ? "text-gradient"
-          : "text-gray-900";
+        const valueClass = isAccent || isRate ? "text-gradient" : "text-gray-900";
 
         const cardClass = isAccent
           ? "stat-card-accent animate-reveal-up"
@@ -123,7 +104,7 @@ export default function StatsRow({ users }: Props) {
             </p>
             <p className="text-[11px] text-brand-400/60 mt-0.5">{card.sub}</p>
 
-            {/* Bottom accent line on completed card */}
+            {/* Bottom accent line on transacted card */}
             {isAccent && (
               <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-accent/80 to-transparent" />
             )}
