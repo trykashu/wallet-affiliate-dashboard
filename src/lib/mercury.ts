@@ -35,7 +35,8 @@ async function mercuryFetch(path: string, options: RequestInit = {}) {
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(safeMercuryError(res.status, body));
+    console.error(`[mercury] API error ${res.status} on ${path}:`, body);
+    throw new Error(`Mercury API ${res.status}: ${body.slice(0, 500)}`);
   }
 
   return res.json();
@@ -59,25 +60,31 @@ export async function getOrCreateRecipient(
   accountNumber: string,
   email?: string
 ): Promise<string> {
+  const payload = {
+    name,
+    emails: email ? [email] : ["payouts@kashupay.com"],
+    electronicRoutingInfo: {
+      accountNumber,
+      routingNumber,
+      electronicAccountType: "businessChecking",
+      address: {
+        address1: "1603 Capitol Ave Ste 415",
+        city: "Cheyenne",
+        region: "WY",
+        postalCode: "82001",
+        country: "US",
+      },
+    },
+  };
+
+  console.log("[mercury] Creating recipient:", JSON.stringify(payload));
+
   const data = await mercuryFetch(`/recipients`, {
     method: "POST",
-    body: JSON.stringify({
-      name,
-      emails: email ? [email] : [`payouts@kashupay.com`],
-      electronicRoutingInfo: {
-        accountNumber,
-        routingNumber,
-        electronicAccountType: "businessChecking",
-        address: {
-          address1: "1603 Capitol Ave Ste 415",
-          city: "Cheyenne",
-          state: "WY",
-          postalCode: "82001",
-        },
-      },
-    }),
+    body: JSON.stringify(payload),
   });
 
+  console.log("[mercury] Recipient created:", data.id);
   return data.id;
 }
 
