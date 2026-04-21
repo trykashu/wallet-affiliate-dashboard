@@ -18,12 +18,25 @@ const InviteSchema = z.object({
 });
 
 export async function POST(request: NextRequest) {
-  // 1. Auth: admin session only
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
+  // 1. Auth: admin session OR API key (for n8n automation)
+  const apiKey = request.headers.get("x-api-key") ?? "";
+  const expectedKey = process.env.AIRTABLE_WEBHOOK_SECRET ?? "";
+  const hasApiKey = apiKey.length > 0 && expectedKey.length > 0 && apiKey === expectedKey;
 
-  if (!user || !isAdminEmail(user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  let adminUserId: string;
+  let adminEmail: string;
+
+  if (hasApiKey) {
+    adminUserId = "automation";
+    adminEmail = "n8n@kashupay.com";
+  } else {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user || !isAdminEmail(user.email)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    adminUserId = user.id;
+    adminEmail = user.email ?? "unknown";
   }
 
   // 2. Validate body
@@ -88,8 +101,8 @@ export async function POST(request: NextRequest) {
 
   // 6. Audit log
   logSecurityEvent({
-    userId: user.id,
-    userEmail: user.email,
+    userId: adminUserId,
+    userEmail: adminEmail,
     action: "admin.invite_affiliate",
     resourceType: "affiliate",
     resourceId: affiliate.id,

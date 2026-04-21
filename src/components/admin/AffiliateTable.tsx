@@ -22,6 +22,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
   const [overridingTier, setOverridingTier] = useState<string | null>(null);
   const [inviteOpen,     setInviteOpen]     = useState(false);
+  const [invitingId,     setInvitingId]     = useState<string | null>(null);
 
   // -- Actions --
 
@@ -79,6 +80,27 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
       alert("Failed to override tier. Please try again.");
     } finally {
       setOverridingTier(null);
+    }
+  }, [router]);
+
+  const handleInvite = useCallback(async (affiliateId: string, email: string) => {
+    setInvitingId(affiliateId);
+    try {
+      const res = await fetch("/api/admin/invite-affiliate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || "Failed to send invite");
+      } else {
+        router.refresh();
+      }
+    } catch {
+      alert("Failed to send invite.");
+    } finally {
+      setInvitingId(null);
     }
   }, [router]);
 
@@ -346,6 +368,27 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                           </>
                         )}
                       </button>
+
+                      {/* Invite / Invited status */}
+                      {!aff.hasLogin ? (
+                        <button
+                          onClick={() => handleInvite(aff.id, aff.email)}
+                          disabled={invitingId === aff.id}
+                          className="flex items-center gap-1 text-xs font-medium text-white bg-brand-600 hover:bg-brand-700
+                                     rounded-lg px-2.5 py-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {invitingId === aff.id ? (
+                            <Spinner />
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                            </svg>
+                          )}
+                          Invite
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-accent font-medium">Invited &#10003;</span>
+                      )}
                     </div>
                   </td>
                 </tr>

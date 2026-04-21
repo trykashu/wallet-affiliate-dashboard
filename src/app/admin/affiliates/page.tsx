@@ -12,6 +12,7 @@ export interface AffiliateWithCounts extends Affiliate {
   volume: number;
   totalEarnings: number;
   hasBankAccount: boolean;
+  hasLogin: boolean;
 }
 
 export default async function AdminAffiliatesPage() {
@@ -63,6 +64,7 @@ export default async function AdminAffiliatesPage() {
       volume,
       totalEarnings: earningsByAffiliate.get(a.id) ?? 0,
       hasBankAccount: affiliatesWithBank.has(a.id),
+      hasLogin: !!a.user_id,
     };
   });
 
