@@ -32,7 +32,7 @@ export default async function PayoutsPage() {
       .eq("is_verified", true)
       .maybeSingle(),
     db.from("payout_accounts")
-      .select("id, provider, account_name, is_verified, metadata")
+      .select("id, provider, account_name, account_number_last4, is_verified, metadata")
       .eq("affiliate_id", affiliateId)
       .eq("provider", "mercury")
       .maybeSingle(),
@@ -49,7 +49,7 @@ export default async function PayoutsPage() {
     ? {
         account_name: (mercuryAccountRaw as Record<string, unknown>).account_name as string ?? "Bank Account",
         is_verified: (mercuryAccountRaw as Record<string, unknown>).is_verified as boolean,
-        last4: ((mercuryAccountRaw as Record<string, unknown>).metadata as Record<string, string>)?.last4 ?? undefined,
+        last4: (mercuryAccountRaw as Record<string, unknown>).account_number_last4 as string ?? undefined,
       }
     : null;
 
