@@ -16,13 +16,9 @@ const dmMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Kashu | Wallet Affiliate Portal",
+  title: "Kashu | Affiliate Portal",
   description: "Wallet Affiliate Dashboard",
   robots: "noindex, nofollow",
-  icons: {
-    icon: "/kashu-icon.png",
-    apple: "/kashu-icon.png",
-  },
 };
 
 export default function RootLayout({
