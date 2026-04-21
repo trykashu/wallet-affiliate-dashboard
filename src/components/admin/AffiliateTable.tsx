@@ -122,10 +122,12 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
       );
     }
         if (contractFilter !== "all") {
-      if (contractFilter === "active") {
+      if (contractFilter === "completed") {
         list = list.filter((a) => a.agreement_status === "Completed" || a.agreement_status === "signed");
-      } else if (contractFilter === "pending") {
+      } else if (contractFilter === "pending_partner") {
         list = list.filter((a) => a.agreement_status === "Pending Partner Signature");
+      } else if (contractFilter === "pending_kashu") {
+        list = list.filter((a) => a.agreement_status === "Pending Kashu Signature");
       } else if (contractFilter === "not_created") {
         list = list.filter((a) => !a.agreement_status || a.agreement_status === "Not Created");
       }
@@ -208,8 +210,9 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
               className="text-xs rounded-lg border border-surface-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
             >
               <option value="all">All contracts</option>
-              <option value="active">Active (Completed)</option>
-              <option value="pending">Pending Signature</option>
+              <option value="completed">Completed</option>
+              <option value="pending_partner">Pending Partner</option>
+              <option value="pending_kashu">Pending Kashu</option>
               <option value="not_created">Not Created</option>
             </select>
             <select
@@ -274,13 +277,16 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                     {(() => {
                       const cs = aff.agreement_status ?? "Not Created";
                       const isCompleted = cs === "Completed" || cs === "signed";
-                      const isPending = cs === "Pending Partner Signature";
+                      const isPendingPartner = cs === "Pending Partner Signature";
+                      const isPendingKashu = cs === "Pending Kashu Signature";
                       return (
-                        <span className={`badge ${
-                          isCompleted ? "badge-accent" :
-                          isPending   ? "badge-amber"  : "badge-red"
+                        <span className={`inline-flex items-center text-[10px] font-semibold rounded-full px-2 py-0.5 border ${
+                          isCompleted     ? "text-emerald-700 bg-emerald-50 border-emerald-200" :
+                          isPendingPartner ? "text-amber-700 bg-amber-50 border-amber-200" :
+                          isPendingKashu   ? "text-sky-700 bg-sky-50 border-sky-200" :
+                                            "text-red-600 bg-red-50 border-red-200"
                         }`}>
-                          {isCompleted ? "Active" : isPending ? "Pending Signature" : cs}
+                          {isCompleted ? "Completed" : isPendingPartner ? "Pending Partner" : isPendingKashu ? "Pending Kashu" : cs}
                         </span>
                       );
                     })()}
