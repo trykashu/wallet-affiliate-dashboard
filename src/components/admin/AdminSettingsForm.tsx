@@ -234,7 +234,7 @@ export default function AdminSettingsForm({
           </div>
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-accent" />
+              <span className="w-2 h-2 rounded-full bg-gradient-to-br from-slate-400 to-slate-600" />
               <span className="text-xs font-medium text-gray-700">Platinum</span>
             </div>
             <span className="text-xs text-brand-400">{fmt.currencyCompact(100000)} referred volume</span>

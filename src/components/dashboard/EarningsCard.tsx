@@ -17,7 +17,7 @@ interface Props {
 
 const TIER_BADGE: Record<AffiliateTier, { label: string; class: string }> = {
   gold:     { label: "Gold",     class: "bg-amber-50 text-amber-700 border-amber-200" },
-  platinum: { label: "Platinum", class: "bg-accent/10 text-accent border-accent/20" },
+  platinum: { label: "Platinum", class: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border-slate-300" },
 };
 
 /** Next payout is the 15th of the following month. */
@@ -171,7 +171,7 @@ export default function EarningsCard({ summary, tier, referredVolume }: Props) {
           </div>
           <div className="h-1 rounded-full bg-surface-200/60 overflow-hidden">
             <div
-              className="h-full rounded-full bg-gradient-to-r from-accent/80 to-brand-600 transition-all duration-700"
+              className="h-full rounded-full bg-gradient-to-r from-slate-400 to-slate-600 transition-all duration-700"
               style={{ width: `${Math.max(volumePct, 1)}%` }}
             />
           </div>
