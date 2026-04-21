@@ -17,6 +17,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
   const [search,    setSearch]    = useState("");
   const [statusFilter, setStatusFilter] = useState<AffiliateStatus | "all">("all");
   const [tierFilter,   setTierFilter]   = useState<AffiliateTier | "all">("all");
+  const [bankFilter,   setBankFilter]   = useState<"all" | "yes" | "no">("all");
   const [viewingAs,    setViewingAs]    = useState<string | null>(null);
   const [togglingStatus, setTogglingStatus] = useState<string | null>(null);
   const [overridingTier, setOverridingTier] = useState<string | null>(null);
@@ -100,8 +101,9 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
     }
     if (statusFilter !== "all") list = list.filter((a) => a.status === statusFilter);
     if (tierFilter !== "all")   list = list.filter((a) => a.tier === tierFilter);
+    if (bankFilter !== "all")   list = list.filter((a) => bankFilter === "yes" ? a.hasBankAccount : !a.hasBankAccount);
     return list;
-  }, [affiliates, search, statusFilter, tierFilter]);
+  }, [affiliates, search, statusFilter, tierFilter, bankFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -137,7 +139,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
           <div>
             <h3 className="text-sm font-semibold text-gray-900">Affiliate Roster</h3>
             <p className="text-xs text-brand-400 mt-0.5">
-              {search || statusFilter !== "all" || tierFilter !== "all"
+              {search || statusFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
                 ? `${sorted.length} of ${affiliates.length}`
                 : affiliates.length} affiliates
             </p>
@@ -176,6 +178,15 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
               <option value="gold">Gold</option>
               <option value="platinum">Platinum</option>
             </select>
+            <select
+              value={bankFilter}
+              onChange={(e) => setBankFilter(e.target.value as "all" | "yes" | "no")}
+              className="text-xs rounded-lg border border-gray-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
+            >
+              <option value="all">Bank: All</option>
+              <option value="yes">Bank: On file</option>
+              <option value="no">Bank: Missing</option>
+            </select>
             <button
               onClick={() => setInviteOpen(true)}
               className="flex items-center gap-1.5 text-xs font-medium text-white bg-accent hover:bg-accent/90
@@ -201,6 +212,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                 <th className="th hidden lg:table-cell"><SortBtn col="volume" label="Volume" /></th>
                 <th className="th hidden lg:table-cell"><SortBtn col="earnings" label="Earnings" /></th>
                 <th className="th hidden md:table-cell"><SortBtn col="joined" label="Joined" /></th>
+                <th className="th hidden sm:table-cell">Bank</th>
                 <th className="th">Actions</th>
               </tr>
             </thead>
@@ -252,6 +264,19 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                   </td>
                   <td className="td text-xs text-brand-400 hidden md:table-cell">
                     {fmt.date(aff.created_at)}
+                  </td>
+                  <td className="td hidden sm:table-cell">
+                    {aff.hasBankAccount ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                        On file
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                        Missing
+                      </span>
+                    )}
                   </td>
                   <td className="td">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -328,7 +353,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
 
         <div className="px-5 py-3 border-t border-surface-200/60 bg-surface-50/60">
           <p className="text-xs text-brand-400">
-            {search || statusFilter !== "all" || tierFilter !== "all"
+            {search || statusFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
               ? `${sorted.length} of ${affiliates.length}`
               : affiliates.length} affiliates total
           </p>

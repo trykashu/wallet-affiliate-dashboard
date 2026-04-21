@@ -11,6 +11,7 @@ export interface AffiliateWithCounts extends Affiliate {
   referredUserCount: number;
   volume: number;
   totalEarnings: number;
+  hasBankAccount: boolean;
 }
 
 export default async function AdminAffiliatesPage() {
@@ -23,15 +24,22 @@ export default async function AdminAffiliatesPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
-  const [affiliatesResult, usersResult, earningsResult] = await Promise.all([
+  const [affiliatesResult, usersResult, earningsResult, payoutAccountsResult] = await Promise.all([
     db.from("affiliates").select("*").order("created_at", { ascending: false }),
     db.from("referred_users").select("id, affiliate_id, first_transaction_amount"),
     db.from("earnings").select("affiliate_id, amount, status"),
+    db.from("payout_accounts").select("affiliate_id").eq("is_verified", true),
   ]);
 
   const affiliates:  Affiliate[]    = affiliatesResult.data ?? [];
   const users:       ReferredUser[] = usersResult.data      ?? [];
   const allEarnings: Earning[]      = earningsResult.data   ?? [];
+
+  // Build set of affiliates with bank accounts on file
+  const affiliatesWithBank = new Set<string>();
+  for (const pa of payoutAccountsResult.data ?? []) {
+    if (pa.affiliate_id) affiliatesWithBank.add(pa.affiliate_id);
+  }
 
   // Build lookup maps
   const usersByAffiliate = new Map<string, ReferredUser[]>();
@@ -54,6 +62,7 @@ export default async function AdminAffiliatesPage() {
       referredUserCount: refUsers.length,
       volume,
       totalEarnings: earningsByAffiliate.get(a.id) ?? 0,
+      hasBankAccount: affiliatesWithBank.has(a.id),
     };
   });
 
