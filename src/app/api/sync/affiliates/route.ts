@@ -17,6 +17,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords, type AirtableRecord } from "@/lib/airtable";
+import { processPendingBankDetails } from "@/lib/process-pending-bank-details";
 
 export const dynamic = "force-dynamic";
 
@@ -99,6 +100,9 @@ export async function GET() {
       }
     }
 
+    // Process any queued bank details from PandaDoc
+    const pendingResult = await processPendingBankDetails(db);
+
     return NextResponse.json({
       success: true,
       total_fetched: records.length,
@@ -106,6 +110,7 @@ export async function GET() {
       skipped,
       errors: errors.length > 0 ? errors : undefined,
       api_calls: apiCalls,
+      pending_bank_details: pendingResult,
     });
   } catch (err) {
     console.error("[sync/affiliates] Sync failed:", err);

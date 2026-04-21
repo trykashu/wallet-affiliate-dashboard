@@ -164,16 +164,28 @@ export async function POST(request: Request) {
   }
 
   if (!affiliate) {
-    console.warn(
-      `[pandadoc-webhook] No affiliate match for email=${bankDetails.email}, doc="${documentName}"`
-    );
+    // No affiliate in Supabase yet — queue bank details for later processing
+    if (bankDetails.email || documentName) {
+      await svc.from("pending_bank_details").insert({
+        email: bankDetails.email ?? "",
+        document_id: documentId,
+        document_name: documentName,
+        account_holder_name: bankDetails.account_holder_name,
+        routing_number: bankDetails.routing_number,
+        account_number: bankDetails.account_number,
+        account_type: bankDetails.account_type,
+      });
+      console.log(`[pandadoc-webhook] Queued bank details for ${bankDetails.email} (affiliate not yet in Supabase)`);
+    }
+
     await logSecurityEvent({
-      action: "pandadoc.no_affiliate_match",
+      action: "pandadoc.bank_details_queued",
       resourceType: "document",
       resourceId: documentId,
       metadata: { email: bankDetails.email, document_name: documentName },
     }).catch(() => {});
-    return NextResponse.json({ ok: true, skipped: "no_affiliate_match" });
+
+    return NextResponse.json({ ok: true, queued: true });
   }
 
   // Process based on validation results
