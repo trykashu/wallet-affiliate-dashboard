@@ -30,6 +30,7 @@ export const DEMO_AFFILIATE: Affiliate = {
   attribution_id:        "DEMO-AXR-2026",
   has_password:          true,
   agreement_status:      "signed",
+  bank_details_needed:   false,
   last_login_at:         new Date().toISOString(),
   created_at:            "2025-08-01T00:00:00Z",
   updated_at:            new Date().toISOString(),

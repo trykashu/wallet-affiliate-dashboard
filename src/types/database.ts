@@ -49,6 +49,7 @@ export interface Affiliate {
   attribution_id: string;
   has_password: boolean;
   agreement_status: string | null;
+  bank_details_needed: boolean;
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
