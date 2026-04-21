@@ -12,12 +12,23 @@ import { isAdminEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
 import type { Earning, PayoutSettings } from "@/types/database";
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user || !isAdminEmail(user.email)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  // Parse optional affiliate_ids filter from request body
+  let selectedAffiliateIds: string[] | null = null;
+  try {
+    const body = await request.json();
+    if (Array.isArray(body.affiliate_ids) && body.affiliate_ids.length > 0) {
+      selectedAffiliateIds = body.affiliate_ids;
+    }
+  } catch {
+    // No body or invalid JSON — process all affiliates
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -62,6 +73,8 @@ export async function POST() {
   }[] = [];
 
   for (const [affId, balance] of balanceByAffiliate) {
+    // Skip if we have a selection and this affiliate isn't in it
+    if (selectedAffiliateIds && !selectedAffiliateIds.includes(affId)) continue;
     if (balance >= minPayout) {
       payoutInserts.push({
         affiliate_id: affId,
