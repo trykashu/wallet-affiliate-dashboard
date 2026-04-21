@@ -100,18 +100,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to create payouts" }, { status: 500 });
   }
 
-  // Mark the approved earnings as 'paid' (since they're now part of a payout batch)
-  const affiliateIdsInBatch = payoutInserts.map((p) => p.affiliate_id);
-  const earningIdsToUpdate = earnings
-    .filter((e) => affiliateIdsInBatch.includes(e.affiliate_id))
-    .map((e) => e.id);
-
-  if (earningIdsToUpdate.length > 0) {
-    await svc
-      .from("earnings")
-      .update({ status: "paid", updated_at: new Date().toISOString() })
-      .in("id", earningIdsToUpdate);
-  }
+  // Note: earnings stay 'approved' until Mercury confirms the ACH transfer succeeded.
+  // The execute-batch route marks them as 'paid' after a successful Mercury API response.
 
   // Audit log
   logSecurityEvent({

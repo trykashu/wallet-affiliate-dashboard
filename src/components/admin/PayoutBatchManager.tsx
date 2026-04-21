@@ -35,8 +35,10 @@ export default function PayoutBatchManager({
   const [payingSingle, setPayingSingle] = useState<string | null>(null);
   const [executingBatch, setExecutingBatch] = useState(false);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [checkingMercury, setCheckingMercury] = useState(false);
 
   const requestedPayouts = payouts.filter((p) => p.status === "requested");
+  const processingPayouts = payouts.filter((p) => p.status === "processing");
 
   // -- Selection --
   const allSelected = selected.size === pendingPayouts.length && pendingPayouts.length > 0;
@@ -140,6 +142,23 @@ export default function PayoutBatchManager({
       alert("Failed to update payout status. Please try again.");
     } finally {
       setUpdatingId(null);
+    }
+  }, [router]);
+
+  const handleCheckMercury = useCallback(async () => {
+    setCheckingMercury(true);
+    try {
+      const res = await fetch("/api/cron/check-mercury-payouts");
+      const data = await res.json();
+      if (data.updated > 0) {
+        router.refresh();
+      } else {
+        alert(`Checked ${data.checked} payout(s) — no status changes yet.`);
+      }
+    } catch {
+      alert("Failed to check Mercury status.");
+    } finally {
+      setCheckingMercury(false);
     }
   }, [router]);
 
@@ -267,21 +286,38 @@ export default function PayoutBatchManager({
             <h3 className="text-sm font-semibold text-gray-900">Payout History</h3>
             <p className="text-xs text-brand-400 mt-0.5">{payouts.length} payouts</p>
           </div>
-          {requestedPayouts.length > 0 && (
-            <button
-              onClick={handleExecuteBatch}
-              disabled={executingBatch}
-              className="flex items-center gap-1.5 text-xs font-medium text-white bg-accent hover:bg-accent/90
-                         rounded-lg px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {executingBatch ? <Spinner /> : (
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
-              )}
-              Execute Requested ({requestedPayouts.length})
-            </button>
-          )}
+          <div className="flex items-center gap-2">
+            {processingPayouts.length > 0 && (
+              <button
+                onClick={handleCheckMercury}
+                disabled={checkingMercury}
+                className="flex items-center gap-1.5 text-xs font-medium text-brand-600 border border-brand-200 hover:border-brand-400
+                           rounded-lg px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+              >
+                {checkingMercury ? <Spinner /> : (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" />
+                  </svg>
+                )}
+                Check Mercury ({processingPayouts.length})
+              </button>
+            )}
+            {requestedPayouts.length > 0 && (
+              <button
+                onClick={handleExecuteBatch}
+                disabled={executingBatch}
+                className="flex items-center gap-1.5 text-xs font-medium text-white bg-accent hover:bg-accent/90
+                           rounded-lg px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {executingBatch ? <Spinner /> : (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                  </svg>
+                )}
+                Execute Requested ({requestedPayouts.length})
+              </button>
+            )}
+          </div>
         </div>
 
         {payouts.length === 0 ? (

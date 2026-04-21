@@ -7,16 +7,28 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
+import { isAdminEmail } from "@/lib/admin";
 import { getTransactionStatus } from "@/lib/mercury";
 import type { Payout } from "@/types/database";
 
 export async function GET(request: NextRequest) {
-  // Verify cron secret
+  // Auth: cron secret OR admin session
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
+  const hasCronSecret = cronSecret && authHeader === `Bearer ${cronSecret}`;
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  let isAdmin = false;
+  if (!hasCronSecret) {
+    try {
+      const supabase = await createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      isAdmin = !!user && isAdminEmail(user.email);
+    } catch { /* no session */ }
+  }
+
+  if (!hasCronSecret && !isAdmin) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -63,6 +75,15 @@ export async function GET(request: NextRequest) {
           .from("payouts")
           .update({ status: newStatus, updated_at: new Date().toISOString() })
           .eq("id", payout.id);
+
+        // When Mercury confirms success, mark associated earnings as 'paid'
+        if (newStatus === "completed") {
+          await svc
+            .from("earnings")
+            .update({ status: "paid", updated_at: new Date().toISOString() })
+            .eq("affiliate_id", payout.affiliate_id)
+            .eq("status", "approved");
+        }
 
         // Notify affiliate
         const notifTitle = newStatus === "completed" ? "Payout completed" : "Payout failed";

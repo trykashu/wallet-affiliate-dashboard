@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/refresh-leaderboard", "schedule": "0 0 1 * *" },
-    { "path": "/api/cron/sync-airtable", "schedule": "0 8 * * *" }
+    { "path": "/api/cron/sync-airtable", "schedule": "0 8 * * *" },
+    { "path": "/api/cron/check-mercury-payouts", "schedule": "0 */4 * * *" }
   ]
 }
