@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     parsed.data.email,
     {
       data:       { affiliate_id: affiliate.id },
-      redirectTo: `${siteUrl ?? "http://localhost:3000"}/auth/callback`,
+      redirectTo: `${siteUrl ?? "http://localhost:3000"}/auth/confirm`,
     },
   );
 

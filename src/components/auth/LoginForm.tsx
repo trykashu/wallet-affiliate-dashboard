@@ -58,7 +58,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
     setErrorMsg("");
 
     const redirectTarget = getRedirectTarget();
-    const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTarget)}`;
+    const callbackUrl = `${window.location.origin}/auth/confirm`;
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
