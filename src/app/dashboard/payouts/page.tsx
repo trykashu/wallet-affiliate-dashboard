@@ -70,6 +70,7 @@ export default async function PayoutsPage() {
         account={account}
         mercuryAccount={mercuryAccountDisplay}
         minPayoutAmount={minPayoutAmount}
+        bankDetailsNeeded={!!affiliate.bank_details_needed}
       />
     </>
   );

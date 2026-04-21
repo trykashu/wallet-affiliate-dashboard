@@ -114,6 +114,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // Clear bank_details_needed flag so the prompt goes away
+  await db
+    .from("affiliates")
+    .update({ bank_details_needed: false })
+    .eq("id", affiliate.id);
+
   // Audit log: bank data updated
   await logSecurityEvent({
     userId: user.id,

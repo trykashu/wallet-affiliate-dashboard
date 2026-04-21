@@ -10,6 +10,7 @@ interface ExistingAccount {
 
 interface Props {
   existingAccount?: ExistingAccount | null;
+  expandedByDefault?: boolean;
 }
 
 interface FormErrors {
@@ -18,8 +19,8 @@ interface FormErrors {
   account_number?: string;
 }
 
-export default function BankAccountForm({ existingAccount }: Props) {
-  const [showForm, setShowForm] = useState(!existingAccount);
+export default function BankAccountForm({ existingAccount, expandedByDefault }: Props) {
+  const [showForm, setShowForm] = useState(!existingAccount || !!expandedByDefault);
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [apiError, setApiError] = useState("");

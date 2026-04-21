@@ -21,6 +21,7 @@ interface Props {
   account:           PayoutAccount | null;
   mercuryAccount:    MercuryAccountDisplay | null;
   minPayoutAmount?:  number;
+  bankDetailsNeeded: boolean;
 }
 
 function getNextPayoutInfo() {
@@ -57,6 +58,7 @@ export default function PayoutsClient({
   account,
   mercuryAccount,
   minPayoutAmount = 25,
+  bankDetailsNeeded,
 }: Props) {
   const { nextDate, periodCovered } = useMemo(() => getNextPayoutInfo(), []);
 
@@ -87,15 +89,56 @@ export default function PayoutsClient({
         </div>
       </div>
 
+      {/* Bank Details Required alert — shown when PandaDoc extraction fails */}
+      {bankDetailsNeeded && !mercuryAccount?.is_verified && (
+        <div className="card border-amber-200 bg-amber-50 p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-amber-800">Bank Details Required</h3>
+              <p className="text-sm text-amber-700 mt-1">
+                We couldn&apos;t verify the bank details from your agreement. Please enter your banking information below so we can process your commissions.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Auto-import info — shown when no bank details needed and no account on file */}
+      {!bankDetailsNeeded && !mercuryAccount && (
+        <div className="card border-blue-100 bg-blue-50 p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-blue-100 border border-blue-200 flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.6} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-blue-800">Bank Details Pending</h3>
+              <p className="text-sm text-blue-700 mt-1">
+                Your bank details will be imported automatically when your agreement is signed.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Two-column grid: Summary + Bank Account */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <PayoutSummary
           earnings={earnings}
           payouts={payouts}
         />
-        <BankAccountForm
-          existingAccount={mercuryAccount}
-        />
+        {(bankDetailsNeeded || mercuryAccount) && (
+          <BankAccountForm
+            existingAccount={mercuryAccount}
+            expandedByDefault={bankDetailsNeeded && !mercuryAccount?.is_verified}
+          />
+        )}
       </div>
 
       <PayoutHistory payouts={payouts} affiliateName={affiliateName} />
