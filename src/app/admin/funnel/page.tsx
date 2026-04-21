@@ -2,9 +2,9 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
-import ConversionFunnel        from "@/components/dashboard/ConversionFunnel";
+import HolographicFunnel       from "@/components/dashboard/HolographicFunnel";
 import DropOffAnalysis         from "@/components/dashboard/DropOffAnalysis";
-import type { ReferredUser, FunnelEvent } from "@/types/database";
+import type { ReferredUser, FunnelEvent, FunnelStatus, StageDuration } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -18,16 +18,17 @@ export default async function AdminFunnelPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
-  const [usersResult, eventsResult] = await Promise.all([
+  const [usersResult, eventsResult, statusesResult] = await Promise.all([
     db.from("referred_users").select("*"),
     db.from("funnel_events").select("*"),
+    db.from("funnel_statuses").select("*").order("sort_order", { ascending: true }),
   ]);
 
-  const allUsers:  ReferredUser[] = usersResult.data  ?? [];
-  const allEvents: FunnelEvent[]  = eventsResult.data ?? [];
+  const allUsers:      ReferredUser[] = usersResult.data    ?? [];
+  const allEvents:     FunnelEvent[]  = eventsResult.data   ?? [];
+  const funnelStatuses: FunnelStatus[] = statusesResult.data ?? [];
 
   // Compute average stage durations from funnel_events
-  const durationsByStage: Record<string, number[]> = {};
   const userFirstEvent: Record<string, Record<string, number>> = {};
 
   for (const e of allEvents) {
@@ -43,6 +44,8 @@ export default async function AdminFunnelPage() {
   }
 
   const STAGES = ["waitlist", "booked_call", "sent_onboarding", "signed_up", "transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank"];
+  const durationsByStage: Record<string, number[]> = {};
+
   for (let i = 1; i < STAGES.length; i++) {
     const from = STAGES[i - 1];
     const to = STAGES[i];
@@ -52,7 +55,7 @@ export default async function AdminFunnelPage() {
       const fromTs = userFirstEvent[uid][from];
       const toTs = userFirstEvent[uid][to];
       if (fromTs && toTs && toTs > fromTs) {
-        durations.push((toTs - fromTs) / (1000 * 60 * 60)); // hours
+        durations.push((toTs - fromTs) / (1000 * 60 * 60));
       }
     }
 
@@ -63,7 +66,7 @@ export default async function AdminFunnelPage() {
     }
   }
 
-  const stageDurations = Object.entries(durationsByStage).map(([slug, arr]) => ({
+  const stageDurations: StageDuration[] = Object.entries(durationsByStage).map(([slug, arr]) => ({
     status_slug: slug,
     avg_hours: arr.reduce((s, v) => s + v, 0) / arr.length,
   }));
@@ -75,10 +78,11 @@ export default async function AdminFunnelPage() {
         <p className="text-xs text-brand-400 mt-0.5">All affiliates combined</p>
       </div>
 
-      <ConversionFunnel
+      <HolographicFunnel
         users={allUsers}
-        events={allEvents}
+        statuses={funnelStatuses}
         stageDurations={stageDurations}
+        events={allEvents}
       />
 
       <DropOffAnalysis
