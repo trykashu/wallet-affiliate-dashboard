@@ -56,10 +56,17 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
 
       setDebugMsg("Password set! Marking account...");
 
+      // Get current session token to pass to API (server may not have cookies)
+      const { data: currentSession } = await supabase.auth.getSession();
+      const accessToken = currentSession.session?.access_token;
+
       // Call API to mark has_password = true
       const res = await fetch("/api/auth/setup-password", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { "Authorization": `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({ password }),
       });
 
