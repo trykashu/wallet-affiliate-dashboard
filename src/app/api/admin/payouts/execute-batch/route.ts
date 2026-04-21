@@ -10,7 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
-import { sendACHTransfer } from "@/lib/mercury";
+import { sendACHTransfer, getOrCreateRecipient } from "@/lib/mercury";
 import type { Payout, PayoutAccount } from "@/types/database";
 
 export async function POST() {
@@ -105,13 +105,27 @@ export async function POST() {
 
     const account = accountsByAffiliate.get(payout.affiliate_id);
 
-    if (!account || !account.provider_id) {
-      // Mark as failed if no valid payout account
+    if (!account) {
       await svc
         .from("payouts")
         .update({ status: "failed", updated_at: new Date().toISOString() })
         .eq("id", payout.id);
-      errors.push(`Payout ${payout.id}: No verified payout account for affiliate`);
+      errors.push(`Payout ${payout.id}: No payout account for affiliate`);
+      continue;
+    }
+
+    // Get bank details from metadata (where CSV upload and manual entry store them)
+    const meta = (account.metadata ?? {}) as Record<string, string>;
+    const routingNumber = meta.routing_number || account.routing_number;
+    const accountNumber = meta.full_account_number;
+    const accountName = account.account_name || "Affiliate";
+
+    if (!routingNumber || !accountNumber) {
+      await svc
+        .from("payouts")
+        .update({ status: "failed", updated_at: new Date().toISOString() })
+        .eq("id", payout.id);
+      errors.push(`Payout ${payout.id}: Missing bank details (routing or account number)`);
       continue;
     }
 
@@ -119,19 +133,30 @@ export async function POST() {
     const period = payout.period || new Date().toISOString().slice(0, 7);
     const idempotencyKey = `payout_${payout.affiliate_id}_${period}_${payout.id}`;
 
-    // Audit log: attempt
-    await svc.from("payout_audit_log").insert({
-      payout_id: payout.id,
-      affiliate_id: payout.affiliate_id,
-      action: "MERCURY_SEND_ATTEMPT",
-      amount: payout.amount,
-      initiated_by: user.id,
-      request_payload: { recipientId: account.provider_id, amount: payout.amount, idempotencyKey },
-    });
-
     try {
+      // Create Mercury recipient if we don't have one yet
+      let recipientId = account.provider_id;
+      if (!recipientId) {
+        recipientId = await getOrCreateRecipient(accountName, routingNumber, accountNumber);
+        // Save the recipient ID for future payouts
+        await svc
+          .from("payout_accounts")
+          .update({ provider_id: recipientId, updated_at: new Date().toISOString() })
+          .eq("id", account.id);
+      }
+
+      // Audit log: attempt
+      await svc.from("payout_audit_log").insert({
+        payout_id: payout.id,
+        affiliate_id: payout.affiliate_id,
+        action: "MERCURY_SEND_ATTEMPT",
+        amount: payout.amount,
+        initiated_by: user.id,
+        request_payload: { recipientId, amount: payout.amount, idempotencyKey },
+      });
+
       const result = await sendACHTransfer({
-        recipientId: account.provider_id,
+        recipientId,
         amount: payout.amount,
         idempotencyKey,
         note: `Affiliate commission payout - ${payout.period ?? "manual"}`,
