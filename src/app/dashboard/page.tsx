@@ -3,8 +3,6 @@ import { fmt } from "@/lib/fmt";
 import type { FunnelStatusSlug, ReferredUser, FunnelEvent, FunnelStatus, StageDuration } from "@/types/database";
 import StatsRow from "@/components/dashboard/StatsRow";
 import ReferralLinkCard from "@/components/dashboard/ReferralLinkCard";
-import RecentActivity from "@/components/dashboard/RecentActivity";
-import type { RecentEvent } from "@/components/dashboard/RecentActivity";
 import HolographicFunnel from "@/components/dashboard/HolographicFunnel";
 
 export const dynamic = "force-dynamic";
@@ -44,22 +42,7 @@ export default async function DashboardPage() {
   // ── 4. Compute stage durations from funnel events ───────────
   const stageDurations = computeStageDurations(funnelEvents);
 
-  // ── 5. Fetch recent funnel events (last 10) ─────────────────
-  const { data: eventsRaw } = await db
-    .from("funnel_events")
-    .select("id, from_status, to_status, created_at, referred_users(full_name)")
-    .eq("referred_users.affiliate_id", affiliateId)
-    .order("created_at", { ascending: false })
-    .limit(10);
-
-  // The join may return events where the referred_user doesn't belong to this
-  // affiliate (Supabase foreign-key filter returns null for the join).
-  // Also, for RLS-scoped queries this is handled automatically.
-  const events: RecentEvent[] = ((eventsRaw ?? []) as RecentEvent[]).filter(
-    (e) => e.referred_users !== null
-  );
-
-  // ── 6. Total Transfer In volume ──────────────────────────────
+  // ── 5. Total Transfer In volume ──────────────────────────────
   const { data: volumeRows } = await db
     .from("transactions")
     .select("amount")
@@ -94,6 +77,12 @@ export default async function DashboardPage() {
 
   return (
     <>
+      {/* Referral link — full width at top */}
+      <ReferralLinkCard
+        url={referralUrl}
+        description="Share this link to earn commission on users that you refer who deposit funds into the wallet."
+      />
+
       {/* ── Hero Greeting ─────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-600 to-brand-700 px-5 sm:px-8 py-6 sm:py-8 animate-reveal-up noise-overlay">
         {/* Ambient glow orbs */}
@@ -148,15 +137,6 @@ export default async function DashboardPage() {
         stageDurations={stageDurations}
         events={funnelEvents}
       />
-
-      {/* Referral link + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <ReferralLinkCard
-          url={referralUrl}
-          description="Share this link to earn commission on users that you refer who deposit funds into the wallet."
-        />
-        <RecentActivity events={events} />
-      </div>
     </>
   );
 }
