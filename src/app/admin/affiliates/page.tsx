@@ -12,7 +12,9 @@ export interface AffiliateWithCounts extends Affiliate {
   volume: number;
   totalEarnings: number;
   hasBankAccount: boolean;
-  hasLogin: boolean;
+  hasLogin: boolean;        // user_id is set (invite accepted)
+  hasPassword: boolean;     // account fully set up
+  lastLoginAt: string | null;
 }
 
 export default async function AdminAffiliatesPage() {
@@ -65,6 +67,8 @@ export default async function AdminAffiliatesPage() {
       totalEarnings: earningsByAffiliate.get(a.id) ?? 0,
       hasBankAccount: affiliatesWithBank.has(a.id),
       hasLogin: !!a.user_id,
+      hasPassword: !!a.has_password,
+      lastLoginAt: a.last_login_at,
     };
   });
 

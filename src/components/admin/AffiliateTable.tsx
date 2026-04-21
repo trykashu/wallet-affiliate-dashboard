@@ -236,7 +236,8 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                 <th className="th"><SortBtn col="users" label="Users" /></th>
                 <th className="th hidden lg:table-cell"><SortBtn col="volume" label="Volume" /></th>
                 <th className="th hidden lg:table-cell"><SortBtn col="earnings" label="Earnings" /></th>
-                <th className="th hidden md:table-cell"><SortBtn col="joined" label="Joined" /></th>
+                <th className="th hidden sm:table-cell">Account</th>
+                <th className="th hidden lg:table-cell">Last Active</th>
                 <th className="th hidden sm:table-cell">Bank</th>
                 <th className="th">Actions</th>
               </tr>
@@ -287,8 +288,23 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                   <td className="td hidden lg:table-cell">
                     <span className="text-sm font-medium text-gray-900 tabular-nums">{fmt.currency(aff.totalEarnings)}</span>
                   </td>
-                  <td className="td text-xs text-brand-400 hidden md:table-cell">
-                    {fmt.date(aff.created_at)}
+                  <td className="td hidden sm:table-cell">
+                    {!aff.hasLogin ? (
+                      <span className="inline-flex items-center text-[10px] font-semibold text-brand-400 bg-surface-100 border border-surface-200 rounded-full px-2 py-0.5">
+                        Not Invited
+                      </span>
+                    ) : !aff.hasPassword ? (
+                      <span className="inline-flex items-center text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
+                        Pending Setup
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        Active
+                      </span>
+                    )}
+                  </td>
+                  <td className="td hidden lg:table-cell text-xs text-brand-400">
+                    {aff.lastLoginAt ? fmt.relative(aff.lastLoginAt) : "\u2014"}
                   </td>
                   <td className="td hidden sm:table-cell">
                     {aff.hasBankAccount ? (
@@ -369,7 +385,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                         )}
                       </button>
 
-                      {/* Invite / Invited status */}
+                      {/* Invite / Send Magic Link */}
                       {!aff.hasLogin ? (
                         <button
                           onClick={() => handleInvite(aff.id, aff.email)}
@@ -386,9 +402,23 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                           )}
                           Invite
                         </button>
-                      ) : (
-                        <span className="text-[10px] text-accent font-medium">Invited &#10003;</span>
-                      )}
+                      ) : !aff.hasPassword ? (
+                        <button
+                          onClick={() => handleInvite(aff.id, aff.email)}
+                          disabled={invitingId === aff.id}
+                          className="flex items-center gap-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100
+                                     border border-amber-200 rounded-lg px-2.5 py-1.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {invitingId === aff.id ? (
+                            <Spinner />
+                          ) : (
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                            </svg>
+                          )}
+                          Send Link
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
