@@ -24,8 +24,8 @@ export default function TransactionLedger({ transactions }: Props) {
     });
   }, [transactions, sortOrder]);
 
-  const totalIn = useMemo(
-    () => transactions.filter((t) => t.transaction_type === "Transfer In").reduce((s, t) => s + t.amount, 0),
+  const totalVolume = useMemo(
+    () => transactions.reduce((s, t) => s + t.amount, 0),
     [transactions]
   );
 
@@ -52,7 +52,7 @@ export default function TransactionLedger({ transactions }: Props) {
             <h3 className="text-sm font-semibold text-gray-900">Transaction Ledger</h3>
             <p className="text-xs text-brand-400 mt-0.5">
               {fmt.count(transactions.length)} transactions
-              {totalIn > 0 && <> &middot; <span className="text-accent font-medium">{fmt.currencyCompact(totalIn)}</span> total volume</>}
+              {totalVolume > 0 && <> &middot; <span className="text-accent font-medium">{fmt.currencyCompact(totalVolume)}</span> total volume</>}
             </p>
           </div>
 

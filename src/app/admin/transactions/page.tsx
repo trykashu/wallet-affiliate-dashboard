@@ -21,6 +21,7 @@ export default async function AdminTransactionsPage() {
   const [txResult, affiliatesResult, usersResult] = await Promise.all([
     db.from("transactions")
       .select("id, affiliate_id, referred_user_id, amount, transaction_type, transaction_external_id, transaction_date, email, created_at")
+      .eq("transaction_type", "Transfer In")
       .order("transaction_date", { ascending: false })
       .limit(1000),
     db.from("affiliates")
