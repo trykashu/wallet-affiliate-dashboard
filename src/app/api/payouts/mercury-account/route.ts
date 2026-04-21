@@ -5,15 +5,13 @@
  * Body: { account_holder_name: string, routing_number: string, account_number: string }
  *
  * Upserts into payout_accounts with provider='mercury'.
- * Stores full routing/account numbers in RLS-protected metadata field.
+ * Stores routing/account in metadata (same format as CSV upload and PandaDoc webhook).
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { encrypt } from "@/lib/encryption";
 import { logSecurityEvent } from "@/lib/audit-log";
-import { safeError } from "@/lib/safe-log";
 
 export const dynamic = "force-dynamic";
 
@@ -55,7 +53,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Affiliate not found" }, { status: 404 });
   }
 
-  // Last 4 digits for display purposes
   const last4 = account_number.slice(-4);
 
   // Check for existing Mercury account
@@ -67,60 +64,51 @@ export async function POST(request: NextRequest) {
     .limit(1)
     .maybeSingle();
 
+  // Match the same storage format as CSV upload and PandaDoc webhook
   const accountData = {
     affiliate_id: affiliate.id,
     provider: "mercury",
-    provider_id: null,
     account_name: account_holder_name,
+    routing_number: routing_number,
+    account_number_last4: last4,
     is_verified: true,
-    is_default: false,
+    is_default: true,
     metadata: {
-      account_holder_name,
-      routing_number_encrypted: encrypt(routing_number),
-      account_number_encrypted: encrypt(account_number),
-      account_type: "checking",
-      last4,
-      encryption_version: 1,
+      full_account_number: account_number,
+      routing_number: routing_number,
+      source: "manual_entry",
     },
     updated_at: new Date().toISOString(),
   };
 
   if (existing) {
-    // Update existing
     const { error: updateErr } = await db
       .from("payout_accounts")
       .update(accountData)
       .eq("id", existing.id);
 
     if (updateErr) {
-      safeError("[mercury-account]", "Update failed:", updateErr);
-      return NextResponse.json(
-        { error: "Failed to update account" },
-        { status: 500 }
-      );
+      console.error("[mercury-account] Update failed:", updateErr.message);
+      return NextResponse.json({ error: "Failed to update account" }, { status: 500 });
     }
   } else {
-    // Insert new
     const { error: insertErr } = await db
       .from("payout_accounts")
       .insert(accountData);
 
     if (insertErr) {
-      safeError("[mercury-account]", "Insert failed:", insertErr);
-      return NextResponse.json(
-        { error: "Failed to save account" },
-        { status: 500 }
-      );
+      console.error("[mercury-account] Insert failed:", insertErr.message);
+      return NextResponse.json({ error: "Failed to save account" }, { status: 500 });
     }
   }
 
-  // Clear bank_details_needed flag so the prompt goes away
+  // Clear bank_details_needed flag
   await db
     .from("affiliates")
     .update({ bank_details_needed: false })
     .eq("id", affiliate.id);
 
-  // Audit log: bank data updated
+  // Audit log
   await logSecurityEvent({
     userId: user.id,
     userEmail: user.email,
@@ -130,8 +118,5 @@ export async function POST(request: NextRequest) {
     metadata: { changed_by: "self" },
   });
 
-  return NextResponse.json({
-    success: true,
-    last4,
-  });
+  return NextResponse.json({ success: true, last4 });
 }
