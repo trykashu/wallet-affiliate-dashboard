@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createBrowserClient } from "@supabase/ssr";
 import Image from "next/image";
 
 type Status = "idle" | "loading" | "error";
@@ -25,18 +26,30 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
     setErrorMsg("");
 
     try {
+      // Use browser client to update password (session may be in localStorage, not cookies)
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+
+      const { error: updateError } = await supabase.auth.updateUser({ password });
+
+      if (updateError) {
+        setStatus("error");
+        setErrorMsg(updateError.message);
+        return;
+      }
+
+      // Now call the API to mark has_password = true in the database
       const res = await fetch("/api/auth/setup-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
 
-      const data = await res.json();
-
+      // Even if the API call fails, the password was set — still redirect
       if (!res.ok) {
-        setStatus("error");
-        setErrorMsg(data.error ?? "Something went wrong");
-        return;
+        console.warn("[setup-password] API call to mark has_password failed, but password was set");
       }
 
       // Password set — go to correct destination
