@@ -15,7 +15,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
   const [sortKey,   setSortKey]   = useState<SortKey>("users");
   const [sortDir,   setSortDir]   = useState<"desc" | "asc">("desc");
   const [search,    setSearch]    = useState("");
-  const [statusFilter, setStatusFilter] = useState<AffiliateStatus | "all">("all");
+  const [contractFilter, setContractFilter] = useState<string>("all");
   const [tierFilter,   setTierFilter]   = useState<AffiliateTier | "all">("all");
   const [bankFilter,   setBankFilter]   = useState<"all" | "yes" | "no">("all");
   const [viewingAs,    setViewingAs]    = useState<string | null>(null);
@@ -121,11 +121,19 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
         (a.business_name ?? "").toLowerCase().includes(q)
       );
     }
-    if (statusFilter !== "all") list = list.filter((a) => a.status === statusFilter);
+        if (contractFilter !== "all") {
+      if (contractFilter === "active") {
+        list = list.filter((a) => a.agreement_status === "Completed" || a.agreement_status === "signed");
+      } else if (contractFilter === "pending") {
+        list = list.filter((a) => a.agreement_status === "Pending Partner Signature");
+      } else if (contractFilter === "not_created") {
+        list = list.filter((a) => !a.agreement_status || a.agreement_status === "Not Created");
+      }
+    }
     if (tierFilter !== "all")   list = list.filter((a) => a.tier === tierFilter);
     if (bankFilter !== "all")   list = list.filter((a) => bankFilter === "yes" ? a.hasBankAccount : !a.hasBankAccount);
     return list;
-  }, [affiliates, search, statusFilter, tierFilter, bankFilter]);
+  }, [affiliates, search, contractFilter, tierFilter, bankFilter]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -163,7 +171,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
             <div>
               <h3 className="text-sm font-semibold text-gray-900">Affiliate Roster</h3>
               <p className="text-xs text-brand-400 mt-0.5">
-                {search || statusFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
+                {search || contractFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
                   ? `${sorted.length} of ${affiliates.length}`
                   : affiliates.length} affiliates
               </p>
@@ -195,14 +203,14 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
               />
             </div>
             <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as AffiliateStatus | "all")}
+              value={contractFilter}
+              onChange={(e) => setContractFilter(e.target.value)}
               className="text-xs rounded-lg border border-surface-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
             >
-              <option value="all">All statuses</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="suspended">Suspended</option>
+              <option value="all">All contracts</option>
+              <option value="active">Active (Completed)</option>
+              <option value="pending">Pending Signature</option>
+              <option value="not_created">Not Created</option>
             </select>
             <select
               value={tierFilter}
@@ -231,13 +239,14 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
             <thead>
               <tr className="border-b border-surface-200/60 bg-surface-50/60">
                 <th className="th">Affiliate</th>
-                <th className="th hidden sm:table-cell">Status</th>
+                <th className="th hidden sm:table-cell">Contract</th>
                 <th className="th hidden md:table-cell">Tier</th>
                 <th className="th"><SortBtn col="users" label="Users" /></th>
                 <th className="th hidden lg:table-cell"><SortBtn col="volume" label="Volume" /></th>
                 <th className="th hidden lg:table-cell"><SortBtn col="earnings" label="Earnings" /></th>
                 <th className="th hidden sm:table-cell">Account</th>
-                <th className="th hidden lg:table-cell">Last Active</th>
+                <th className="th hidden md:table-cell">Joined</th>
+                <th className="th hidden lg:table-cell">Last Login</th>
                 <th className="th hidden sm:table-cell">Bank</th>
                 <th className="th">Actions</th>
               </tr>
@@ -262,12 +271,19 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                     </div>
                   </td>
                   <td className="td hidden sm:table-cell">
-                    <span className={`badge ${
-                      aff.status === "active"    ? "badge-accent" :
-                      aff.status === "suspended" ? "badge-red"    : "badge-amber"
-                    }`}>
-                      {aff.status}
-                    </span>
+                    {(() => {
+                      const cs = aff.agreement_status ?? "Not Created";
+                      const isCompleted = cs === "Completed" || cs === "signed";
+                      const isPending = cs === "Pending Partner Signature";
+                      return (
+                        <span className={`badge ${
+                          isCompleted ? "badge-accent" :
+                          isPending   ? "badge-amber"  : "badge-red"
+                        }`}>
+                          {isCompleted ? "Active" : isPending ? "Pending Signature" : cs}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="td hidden md:table-cell">
                     <div className="flex items-center gap-1.5">
@@ -302,6 +318,9 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                         Active
                       </span>
                     )}
+                  </td>
+                  <td className="td hidden md:table-cell text-xs text-brand-400">
+                    {aff.lastLoginAt ? fmt.date(aff.lastLoginAt) : "\u2014"}
                   </td>
                   <td className="td hidden lg:table-cell text-xs text-brand-400">
                     {aff.lastLoginAt ? fmt.relative(aff.lastLoginAt) : "\u2014"}
@@ -429,7 +448,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
 
         <div className="px-5 py-3 border-t border-surface-200/60 bg-surface-50/60">
           <p className="text-xs text-brand-400">
-            {search || statusFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
+            {search || contractFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
               ? `${sorted.length} of ${affiliates.length}`
               : affiliates.length} affiliates total
           </p>
