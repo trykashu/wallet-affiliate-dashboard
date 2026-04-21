@@ -17,39 +17,89 @@ export default function AuthConfirmPage() {
   useEffect(() => {
     async function handleCallback() {
       try {
+        // Read hash fragment from the URL
+        const hash = window.location.hash;
+        console.log("[auth/confirm] Hash:", hash ? hash.substring(0, 50) + "..." : "none");
+        console.log("[auth/confirm] Search:", window.location.search);
+        console.log("[auth/confirm] Full URL:", window.location.href.substring(0, 120));
+
         const supabase = createBrowserClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
         );
 
-        // Supabase client auto-detects hash fragments and sets session
-        const { data, error } = await supabase.auth.getSession();
+        // If hash contains access_token, Supabase client should detect it on init.
+        // But we may need to explicitly call onAuthStateChange to catch it.
 
-        if (error) {
-          console.error("[auth/confirm] Session error:", error.message);
-          setStatus("error");
-          setErrorMsg(error.message);
-          return;
-        }
+        // First, check if there's already a session (from auto-detection)
+        const { data: sessionData } = await supabase.auth.getSession();
 
-        if (data.session) {
-          // Session established — redirect to post-login for routing
+        if (sessionData.session) {
+          console.log("[auth/confirm] Session found immediately");
           window.location.href = "/api/auth/post-login?next=/dashboard";
           return;
         }
 
-        // No session and no error — might still be processing hash
-        // Try getUser as fallback
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+        // If hash has tokens, try to set session manually
+        if (hash && hash.includes("access_token")) {
+          const params = new URLSearchParams(hash.substring(1));
+          const accessToken = params.get("access_token");
+          const refreshToken = params.get("refresh_token");
 
-        if (userError || !userData.user) {
-          setStatus("error");
-          setErrorMsg("Could not verify your invite link. Please try again or request a new invite.");
+          if (accessToken && refreshToken) {
+            console.log("[auth/confirm] Setting session from hash tokens");
+            const { error: setError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
+
+            if (setError) {
+              console.error("[auth/confirm] setSession error:", setError.message);
+              setStatus("error");
+              setErrorMsg(setError.message);
+              return;
+            }
+
+            window.location.href = "/api/auth/post-login?next=/dashboard";
+            return;
+          }
+        }
+
+        // If URL has a code param (PKCE flow landed here somehow)
+        const searchParams = new URLSearchParams(window.location.search);
+        const code = searchParams.get("code");
+        if (code) {
+          console.log("[auth/confirm] Found code param, exchanging...");
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+          if (!exchangeError) {
+            window.location.href = "/api/auth/post-login?next=/dashboard";
+            return;
+          }
+          console.error("[auth/confirm] Code exchange failed:", exchangeError.message);
+        }
+
+        // Wait briefly for onAuthStateChange to fire (Supabase may process async)
+        await new Promise<void>((resolve) => {
+          const timeout = setTimeout(() => resolve(), 3000);
+          supabase.auth.onAuthStateChange((event) => {
+            console.log("[auth/confirm] Auth state change:", event);
+            if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+              clearTimeout(timeout);
+              resolve();
+            }
+          });
+        });
+
+        // Final check
+        const { data: finalSession } = await supabase.auth.getSession();
+        if (finalSession.session) {
+          console.log("[auth/confirm] Session found after waiting");
+          window.location.href = "/api/auth/post-login?next=/dashboard";
           return;
         }
 
-        // User exists — redirect
-        window.location.href = "/api/auth/post-login?next=/dashboard";
+        setStatus("error");
+        setErrorMsg("Could not verify your invite link. Please try again or request a new invite.");
       } catch (err) {
         console.error("[auth/confirm] Unexpected error:", err);
         setStatus("error");
