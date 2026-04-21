@@ -135,17 +135,30 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
     <>
       <div className="card overflow-hidden">
         {/* Header */}
-        <div className="px-5 py-4 border-b border-surface-200/60 flex flex-wrap items-center gap-3 justify-between">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">Affiliate Roster</h3>
-            <p className="text-xs text-brand-400 mt-0.5">
-              {search || statusFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
-                ? `${sorted.length} of ${affiliates.length}`
-                : affiliates.length} affiliates
-            </p>
+        <div className="px-5 py-4 border-b border-surface-200/60">
+          {/* Top row: title + invite button */}
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Affiliate Roster</h3>
+              <p className="text-xs text-brand-400 mt-0.5">
+                {search || statusFilter !== "all" || tierFilter !== "all" || bankFilter !== "all"
+                  ? `${sorted.length} of ${affiliates.length}`
+                  : affiliates.length} affiliates
+              </p>
+            </div>
+            <button
+              onClick={() => setInviteOpen(true)}
+              className="flex items-center gap-1.5 text-xs font-medium text-white bg-accent hover:bg-accent/90
+                         rounded-lg px-4 py-2.5 transition-colors flex-shrink-0"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+              </svg>
+              Invite Affiliate
+            </button>
           </div>
 
-          {/* Filters */}
+          {/* Filters row */}
           <div className="flex items-center gap-2 flex-wrap">
             <div className="relative flex-1 min-w-[140px] max-w-xs">
               <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-brand-400 pointer-events-none" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -187,16 +200,6 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
               <option value="yes">Bank: On file</option>
               <option value="no">Bank: Missing</option>
             </select>
-            <button
-              onClick={() => setInviteOpen(true)}
-              className="flex items-center gap-1.5 text-xs font-medium text-white bg-accent hover:bg-accent/90
-                         rounded-lg px-3 py-2 transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2.2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-              </svg>
-              Invite Affiliate
-            </button>
           </div>
         </div>
 
