@@ -13,17 +13,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  // 1. Only process document_state_changed events
-  const event = body.event as string | undefined;
-  if (event !== "document_state_changed") {
-    return NextResponse.json({ ok: true, skipped: "event_type" });
-  }
-
-  // 2. Only process document.completed status
-  const data = (body.data ?? {}) as Record<string, unknown>;
+  // Log the raw event for debugging
+  // PandaDoc may send as object or array
+  const payload = Array.isArray(body) ? (body[0] as Record<string, unknown>) : body;
+  const event = payload.event as string | undefined;
+  const data = ((payload.data ?? payload) as Record<string, unknown>);
   const status = data.status as string | undefined;
-  if (status !== "document.completed") {
-    return NextResponse.json({ ok: true, skipped: "status" });
+
+  console.log(`[pandadoc-webhook] Received event: ${event}, status: ${status}, keys: ${Object.keys(body).join(",")}`);
+
+  // Accept both "document_state_changed" and "recipient_completed" events
+  // PandaDoc may send either depending on webhook configuration
+  const isCompletedEvent =
+    (event === "document_state_changed" && status === "document.completed") ||
+    event === "recipient_completed" ||
+    event === "document_completed" ||
+    status === "document.completed";
+
+  if (!isCompletedEvent) {
+    return NextResponse.json({ ok: true, skipped: "not_completed", event, status });
   }
 
   const documentId = data.id as string;
