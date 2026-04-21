@@ -182,6 +182,21 @@ export interface PayoutAuditLog {
   created_at: string;
 }
 
+export interface PendingBankDetails {
+  id: string;
+  email: string;
+  document_id: string | null;
+  document_name: string | null;
+  account_holder_name: string | null;
+  routing_number: string | null;
+  account_number: string | null;
+  account_type: string | null;
+  processed: boolean;
+  processed_at: string | null;
+  error_message: string | null;
+  created_at: string;
+}
+
 export interface Admin {
   id: string;
   user_id: string;
@@ -299,6 +314,11 @@ export interface Database {
         Row: PayoutAuditLog;
         Insert: WithOptionalId<PayoutAuditLog>;
         Update: UpdatableFields<PayoutAuditLog>;
+      };
+      pending_bank_details: {
+        Row: PendingBankDetails;
+        Insert: WithOptionalId<PendingBankDetails>;
+        Update: UpdatableFields<PendingBankDetails>;
       };
       admins: {
         Row: Admin;
