@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   } else {
     await svc
       .from("affiliates")
-      .update({ has_password: true, account_activated_at: now })
+      .update({ has_password: true, last_login_at: now })
       .eq("user_id", userId);
   }
 
