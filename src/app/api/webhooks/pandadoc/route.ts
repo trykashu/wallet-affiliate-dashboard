@@ -190,27 +190,37 @@ export async function POST(request: Request) {
 
   // Process based on validation results
   if (bankDetails.routing_valid && bankDetails.account_valid) {
-    // Valid — upsert payout account
+    // Save bank details — check for existing, then update or insert
     const accountNumberLast4 = bankDetails.account_number!.slice(-4);
-
-    await svc.from("payout_accounts").upsert(
-      {
-        affiliate_id: affiliate.id,
-        provider: "mercury",
-        account_name: bankDetails.account_holder_name ?? affiliate.agent_name,
+    const bankPayload = {
+      affiliate_id: affiliate.id,
+      provider: "mercury" as const,
+      account_name: bankDetails.account_holder_name ?? affiliate.agent_name,
+      routing_number: bankDetails.routing_number,
+      account_number_last4: accountNumberLast4,
+      is_default: true,
+      is_verified: true,
+      metadata: {
+        full_account_number: bankDetails.account_number,
         routing_number: bankDetails.routing_number,
-        account_number_last4: accountNumberLast4,
-        is_default: true,
-        is_verified: true,
-        metadata: {
-          full_account_number: bankDetails.account_number,
-          routing_number: bankDetails.routing_number,
-          account_type: bankDetails.account_type,
-          source: "pandadoc",
-        },
+        account_type: bankDetails.account_type,
+        source: "pandadoc",
       },
-      { onConflict: "affiliate_id,provider" }
-    );
+    };
+
+    const { data: existingAccount } = await svc
+      .from("payout_accounts")
+      .select("id")
+      .eq("affiliate_id", affiliate.id)
+      .eq("provider", "mercury")
+      .limit(1)
+      .maybeSingle();
+
+    if (existingAccount) {
+      await svc.from("payout_accounts").update(bankPayload).eq("id", existingAccount.id);
+    } else {
+      await svc.from("payout_accounts").insert(bankPayload);
+    }
 
     await svc
       .from("affiliates")
