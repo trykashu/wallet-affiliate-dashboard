@@ -45,7 +45,7 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden animate-scale-in">
+      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-card-lg overflow-hidden animate-scale-in">
         {/* Header */}
         <div className="px-6 pt-6 pb-4 border-b border-surface-200/60">
           <div className="flex items-start justify-between">
@@ -92,8 +92,8 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="affiliate@example.com"
-                className="w-full px-3 py-2 text-sm bg-gray-50 border border-surface-200 rounded-xl
-                           text-gray-900 placeholder-gray-400
+                className="w-full px-3 py-2 text-sm bg-surface-100/60 border border-surface-200 rounded-xl
+                           text-gray-900 placeholder-brand-400/50
                            focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent
                            transition-colors"
               />

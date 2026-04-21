@@ -118,7 +118,7 @@ export default function NotificationBell({ affiliateId, initialCount }: Notifica
         <button
           onClick={() => setOpen((o) => !o)}
           className="relative w-9 h-9 rounded-xl flex items-center justify-center
-                     text-brand-400 hover:text-brand-600 hover:bg-gray-100
+                     text-brand-400 hover:text-brand-600 hover:bg-surface-100
                      transition-all duration-150"
           aria-label="Notifications"
         >

@@ -71,7 +71,7 @@ export default function UpdatePasswordForm() {
             onChange={(e) => setNewPassword(e.target.value)}
             placeholder="Minimum 8 characters"
             required
-            className={`w-full px-4 py-2.5 pr-10 rounded-xl border text-sm text-gray-900 placeholder-gray-400
+            className={`w-full px-4 py-2.5 pr-10 rounded-xl border text-sm text-gray-900 placeholder-brand-400/50
                        focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all bg-white ${
                          tooShort ? "border-red-300" : "border-surface-200"
                        }`}
@@ -103,7 +103,7 @@ export default function UpdatePasswordForm() {
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="Re-enter new password"
             required
-            className={`w-full px-4 py-2.5 pr-10 rounded-xl border text-sm text-gray-900 placeholder-gray-400
+            className={`w-full px-4 py-2.5 pr-10 rounded-xl border text-sm text-gray-900 placeholder-brand-400/50
                        focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all bg-white ${
                          mismatch ? "border-red-300" : "border-surface-200"
                        }`}

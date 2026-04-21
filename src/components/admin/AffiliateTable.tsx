@@ -156,7 +156,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                 placeholder="Search affiliates..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-surface-200 bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-surface-200 bg-white text-gray-900 placeholder-brand-400/50 focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
               />
             </div>
             <select

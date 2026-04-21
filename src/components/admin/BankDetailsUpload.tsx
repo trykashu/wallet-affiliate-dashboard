@@ -145,7 +145,7 @@ export default function BankDetailsUpload() {
       </div>
 
       {/* Drop zone / file picker */}
-      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-200 rounded-xl cursor-pointer hover:border-accent hover:bg-gray-50 transition-colors">
+      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-200 rounded-xl cursor-pointer hover:border-accent hover:bg-surface-100/60 transition-colors">
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <svg
             className="w-8 h-8 mb-2 text-brand-400"
@@ -192,7 +192,7 @@ export default function BankDetailsUpload() {
           <div className="overflow-x-auto rounded-xl border border-surface-200/60">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-gray-50">
+                <tr className="bg-surface-100/60">
                   <th className="th text-left px-3 py-2">Email</th>
                   <th className="th text-left px-3 py-2">Routing #</th>
                   <th className="th text-left px-3 py-2">Account #</th>
@@ -280,7 +280,7 @@ export default function BankDetailsUpload() {
               <p className="text-lg font-bold text-blue-600 tabular-nums">{result.updated}</p>
               <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Updated</p>
             </div>
-            <div className={`rounded-xl px-4 py-3 text-center ${result.errors.length > 0 ? "bg-red-50" : "bg-gray-50"}`}>
+            <div className={`rounded-xl px-4 py-3 text-center ${result.errors.length > 0 ? "bg-red-50" : "bg-surface-100/60"}`}>
               <p className={`text-lg font-bold tabular-nums ${result.errors.length > 0 ? "text-red-500" : "text-gray-400"}`}>
                 {result.errors.length}
               </p>

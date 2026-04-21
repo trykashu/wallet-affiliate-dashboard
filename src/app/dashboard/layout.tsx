@@ -197,7 +197,7 @@ export default async function DashboardLayout({
 
 function AccountPending({ userEmail }: { userEmail: string }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen bg-surface-50 flex items-center justify-center px-4">
       <div className="text-center max-w-sm animate-fade-in">
         <div className="w-16 h-16 mx-auto mb-6 rounded-2xl bg-brand-600/20 border border-brand-600/30 flex items-center justify-center">
           <svg className="w-8 h-8 text-brand-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">

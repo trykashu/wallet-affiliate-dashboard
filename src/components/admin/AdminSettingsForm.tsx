@@ -106,7 +106,7 @@ export default function AdminSettingsForm({
               id="auto-approve"
               checked={autoApprove}
               onChange={(e) => setAutoApprove(e.target.checked)}
-              className="mt-0.5 rounded border-gray-300"
+              className="mt-0.5 rounded border-surface-200"
             />
             <div>
               <label htmlFor="auto-approve" className="text-xs text-gray-700 font-medium cursor-pointer">
@@ -234,7 +234,7 @@ export default function AdminSettingsForm({
           </div>
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-400" />
+              <span className="w-2 h-2 rounded-full bg-accent" />
               <span className="text-xs font-medium text-gray-700">Platinum</span>
             </div>
             <span className="text-xs text-brand-400">{fmt.currencyCompact(100000)} referred volume</span>

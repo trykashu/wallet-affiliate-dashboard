@@ -66,7 +66,7 @@ export default function UserTable({ users }: Props) {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 pr-3 py-1.5 text-xs bg-white border border-surface-200 rounded-xl
-                         text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2
+                         text-gray-900 placeholder-brand-400/50 focus:outline-none focus:ring-2
                          focus:ring-brand-600/20 focus:border-brand-600/50 w-full sm:w-44 transition-all focus:sm:w-56"
             />
           </div>

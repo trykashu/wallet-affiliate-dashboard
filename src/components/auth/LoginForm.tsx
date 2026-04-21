@@ -145,7 +145,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-gray-900
-                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
+                             placeholder-brand-400/50 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                              focus:border-brand-600 transition-all"
                 />
               </div>
@@ -174,7 +174,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
                     className="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 pr-11 text-sm text-gray-900
-                               placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
+                               placeholder-brand-400/50 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                                focus:border-brand-600 transition-all"
                   />
                   <button
@@ -222,7 +222,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
               <button
                 type="button"
                 onClick={() => switchMode("magic")}
-                className="w-full border border-surface-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700
+                className="w-full border border-surface-200 hover:border-surface-200 hover:bg-surface-100/60 text-gray-700
                            font-medium rounded-lg py-3 text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -249,7 +249,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
                   className="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-gray-900
-                             placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
+                             placeholder-brand-400/50 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                              focus:border-brand-600 transition-all"
                 />
               </div>

@@ -221,7 +221,7 @@ export default function PayoutBatchManager({
                       type="checkbox"
                       checked={allSelected}
                       onChange={toggleSelectAll}
-                      className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600/20 cursor-pointer"
+                      className="w-4 h-4 rounded border-surface-200 text-brand-600 focus:ring-brand-600/20 cursor-pointer"
                     />
                   </th>
                   <th className="th">Affiliate</th>
@@ -246,7 +246,7 @@ export default function PayoutBatchManager({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => toggleSelect(p.affiliate_id)}
-                          className="w-4 h-4 rounded border-gray-300 text-brand-600 focus:ring-brand-600/20 cursor-pointer"
+                          className="w-4 h-4 rounded border-surface-200 text-brand-600 focus:ring-brand-600/20 cursor-pointer"
                         />
                       </td>
                       <td className="td">

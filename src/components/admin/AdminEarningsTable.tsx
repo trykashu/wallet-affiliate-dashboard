@@ -141,7 +141,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
                     type="checkbox"
                     checked={selected.size === pendingIds.length && pendingIds.length > 0}
                     onChange={toggleSelectAll}
-                    className="rounded border-gray-300"
+                    className="rounded border-surface-200"
                   />
                 </th>
               )}
@@ -163,7 +163,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
                         type="checkbox"
                         checked={selected.has(e.id)}
                         onChange={() => toggleSelect(e.id)}
-                        className="rounded border-gray-300"
+                        className="rounded border-surface-200"
                       />
                     ) : null}
                   </td>

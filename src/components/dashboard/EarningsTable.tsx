@@ -23,7 +23,7 @@ const STATUS_STYLES: Record<EarningStatus, { label: string; className: string }>
 
 const TIER_STYLES: Record<AffiliateTier, { label: string; className: string }> = {
   gold:     { label: "Gold",     className: "bg-amber-50 text-amber-700 border border-amber-200" },
-  platinum: { label: "Platinum", className: "bg-purple-50 text-purple-700 border border-purple-200" },
+  platinum: { label: "Platinum", className: "bg-accent/10 text-accent border border-accent/20" },
 };
 
 const FILTER_OPTIONS: { label: string; value: EarningStatus | "all" }[] = [
