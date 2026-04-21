@@ -60,8 +60,7 @@ export default async function DashboardPage() {
 
   // ── 8. Greeting + hero stats ─────────────────────────────────
   const hour = now.getHours();
-  const greeting =
-    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const greeting = "Welcome back";
   const firstName = affiliate.agent_name.split(" ")[0];
 
   // Stages at or past transaction_run
@@ -77,12 +76,6 @@ export default async function DashboardPage() {
 
   return (
     <>
-      {/* Referral link — full width at top */}
-      <ReferralLinkCard
-        url={referralUrl}
-        description="Share this link to earn commission on users that you refer who deposit funds into the wallet."
-      />
-
       {/* ── Hero Greeting ─────────────────────────────────────── */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand-600 via-brand-600 to-brand-700 px-5 sm:px-8 py-6 sm:py-8 animate-reveal-up noise-overlay">
         {/* Ambient glow orbs */}
@@ -126,6 +119,12 @@ export default async function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Referral link — full width */}
+      <ReferralLinkCard
+        url={referralUrl}
+        description="Share this link to earn commission on users that you refer who deposit funds into the wallet."
+      />
 
       {/* Stats row */}
       <StatsRow users={users} />
