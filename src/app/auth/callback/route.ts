@@ -1,12 +1,9 @@
 /**
  * GET /auth/callback
  *
- * Supabase auth callback — handles both:
+ * Supabase auth callback — handles:
  * 1. PKCE flow: ?code=xxx (from magic link signInWithOtp)
- * 2. Implicit flow: #access_token=xxx (from inviteUserByEmail)
- *
- * For PKCE: exchanges code for session server-side, then redirects to post-login.
- * For implicit: redirects to a client-side page that reads the hash fragment.
+ * 2. Implicit flow: no code (from inviteUserByEmail) → redirect to client-side /auth/confirm
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -17,15 +14,29 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
 
-  // If no code, this might be an implicit flow redirect where the token is in the hash fragment.
-  // Hash fragments are NOT sent to the server, so redirect to a client-side page to handle it.
+  // No code → implicit flow (invite links) → redirect to client-side handler
   if (!code) {
-    // Redirect to client-side callback handler that can read hash fragments
-    return NextResponse.redirect(`${origin}/auth/confirm`);
+    const redirectUrl = new URL("/auth/confirm", origin);
+    // Preserve hash fragment by using a meta refresh page
+    return new NextResponse(
+      `<!DOCTYPE html><html><head><meta http-equiv="refresh" content="0;url=/auth/confirm${request.nextUrl.hash || ""}"></head><body>Redirecting...</body></html>`,
+      {
+        status: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   }
 
-  // PKCE flow: exchange code for session
-  const response = NextResponse.redirect(`${origin}/api/auth/post-login?next=${encodeURIComponent(next)}`);
+  // PKCE flow: exchange code for session server-side
+  const postLoginUrl = new URL(`/api/auth/post-login`, origin);
+  postLoginUrl.searchParams.set("next", next);
+  const response = NextResponse.redirect(postLoginUrl.toString());
+
+  // Ensure mobile browsers treat this as a navigation, not a download
+  response.headers.set("Content-Type", "text/html; charset=utf-8");
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -48,6 +59,7 @@ export async function GET(request: NextRequest) {
   const { error } = await supabase.auth.exchangeCodeForSession(code);
 
   if (error) {
+    console.error("[auth/callback] Code exchange failed:", error.message);
     return NextResponse.redirect(`${origin}/login?error=auth_failed`);
   }
 
