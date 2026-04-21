@@ -73,7 +73,7 @@ export default function UpdatePasswordForm() {
             required
             className={`w-full px-4 py-2.5 pr-10 rounded-xl border text-sm text-gray-900 placeholder-gray-400
                        focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all bg-white ${
-                         tooShort ? "border-red-300" : "border-gray-200"
+                         tooShort ? "border-red-300" : "border-surface-200"
                        }`}
           />
           <button
@@ -105,7 +105,7 @@ export default function UpdatePasswordForm() {
             required
             className={`w-full px-4 py-2.5 pr-10 rounded-xl border text-sm text-gray-900 placeholder-gray-400
                        focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent transition-all bg-white ${
-                         mismatch ? "border-red-300" : "border-gray-200"
+                         mismatch ? "border-red-300" : "border-surface-200"
                        }`}
           />
           <button

@@ -73,7 +73,7 @@ export default function AdminSettingsForm({
                 step={1}
                 value={minPayout}
                 onChange={(e) => setMinPayout(Number(e.target.value))}
-                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900
+                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
                            focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
               />
             </div>
@@ -90,7 +90,7 @@ export default function AdminSettingsForm({
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value as PayoutProvider)}
-              className="max-w-xs w-full text-sm rounded-xl border border-gray-200 bg-white text-gray-900 px-3 py-2
+              className="max-w-xs w-full text-sm rounded-xl border border-surface-200 bg-white text-gray-900 px-3 py-2
                          focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
             >
               {PROVIDERS.map((p) => (
@@ -167,7 +167,7 @@ export default function AdminSettingsForm({
                 step={100}
                 value={maxSinglePayout}
                 onChange={(e) => setMaxSinglePayout(Number(e.target.value))}
-                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900
+                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
                            focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
               />
             </div>
@@ -190,7 +190,7 @@ export default function AdminSettingsForm({
                 step={1000}
                 value={maxDailyAggregate}
                 onChange={(e) => setMaxDailyAggregate(Number(e.target.value))}
-                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900
+                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
                            focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
               />
             </div>
@@ -211,7 +211,7 @@ export default function AdminSettingsForm({
               step={1}
               value={maxBatchSize}
               onChange={(e) => setMaxBatchSize(Number(e.target.value))}
-              className="max-w-xs w-full px-3 py-2 text-sm rounded-xl border border-gray-200 bg-white text-gray-900
+              className="max-w-xs w-full px-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
                          focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
             />
             <p className="text-[10px] text-brand-400 mt-1">

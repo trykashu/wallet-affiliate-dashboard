@@ -208,7 +208,7 @@ export default function AppSidebar({
             <p className={`text-[10px] text-white/25 truncate ${companyName ? "" : "mt-0.5"}`}>{userEmail}</p>
           </div>
           {isAdmin ? (
-            <span className="badge-amber text-[10px] px-2 py-0.5 flex-shrink-0">Admin</span>
+            <span className="bg-white/10 text-white/70 border border-white/15 text-[10px] px-2 py-0.5 rounded-full font-semibold flex-shrink-0">Admin</span>
           ) : tier ? (
             <TierBadge tier={tier} size="sm" />
           ) : null}

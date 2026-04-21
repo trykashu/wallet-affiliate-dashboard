@@ -143,11 +143,11 @@ export default function NotificationBell({ affiliateId, initialCount }: Notifica
               onClick={() => setOpen(false)}
             />
             <div
-              className="absolute right-0 top-11 w-80 bg-white border border-surface-200 rounded-2xl z-50 shadow-2xl overflow-hidden
+              className="absolute right-0 top-11 w-80 bg-white border border-surface-200/60 rounded-2xl z-50 shadow-card-md overflow-hidden
                          animate-scale-in origin-top-right"
             >
               {/* Header */}
-              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center justify-between px-4 py-3 border-b border-surface-200/60">
                 <h3 className="text-xs font-semibold text-gray-900">Notifications</h3>
                 {count > 0 && (
                   <button
@@ -160,7 +160,7 @@ export default function NotificationBell({ affiliateId, initialCount }: Notifica
               </div>
 
               {/* List */}
-              <div className="max-h-[380px] overflow-y-auto divide-y divide-gray-100">
+              <div className="max-h-[380px] overflow-y-auto divide-y divide-surface-200/60">
                 {notifications.length === 0 ? (
                   <div className="px-4 py-10 text-center">
                     <div className="w-10 h-10 mx-auto mb-3 rounded-2xl bg-surface-100 flex items-center justify-center">

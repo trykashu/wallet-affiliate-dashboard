@@ -65,7 +65,7 @@ export default function UserTable({ users }: Props) {
               placeholder="Search name, email..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs bg-white border border-gray-200 rounded-xl
+              className="pl-8 pr-3 py-1.5 text-xs bg-white border border-surface-200 rounded-xl
                          text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2
                          focus:ring-brand-600/20 focus:border-brand-600/50 w-full sm:w-44 transition-all focus:sm:w-56"
             />
@@ -88,7 +88,7 @@ export default function UserTable({ users }: Props) {
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-surface-200/60 bg-gray-50/60">
+            <tr className="border-b border-surface-200/60 bg-surface-100/40">
               <th className="th">Name</th>
               <th className="th hidden md:table-cell">Email</th>
               <th className="th hidden lg:table-cell">Phone</th>

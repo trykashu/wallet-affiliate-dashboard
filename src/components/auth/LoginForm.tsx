@@ -144,7 +144,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900
+                  className="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-gray-900
                              placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                              focus:border-brand-600 transition-all"
                 />
@@ -173,7 +173,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 pr-11 text-sm text-gray-900
+                    className="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 pr-11 text-sm text-gray-900
                                placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                                focus:border-brand-600 transition-all"
                   />
@@ -211,7 +211,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
               {/* Divider */}
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-100" />
+                  <div className="w-full border-t border-surface-200/60" />
                 </div>
                 <div className="relative flex justify-center">
                   <span className="bg-white px-3 text-xs text-gray-400">or</span>
@@ -222,7 +222,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
               <button
                 type="button"
                 onClick={() => switchMode("magic")}
-                className="w-full border border-gray-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700
+                className="w-full border border-surface-200 hover:border-gray-300 hover:bg-gray-50 text-gray-700
                            font-medium rounded-lg py-3 text-sm flex items-center justify-center gap-2 transition-colors"
               >
                 <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
@@ -248,7 +248,7 @@ export default function LoginForm({ initialError }: LoginFormProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900
+                  className="w-full rounded-xl border border-surface-200 bg-white px-4 py-3 text-sm text-gray-900
                              placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                              focus:border-brand-600 transition-all"
                 />

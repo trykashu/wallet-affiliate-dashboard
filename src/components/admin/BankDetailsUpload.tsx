@@ -145,7 +145,7 @@ export default function BankDetailsUpload() {
       </div>
 
       {/* Drop zone / file picker */}
-      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-accent hover:bg-gray-50 transition-colors">
+      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-200 rounded-xl cursor-pointer hover:border-accent hover:bg-gray-50 transition-colors">
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <svg
             className="w-8 h-8 mb-2 text-brand-400"
@@ -189,7 +189,7 @@ export default function BankDetailsUpload() {
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-100">
+          <div className="overflow-x-auto rounded-xl border border-surface-200/60">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-gray-50">
@@ -200,7 +200,7 @@ export default function BankDetailsUpload() {
                   <th className="th text-center px-3 py-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-surface-200/60">
                 {preview.map((row, i) => {
                   const isValid = row.routingValid && row.accountValid;
                   const cleaned = cleanAccountNumber(row.account_number);

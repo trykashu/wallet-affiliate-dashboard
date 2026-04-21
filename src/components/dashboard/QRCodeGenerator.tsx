@@ -6,6 +6,8 @@ interface Props {
   referralUrl: string;
 }
 
+const QR_BRAND_COLORS = { dark: "#0C5147", light: "#ffffff" }; // brand-600
+
 export default function QRCodeGenerator({ referralUrl }: Props) {
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
@@ -20,8 +22,8 @@ export default function QRCodeGenerator({ referralUrl }: Props) {
           width:  280,
           margin: 2,
           color: {
-            dark:  "#0C5147",
-            light: "#ffffff",
+            dark:  QR_BRAND_COLORS.dark,
+            light: QR_BRAND_COLORS.light,
           },
           errorCorrectionLevel: "M",
         });
@@ -65,7 +67,7 @@ export default function QRCodeGenerator({ referralUrl }: Props) {
       {/* QR Code */}
       <div className="flex justify-center">
         {qrDataUrl ? (
-          <div className="rounded-2xl overflow-hidden border border-gray-200 p-3 bg-brand-600 inline-block">
+          <div className="rounded-2xl overflow-hidden border border-surface-200 p-3 bg-brand-600 inline-block">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={qrDataUrl}
@@ -93,7 +95,7 @@ export default function QRCodeGenerator({ referralUrl }: Props) {
           className={`flex-shrink-0 text-xs px-3 py-1.5 rounded-lg border transition-all ${
             copied
               ? "bg-accent/10 border-accent/30 text-accent"
-              : "border-gray-200 text-brand-400 hover:text-brand-600 hover:bg-brand-50 hover:border-brand-600"
+              : "border-surface-200 text-brand-400 hover:text-brand-600 hover:bg-brand-50 hover:border-brand-600"
           }`}
         >
           {copied ? "Copied!" : "Copy"}

@@ -98,7 +98,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as EarningStatus | "all")}
-            className="text-xs rounded-lg border border-gray-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
+            className="text-xs rounded-lg border border-surface-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
           >
             <option value="all">All statuses</option>
             <option value="pending">Pending</option>

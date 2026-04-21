@@ -129,7 +129,7 @@ export default function EarningsTable({ earnings }: Props) {
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-surface-200/60 bg-gray-50/60">
+            <tr className="border-b border-surface-200/60 bg-surface-100/40">
               <th className="th">Date</th>
               <th className="th">User</th>
               <th className="th hidden md:table-cell">Tier</th>

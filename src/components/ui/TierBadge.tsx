@@ -13,8 +13,8 @@ const TIER_CONFIG: Record<AffiliateTier, { label: string; classes: string; dot: 
   },
   platinum: {
     label:   "Platinum",
-    classes: "bg-purple-400/10 text-purple-300 border-purple-400/20",
-    dot:     "bg-purple-400",
+    classes: "bg-accent/10 text-accent border-accent/20",
+    dot:     "bg-accent",
   },
 };
 

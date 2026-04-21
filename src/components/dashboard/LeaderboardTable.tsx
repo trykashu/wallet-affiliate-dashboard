@@ -112,7 +112,7 @@ export default function LeaderboardTable({ snapshots, previousSnapshots, current
             <select
               value={currentPeriod ?? ""}
               onChange={(e) => router.push(`/dashboard/analytics?period=${e.target.value}`)}
-              className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
+              className="text-xs border border-surface-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-900 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
             >
               {periods.map((p) => (
                 <option key={p} value={p}>{formatPeriodLabel(p)}</option>
@@ -154,11 +154,11 @@ export default function LeaderboardTable({ snapshots, previousSnapshots, current
                     <tr>
                       <td colSpan={prevRankMap.size > 0 ? 8 : 7} className="px-5 py-2 bg-surface-50/60">
                         <div className="flex items-center gap-2">
-                          <div className="flex-1 border-t border-dashed border-gray-200" />
+                          <div className="flex-1 border-t border-dashed border-surface-200" />
                           <span className="text-[10px] text-brand-500 whitespace-nowrap tabular-nums px-1">
                             ···&nbsp;&nbsp;{gapCount.toLocaleString()} affiliate{gapCount !== 1 ? "s" : ""}
                           </span>
-                          <div className="flex-1 border-t border-dashed border-gray-200" />
+                          <div className="flex-1 border-t border-dashed border-surface-200" />
                         </div>
                       </td>
                     </tr>

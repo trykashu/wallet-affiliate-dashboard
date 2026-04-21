@@ -141,7 +141,7 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
       {/* Display existing/saved account */}
       {displayAccount && !showForm && (
         <div className="space-y-3">
-          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100">
+          <div className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-surface-200/60">
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900 truncate">
                 {displayAccount.account_name}
@@ -187,7 +187,7 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
               value={accountHolderName}
               onChange={(e) => setAccountHolderName(e.target.value)}
               placeholder="Name on the bank account"
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+              className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
             />
             {errors.account_holder_name && (
               <p className="text-red-500 text-xs mt-1">{errors.account_holder_name}</p>
@@ -207,7 +207,7 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
               value={routingNumber}
               onChange={(e) => handleDigitInput(e.target.value, setRoutingNumber)}
               placeholder="9-digit routing number"
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+              className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
             />
             {errors.routing_number && (
               <p className="text-red-500 text-xs mt-1">{errors.routing_number}</p>
@@ -227,7 +227,7 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
               value={accountNumber}
               onChange={(e) => handleDigitInput(e.target.value, setAccountNumber)}
               placeholder="Account number"
-              className="w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+              className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-gray-400 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
             />
             {errors.account_number && (
               <p className="text-red-500 text-xs mt-1">{errors.account_number}</p>
@@ -246,7 +246,7 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
                 className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium border transition-colors ${
                   accountType === "checking"
                     ? "bg-brand-600 text-white border-brand-600"
-                    : "bg-white text-gray-700 border-gray-200 hover:border-brand-600 hover:text-brand-600"
+                    : "bg-white text-gray-700 border-surface-200 hover:border-brand-600 hover:text-brand-600"
                 }`}
               >
                 Checking
@@ -257,7 +257,7 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
                 className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium border transition-colors ${
                   accountType === "savings"
                     ? "bg-brand-600 text-white border-brand-600"
-                    : "bg-white text-gray-700 border-gray-200 hover:border-brand-600 hover:text-brand-600"
+                    : "bg-white text-gray-700 border-surface-200 hover:border-brand-600 hover:text-brand-600"
                 }`}
               >
                 Savings

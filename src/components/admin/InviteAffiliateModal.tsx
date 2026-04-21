@@ -92,7 +92,7 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="affiliate@example.com"
-                className="w-full px-3 py-2 text-sm bg-gray-50 border border-gray-200 rounded-xl
+                className="w-full px-3 py-2 text-sm bg-gray-50 border border-surface-200 rounded-xl
                            text-gray-900 placeholder-gray-400
                            focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent
                            transition-colors"

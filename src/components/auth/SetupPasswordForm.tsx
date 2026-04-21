@@ -143,10 +143,10 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Minimum 8 characters"
-                  className={`w-full rounded-lg border bg-white px-4 py-3 pr-11 text-sm text-gray-900
+                  className={`w-full rounded-xl border bg-white px-4 py-3 pr-11 text-sm text-gray-900
                              placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                              focus:border-brand-600 transition-all ${
-                               tooShort ? "border-red-300" : "border-gray-200"
+                               tooShort ? "border-red-300" : "border-surface-200"
                              }`}
                 />
                 <button
@@ -178,10 +178,10 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
                   value={confirm}
                   onChange={(e) => setConfirm(e.target.value)}
                   placeholder="Re-enter your password"
-                  className={`w-full rounded-lg border bg-white px-4 py-3 pr-11 text-sm text-gray-900
+                  className={`w-full rounded-xl border bg-white px-4 py-3 pr-11 text-sm text-gray-900
                              placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-600/20
                              focus:border-brand-600 transition-all ${
-                               mismatch ? "border-red-300" : "border-gray-200"
+                               mismatch ? "border-red-300" : "border-surface-200"
                              }`}
                 />
                 <button
