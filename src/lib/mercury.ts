@@ -49,22 +49,32 @@ function getAccountId(): string {
 
 /**
  * Create a Mercury recipient for ACH payout.
+ * Mercury API: POST /api/v1/recipients
+ * Docs: https://docs.mercury.com/reference/createrecipient
  * Returns the recipient ID.
  */
 export async function getOrCreateRecipient(
   name: string,
   routingNumber: string,
-  accountNumber: string
+  accountNumber: string,
+  email?: string
 ): Promise<string> {
-  const accountId = getAccountId();
-
-  const data = await mercuryFetch(`/account/${accountId}/recipients`, {
+  const data = await mercuryFetch(`/recipients`, {
     method: "POST",
     body: JSON.stringify({
       name,
-      routingNumber,
-      accountNumber,
-      paymentMethod: "ach",
+      emails: email ? [email] : [`payouts@kashupay.com`],
+      electronicRoutingInfo: {
+        accountNumber,
+        routingNumber,
+        electronicAccountType: "businessChecking",
+        address: {
+          address1: "1603 Capitol Ave Ste 415",
+          city: "Cheyenne",
+          state: "WY",
+          postalCode: "82001",
+        },
+      },
     }),
   });
 
