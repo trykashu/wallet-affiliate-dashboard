@@ -360,26 +360,38 @@ export default function PayoutBatchManager({
                       <span className="text-xs text-brand-400">{fmt.date(p.created_at)}</span>
                     </td>
                     <td className="td">
-                      {(p.status === "processing" || p.status === "requested") && (
-                        <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1">
+                        {(p.status === "processing" || p.status === "requested") && (
+                          <>
+                            <button
+                              onClick={() => handleUpdateStatus(p.id, "completed")}
+                              disabled={updatingId === p.id}
+                              className="text-[10px] font-medium text-accent border border-accent/30 hover:border-accent
+                                         rounded px-2 py-1 transition-all disabled:opacity-50"
+                            >
+                              {updatingId === p.id ? "..." : "Complete"}
+                            </button>
+                            <button
+                              onClick={() => handleUpdateStatus(p.id, "failed")}
+                              disabled={updatingId === p.id}
+                              className="text-[10px] font-medium text-red-500 border border-red-200 hover:border-red-400
+                                         rounded px-2 py-1 transition-all disabled:opacity-50"
+                            >
+                              {updatingId === p.id ? "..." : "Failed"}
+                            </button>
+                          </>
+                        )}
+                        {p.status === "failed" && (
                           <button
-                            onClick={() => handleUpdateStatus(p.id, "completed")}
+                            onClick={() => handleUpdateStatus(p.id, "requested")}
                             disabled={updatingId === p.id}
-                            className="text-[10px] font-medium text-accent border border-accent/30 hover:border-accent
+                            className="text-[10px] font-medium text-amber-600 border border-amber-200 hover:border-amber-400
                                        rounded px-2 py-1 transition-all disabled:opacity-50"
                           >
-                            {updatingId === p.id ? "..." : "Complete"}
+                            {updatingId === p.id ? "..." : "Retry"}
                           </button>
-                          <button
-                            onClick={() => handleUpdateStatus(p.id, "failed")}
-                            disabled={updatingId === p.id}
-                            className="text-[10px] font-medium text-red-500 border border-red-200 hover:border-red-400
-                                       rounded px-2 py-1 transition-all disabled:opacity-50"
-                          >
-                            {updatingId === p.id ? "..." : "Failed"}
-                          </button>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
