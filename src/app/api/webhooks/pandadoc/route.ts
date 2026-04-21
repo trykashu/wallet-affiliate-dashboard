@@ -74,6 +74,12 @@ export async function POST(request: Request) {
     `[pandadoc-webhook] Processing completed document: ${documentId} "${documentName}"`
   );
 
+  // Only process Affiliate Agreement documents — skip MRP, W9, Pay Request, etc.
+  if (!documentName.toLowerCase().includes("affiliate agreement")) {
+    console.log(`[pandadoc-webhook] Skipping non-affiliate document: "${documentName}"`);
+    return NextResponse.json({ ok: true, skipped: "not_affiliate_agreement" });
+  }
+
   // Try to use fields from the webhook payload first (PandaDoc sends them when "fields" is checked)
   // Fall back to API call if not present
   let fields: PandaDocField[];
