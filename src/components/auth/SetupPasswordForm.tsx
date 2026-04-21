@@ -18,15 +18,12 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
   const tooShort = password.length > 0 && password.length < 8;
   const canSubmit = password.length >= 8 && password === confirm && status !== "loading";
 
-  const [debugMsg, setDebugMsg] = useState("");
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!canSubmit) return;
 
     setStatus("loading");
     setErrorMsg("");
-    setDebugMsg("Starting password setup...");
 
     try {
       const supabase = createBrowserClient(
@@ -36,25 +33,19 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
 
       // Check if we have a session
       const { data: sessionData } = await supabase.auth.getSession();
-      setDebugMsg(`Session: ${sessionData.session ? "yes" : "no"}`);
 
       if (!sessionData.session) {
         setStatus("error");
         setErrorMsg("No active session. Please click the invite link in your email again.");
         return;
       }
-
-      setDebugMsg("Updating password...");
       const { error: updateError } = await supabase.auth.updateUser({ password });
 
       if (updateError) {
         setStatus("error");
         setErrorMsg(`Password update failed: ${updateError.message}`);
-        setDebugMsg(`Error: ${updateError.message}`);
         return;
       }
-
-      setDebugMsg("Password set! Marking account...");
 
       // Get current session token to pass to API (server may not have cookies)
       const { data: currentSession } = await supabase.auth.getSession();
@@ -71,7 +62,6 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
       });
 
       const apiStatus = res.ok ? "ok" : `failed (${res.status})`;
-      setDebugMsg(`API: ${apiStatus}. Redirecting...`);
 
       // Redirect regardless — password was already set client-side
       setTimeout(() => {
@@ -81,7 +71,6 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
       const msg = err instanceof Error ? err.message : "Unknown error";
       setStatus("error");
       setErrorMsg(`Error: ${msg}`);
-      setDebugMsg(`Catch: ${msg}`);
     }
   }
 
@@ -236,13 +225,6 @@ export default function SetupPasswordForm({ redirectTo = "/dashboard" }: { redir
                 <p className="text-xs text-red-500 mt-1">Passwords do not match</p>
               )}
             </div>
-
-            {/* Debug (temporary) */}
-            {debugMsg && (
-              <div className="p-2 rounded-lg bg-blue-50 border border-blue-200">
-                <p className="text-xs text-blue-700 font-mono">{debugMsg}</p>
-              </div>
-            )}
 
             {/* Error */}
             {status === "error" && errorMsg && (
