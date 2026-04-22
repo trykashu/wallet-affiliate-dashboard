@@ -88,13 +88,14 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: referredUsers } = await (db as any)
       .from("referred_users")
-      .select("id, email, affiliate_id, status_slug, first_transaction_at");
+      .select("id, email, affiliate_id, status_slug, first_transaction_at, created_at");
 
     const referredUserByEmail = new Map<string, {
       id: string;
       affiliate_id: string;
       status_slug: FunnelStatusSlug;
       first_transaction_at: string | null;
+      created_at: string;
     }>();
 
     for (const ru of referredUsers || []) {
@@ -104,6 +105,7 @@ export async function GET() {
           affiliate_id: ru.affiliate_id,
           status_slug: ru.status_slug,
           first_transaction_at: ru.first_transaction_at,
+          created_at: ru.created_at,
         });
       }
     }
@@ -130,7 +132,16 @@ export async function GET() {
 
     // Track which affiliates have Transfer In transactions for volume update
     const affiliateTransferInTotals = new Map<string, number>();
-    // Track referred_users needing first-transaction updates
+    // Track eligible transactions for earnings (all txns in first month of referral)
+    const eligibleEarnings: {
+      referredUserId: string;
+      affiliateId: string;
+      amount: number;
+      date: string | null;
+      currentStatusSlug: FunnelStatusSlug;
+      airtableRecordId: string;
+    }[] = [];
+    // Track first-transaction updates for referred_users
     const firstTxnUpdates: {
       referredUserId: string;
       affiliateId: string;
@@ -192,6 +203,7 @@ export async function GET() {
         affiliate_id: string;
         status_slug: FunnelStatusSlug;
         first_transaction_at: string | null;
+        created_at: string;
       } | null = null;
       if (email) {
         const ru = referredUserByEmail.get(email.toLowerCase());
@@ -218,20 +230,41 @@ export async function GET() {
         const prev = affiliateTransferInTotals.get(affiliateId) || 0;
         affiliateTransferInTotals.set(affiliateId, prev + amount);
 
-        // Track first-transaction updates for referred_users (skip self-referrals)
-        if (referredUser && !referredUser.first_transaction_at && !isSelfReferral) {
-          // Only add if not already queued
-          const alreadyQueued = firstTxnUpdates.some(
-            (u) => u.referredUserId === referredUser!.id,
-          );
-          if (!alreadyQueued) {
-            firstTxnUpdates.push({
+        if (referredUser && !isSelfReferral) {
+          // Check if transaction is within first month of referral
+          const referralDate = new Date(referredUser.created_at);
+          const txnDate = dateTxn ? new Date(dateTxn) : new Date();
+          const oneMonthAfterReferral = new Date(referralDate);
+          oneMonthAfterReferral.setMonth(oneMonthAfterReferral.getMonth() + 1);
+
+          const isWithinFirstMonth = txnDate <= oneMonthAfterReferral;
+
+          if (isWithinFirstMonth) {
+            // Track for earning creation
+            eligibleEarnings.push({
               referredUserId: referredUser.id,
               affiliateId,
               amount,
               date: dateTxn,
               currentStatusSlug: referredUser.status_slug,
+              airtableRecordId: record.id,
             });
+          }
+
+          // Track first-transaction update (for setting first_transaction_at)
+          if (!referredUser.first_transaction_at) {
+            const alreadyQueued = firstTxnUpdates.some(
+              (u) => u.referredUserId === referredUser!.id,
+            );
+            if (!alreadyQueued) {
+              firstTxnUpdates.push({
+                referredUserId: referredUser.id,
+                affiliateId,
+                amount,
+                date: dateTxn,
+                currentStatusSlug: referredUser.status_slug,
+              });
+            }
           }
         }
       }
@@ -359,35 +392,41 @@ export async function GET() {
           if (!funnelError) funnelEventsCreated++;
         }
 
-        // Create earning
-        const aff = affiliateById.get(update.affiliateId);
-        const tier: AffiliateTier = aff?.tier || "gold";
-        const earningAmount = calculateEarning(update.amount, tier);
-
-        // Check if earning already exists for this referred_user
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: existingEarning } = await (db as any)
-          .from("earnings")
-          .select("id")
-          .eq("referred_user_id", update.referredUserId)
-          .limit(1);
-
-        if (!existingEarning || existingEarning.length === 0) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const { error: earningError } = await (db as any)
-            .from("earnings")
-            .insert({
-              affiliate_id: update.affiliateId,
-              referred_user_id: update.referredUserId,
-              amount: earningAmount,
-              transaction_fee_amount: kashuFee,
-              tier_at_earning: tier,
-              status: "pending",
-            });
-
-          if (!earningError) earningsCreated++;
-        }
       }
+    }
+
+    // Step 8b: Create earnings for all eligible transactions (first month of referral)
+    // Use airtable_record_id as dedup key to avoid duplicate earnings per transaction
+    for (const eligible of eligibleEarnings) {
+      // Check if earning already exists for this specific transaction
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingEarning } = await (db as any)
+        .from("earnings")
+        .select("id")
+        .eq("referred_user_id", eligible.referredUserId)
+        .eq("transaction_fee_amount", calculateKashuFee(eligible.amount))
+        .limit(1);
+
+      if (existingEarning && existingEarning.length > 0) continue;
+
+      const aff = affiliateById.get(eligible.affiliateId);
+      const tier: AffiliateTier = aff?.tier || "gold";
+      const earningAmount = calculateEarning(eligible.amount, tier);
+      const kashuFeeForEarning = calculateKashuFee(eligible.amount);
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: earningError } = await (db as any)
+        .from("earnings")
+        .insert({
+          affiliate_id: eligible.affiliateId,
+          referred_user_id: eligible.referredUserId,
+          amount: earningAmount,
+          transaction_fee_amount: kashuFeeForEarning,
+          tier_at_earning: tier,
+          status: "pending",
+        });
+
+      if (!earningError) earningsCreated++;
     }
 
     return NextResponse.json({
