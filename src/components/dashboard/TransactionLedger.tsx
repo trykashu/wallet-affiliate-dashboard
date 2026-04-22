@@ -77,12 +77,13 @@ export default function TransactionLedger({ transactions }: Props) {
               <th className="th">Date</th>
               <th className="th">User</th>
               <th className="th text-right">Amount</th>
+              <th className="th hidden sm:table-cell">Status</th>
               <th className="th hidden md:table-cell">Transaction ID</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-200/60">
             {filtered.map((txn) => (
-                <tr key={txn.id} className="hover:bg-surface-50/80 transition-colors duration-100">
+                <tr key={txn.id} className={`transition-colors duration-100 ${txn.self_referral ? "bg-red-50/30" : "hover:bg-surface-50/80"}`}>
                   <td className="td text-xs text-brand-400 whitespace-nowrap">
                     {txn.transaction_date ? fmt.date(txn.transaction_date) : "—"}
                   </td>
@@ -98,6 +99,17 @@ export default function TransactionLedger({ transactions }: Props) {
                   </td>
                   <td className="td text-sm font-semibold text-gray-900 text-right tabular-nums">
                     {fmt.currency(txn.amount)}
+                  </td>
+                  <td className="td hidden sm:table-cell">
+                    {txn.self_referral ? (
+                      <span className="inline-flex items-center text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                        Ineligible
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                        Eligible
+                      </span>
+                    )}
                   </td>
                   <td className="td hidden md:table-cell">
                     <span className="text-xs text-brand-400 font-mono truncate max-w-[150px] block">

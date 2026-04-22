@@ -118,6 +118,7 @@ export async function GET() {
       transaction_external_id: string | null;
       transaction_date: string | null;
       email: string | null;
+      self_referral: boolean;
     }
 
     const rows: TxnRow[] = [];
@@ -179,12 +180,10 @@ export async function GET() {
       const emailArr = fields["Email"] as string[] | undefined;
       const email = emailArr?.[0]?.trim() || null;
 
-      // Self-referral check: skip if the transaction email matches the affiliate's email
+      // Self-referral check: flag if the transaction email matches the affiliate's email
       const affiliateRecord = affiliateById.get(affiliateId);
-      if (email && affiliateRecord && email.toLowerCase() === (affiliateRecord.email || "").toLowerCase()) {
-        skippedSelfReferral++;
-        continue;
-      }
+      const isSelfReferral = !!(email && affiliateRecord && email.toLowerCase() === (affiliateRecord.email || "").toLowerCase());
+      if (isSelfReferral) skippedSelfReferral++;
 
       // Try to match to referred_user by email
       let referredUserId: string | null = null;
@@ -211,6 +210,7 @@ export async function GET() {
         transaction_external_id: transactionId,
         transaction_date: dateTxn,
         email,
+        self_referral: isSelfReferral,
       });
 
       // Track Transfer In amounts per affiliate for volume update
@@ -218,8 +218,8 @@ export async function GET() {
         const prev = affiliateTransferInTotals.get(affiliateId) || 0;
         affiliateTransferInTotals.set(affiliateId, prev + amount);
 
-        // Track first-transaction updates for referred_users
-        if (referredUser && !referredUser.first_transaction_at) {
+        // Track first-transaction updates for referred_users (skip self-referrals)
+        if (referredUser && !referredUser.first_transaction_at && !isSelfReferral) {
           // Only add if not already queued
           const alreadyQueued = firstTxnUpdates.some(
             (u) => u.referredUserId === referredUser!.id,

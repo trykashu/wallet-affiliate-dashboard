@@ -241,6 +241,7 @@ export interface Transaction {
   transaction_external_id: string | null;
   transaction_date: string | null;
   email: string | null;
+  self_referral: boolean;
   created_at: string;
   updated_at: string;
 }
