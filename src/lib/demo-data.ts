@@ -161,6 +161,7 @@ export const DEMO_EARNINGS: Earning[] = DEMO_REFERRED_USERS
     amount:                Math.round((u.first_transaction_fee ?? 0) * 0.10 * 100) / 100,
     transaction_fee_amount: u.first_transaction_fee ?? 0,
     tier_at_earning:       "platinum" as const,
+    transaction_ref:       null,
     status:                (i < 8 ? "paid" : i < 12 ? "approved" : "pending") as "paid" | "approved" | "pending",
     created_at:            makeDate(30 - i * 2),
     updated_at:            makeDate(28 - i * 2),

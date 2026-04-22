@@ -398,13 +398,14 @@ export async function GET() {
     // Step 8b: Create earnings for all eligible transactions (first month of referral)
     // Use airtable_record_id as dedup key to avoid duplicate earnings per transaction
     for (const eligible of eligibleEarnings) {
+      const txnRef = eligible.airtableRecordId;
+
       // Check if earning already exists for this specific transaction
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: existingEarning } = await (db as any)
         .from("earnings")
         .select("id")
-        .eq("referred_user_id", eligible.referredUserId)
-        .eq("transaction_fee_amount", calculateKashuFee(eligible.amount))
+        .eq("transaction_ref", txnRef)
         .limit(1);
 
       if (existingEarning && existingEarning.length > 0) continue;
@@ -423,6 +424,7 @@ export async function GET() {
           amount: earningAmount,
           transaction_fee_amount: kashuFeeForEarning,
           tier_at_earning: tier,
+          transaction_ref: txnRef,
           status: "pending",
         });
 

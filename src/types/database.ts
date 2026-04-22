@@ -93,6 +93,7 @@ export interface Earning {
   amount: number;
   transaction_fee_amount: number;
   tier_at_earning: AffiliateTier;
+  transaction_ref: string | null;
   status: EarningStatus;
   created_at: string;
   updated_at: string;
