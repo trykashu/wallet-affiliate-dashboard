@@ -49,6 +49,7 @@ interface UserRow {
 function buildUserRow(
   rec: AirtableRecord,
   affiliateLookup: Record<string, string>,
+  affiliateEmails: Record<string, string>,
 ): UserRow | null {
   const f = rec.fields;
 
@@ -63,6 +64,14 @@ function buildUserRow(
   // Use Contact ID as the upsert key, fall back to Airtable record ID
   const walletUserId = (f["Contact ID"] as string) || rec.id;
 
+  const userEmail = extractLookup(f["Email"]) || (f["Email"] as string) || null;
+
+  // Self-referral check: skip if user email matches affiliate email
+  const affiliateEmail = affiliateEmails[affiliateId];
+  if (userEmail && affiliateEmail && userEmail.toLowerCase() === affiliateEmail.toLowerCase()) {
+    return null; // self-referral
+  }
+
   // Best-effort status mapping — default to signed_up if unknown
   const statusRaw = (f["Status"] as string) || null;
   const statusSlug = statusRaw ? (STATUS_MAP[statusRaw] ?? DEFAULT_STATUS) : DEFAULT_STATUS;
@@ -71,7 +80,7 @@ function buildUserRow(
     wallet_user_id: walletUserId,
     affiliate_id: affiliateId,
     full_name: (f["Client Name"] as string) || null,
-    email: extractLookup(f["Email"]) || (f["Email"] as string) || null,
+    email: userEmail,
     phone: (f["Phone"] as string) || null,
     status_slug: statusSlug,
   };
@@ -103,11 +112,13 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: affiliates } = await (db as any)
       .from("affiliates")
-      .select("id, attribution_id");
+      .select("id, attribution_id, email");
 
     const affiliateLookup: Record<string, string> = {};
+    const affiliateEmails: Record<string, string> = {};
     for (const a of affiliates || []) {
       if (a.attribution_id) affiliateLookup[a.attribution_id] = a.id;
+      if (a.email) affiliateEmails[a.id] = a.email;
     }
 
     // Build rows — only records with a valid Referrer matching an affiliate
@@ -123,7 +134,7 @@ export async function GET() {
         continue;
       }
 
-      const row = buildUserRow(rec, affiliateLookup);
+      const row = buildUserRow(rec, affiliateLookup, affiliateEmails);
       if (row) {
         rows.push(row);
       } else {

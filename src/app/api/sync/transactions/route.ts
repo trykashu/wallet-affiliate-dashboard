@@ -52,10 +52,11 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: affiliates } = await (db as any)
       .from("affiliates")
-      .select("id, attribution_id, business_name, agent_name, tier, tier_override, referred_volume_total");
+      .select("id, attribution_id, business_name, agent_name, email, tier, tier_override, referred_volume_total");
 
     const affiliateById = new Map<string, {
       id: string;
+      email: string | null;
       tier: AffiliateTier;
       tier_override: boolean;
       referred_volume_total: number;
@@ -67,6 +68,7 @@ export async function GET() {
     for (const a of affiliates || []) {
       affiliateById.set(a.id, {
         id: a.id,
+        email: a.email || null,
         tier: a.tier,
         tier_override: a.tier_override,
         referred_volume_total: Number(a.referred_volume_total) || 0,
@@ -122,6 +124,7 @@ export async function GET() {
     let skippedNoReferrer = 0;
     let skippedNoMatch = 0;
     let skippedNotTransferIn = 0;
+    let skippedSelfReferral = 0;
     const unmatchedReferrers: string[] = [];
 
     // Track which affiliates have Transfer In transactions for volume update
@@ -175,6 +178,13 @@ export async function GET() {
       const dateTxn = (fields["Date Txn Started"] as string) || null;
       const emailArr = fields["Email"] as string[] | undefined;
       const email = emailArr?.[0]?.trim() || null;
+
+      // Self-referral check: skip if the transaction email matches the affiliate's email
+      const affiliateRecord = affiliateById.get(affiliateId);
+      if (email && affiliateRecord && email.toLowerCase() === (affiliateRecord.email || "").toLowerCase()) {
+        skippedSelfReferral++;
+        continue;
+      }
 
       // Try to match to referred_user by email
       let referredUserId: string | null = null;
@@ -387,6 +397,7 @@ export async function GET() {
       skipped_no_referrer: skippedNoReferrer,
       skipped_no_match: skippedNoMatch,
       skipped_not_transfer_in: skippedNotTransferIn,
+      skipped_self_referral: skippedSelfReferral,
       unmatched_referrers: unmatchedReferrers.length > 0 ? unmatchedReferrers : undefined,
       upserted,
       volume_updated: volumeUpdated,
