@@ -123,6 +123,7 @@ export async function GET() {
       self_referral: boolean;
       card_last4: string | null;
       card_issuer: string | null;
+      funnel_percent: number | null;
     }
 
     const rows: TxnRow[] = [];
@@ -198,6 +199,13 @@ export async function GET() {
           ? null
           : String(lastFourRaw).padStart(4, "0").slice(-4);
       const cardIssuer = (fields["Card Issuer"] as string) || null;
+      const funnelArr = fields["Funnel %"] as (string | number)[] | undefined;
+      const funnelRaw = funnelArr?.[0];
+      const funnelParsed =
+        funnelRaw === undefined || funnelRaw === null || funnelRaw === ""
+          ? NaN
+          : Number(String(funnelRaw).replace(/[^0-9.\-]/g, ""));
+      const funnelPercent = Number.isFinite(funnelParsed) ? funnelParsed : null;
 
       // Self-referral check: flag if the transaction email matches the affiliate's email
       const affiliateRecord = affiliateById.get(affiliateId);
@@ -233,6 +241,7 @@ export async function GET() {
         self_referral: isSelfReferral,
         card_last4: cardLast4,
         card_issuer: cardIssuer,
+        funnel_percent: funnelPercent,
       });
 
       // Track Transfer In amounts per affiliate for volume update
