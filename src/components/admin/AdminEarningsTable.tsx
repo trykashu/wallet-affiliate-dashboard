@@ -4,6 +4,7 @@ import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
 import TierBadge from "@/components/ui/TierBadge";
+import { COMMISSION_RATES } from "@/lib/tier";
 import type { EarningStatus, AffiliateTier } from "@/types/database";
 
 export interface AdminEarning {
@@ -16,6 +17,7 @@ export interface AdminEarning {
   tier_at_earning: AffiliateTier;
   amount: number;
   status: EarningStatus;
+  tpv: number | null;
 }
 
 export default function AdminEarningsTable({ earnings }: { earnings: AdminEarning[] }) {
@@ -148,8 +150,11 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
               <th className="th">Date</th>
               <th className="th hidden sm:table-cell">Affiliate</th>
               <th className="th hidden md:table-cell">User</th>
-              <th className="th hidden lg:table-cell">Tier</th>
-              <th className="th">Commission</th>
+              <th className="th hidden xl:table-cell">Tier</th>
+              <th className="th text-right">TPV</th>
+              <th className="th text-right hidden lg:table-cell">Cash Collected</th>
+              <th className="th text-right hidden lg:table-cell">Comm %</th>
+              <th className="th text-right">Commission</th>
               <th className="th">Status</th>
             </tr>
           </thead>
@@ -177,10 +182,23 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
                 <td className="td hidden md:table-cell">
                   <span className="text-xs text-gray-600">{e.referred_user_name}</span>
                 </td>
-                <td className="td hidden lg:table-cell">
+                <td className="td hidden xl:table-cell">
                   <TierBadge tier={e.tier_at_earning} />
                 </td>
-                <td className="td">
+                <td className="td text-right">
+                  <span className="text-xs text-gray-700 tabular-nums">
+                    {e.tpv != null ? fmt.currency(e.tpv) : <span className="text-brand-400">&mdash;</span>}
+                  </span>
+                </td>
+                <td className="td text-right hidden lg:table-cell">
+                  <span className="text-xs text-gray-700 tabular-nums">{fmt.currency(Number(e.transaction_fee_amount) || 0)}</span>
+                </td>
+                <td className="td text-right hidden lg:table-cell">
+                  <span className="text-xs text-brand-400 tabular-nums">
+                    {(COMMISSION_RATES[e.tier_at_earning] * 100).toFixed(0)}%
+                  </span>
+                </td>
+                <td className="td text-right">
                   <span className="text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(e.amount)}</span>
                 </td>
                 <td className="td">
@@ -190,7 +208,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={pendingIds.length > 0 ? 7 : 6} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={pendingIds.length > 0 ? 10 : 9} className="px-5 py-10 text-center text-sm text-brand-400">
                   No earnings match the current filter.
                 </td>
               </tr>

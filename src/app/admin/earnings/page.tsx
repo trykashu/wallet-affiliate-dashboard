@@ -5,7 +5,7 @@ import { isAdminEmail }        from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
 import AdminEarningsTable      from "@/components/admin/AdminEarningsTable";
 import type { AdminEarning }   from "@/components/admin/AdminEarningsTable";
-import type { Earning, Affiliate, ReferredUser } from "@/types/database";
+import type { Earning, Affiliate, ReferredUser, Transaction } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +35,19 @@ export default async function AdminEarningsPage() {
   const userMap = new Map<string, string>();
   for (const u of referredUsers) userMap.set(u.id, u.full_name);
 
+  // Look up TPV per earning by joining on transaction_ref ↔ transactions.airtable_record_id
+  const earningRefs = allEarnings.map((e) => e.transaction_ref).filter((r): r is string => !!r);
+  const tpvByRef = new Map<string, number>();
+  if (earningRefs.length > 0) {
+    const { data: refTxns } = await db
+      .from("transactions")
+      .select("airtable_record_id, amount")
+      .in("airtable_record_id", earningRefs);
+    for (const t of (refTxns ?? []) as Pick<Transaction, "airtable_record_id" | "amount">[]) {
+      tpvByRef.set(t.airtable_record_id, Number(t.amount) || 0);
+    }
+  }
+
   const enriched: AdminEarning[] = allEarnings.map((e) => ({
     id:                     e.id,
     created_at:             e.created_at,
@@ -45,6 +58,7 @@ export default async function AdminEarningsPage() {
     tier_at_earning:        e.tier_at_earning,
     amount:                 e.amount,
     status:                 e.status,
+    tpv:                    e.transaction_ref ? (tpvByRef.get(e.transaction_ref) ?? null) : null,
   }));
 
   // Summary stats
