@@ -130,8 +130,8 @@ export default function TransactionTable({
               <th className="th hidden sm:table-cell">User Email</th>
               <th className="th hidden md:table-cell">Affiliate</th>
               <th className="th"><SortBtn col="amount" label="Amount" /></th>
-              <th className="th hidden xl:table-cell">Card</th>
-              <th className="th hidden xl:table-cell">Funnel %</th>
+              <th className="th hidden lg:table-cell">Card</th>
+              <th className="th">Funnel %</th>
               <th className="th hidden lg:table-cell">Transaction ID</th>
             </tr>
           </thead>
@@ -154,7 +154,7 @@ export default function TransactionTable({
                     {fmt.currency(tx.amount)}
                   </span>
                 </td>
-                <td className="td hidden xl:table-cell">
+                <td className="td hidden lg:table-cell">
                   {tx.card_last4 ? (
                     <span className="text-xs text-gray-700 font-mono tabular-nums">
                       {tx.card_issuer ? <span className="text-brand-400 mr-1">{tx.card_issuer}</span> : null}
@@ -164,7 +164,7 @@ export default function TransactionTable({
                     <span className="text-xs text-brand-400">&mdash;</span>
                   )}
                 </td>
-                <td className="td hidden xl:table-cell">
+                <td className="td">
                   <span className="text-xs text-brand-400 tabular-nums">
                     {tx.funnel_percent != null ? `${Number(tx.funnel_percent).toFixed(0)}%` : "\u2014"}
                   </span>
