@@ -35,31 +35,39 @@ export default async function AdminEarningsPage() {
   const userMap = new Map<string, string>();
   for (const u of referredUsers) userMap.set(u.id, u.full_name);
 
-  // Look up TPV per earning by joining on transaction_ref ↔ transactions.airtable_record_id
+  // Look up TPV + funnel % per earning by joining on transaction_ref ↔ transactions.airtable_record_id
   const earningRefs = allEarnings.map((e) => e.transaction_ref).filter((r): r is string => !!r);
-  const tpvByRef = new Map<string, number>();
+  const txnByRef = new Map<string, { amount: number; funnel_percent: number | null }>();
   if (earningRefs.length > 0) {
     const { data: refTxns } = await db
       .from("transactions")
-      .select("airtable_record_id, amount")
+      .select("airtable_record_id, amount, funnel_percent")
       .in("airtable_record_id", earningRefs);
-    for (const t of (refTxns ?? []) as Pick<Transaction, "airtable_record_id" | "amount">[]) {
-      tpvByRef.set(t.airtable_record_id, Number(t.amount) || 0);
+    type RefRow = Pick<Transaction, "airtable_record_id" | "amount"> & { funnel_percent: number | null };
+    for (const t of (refTxns ?? []) as RefRow[]) {
+      txnByRef.set(t.airtable_record_id, {
+        amount: Number(t.amount) || 0,
+        funnel_percent: t.funnel_percent != null ? Number(t.funnel_percent) : null,
+      });
     }
   }
 
-  const enriched: AdminEarning[] = allEarnings.map((e) => ({
-    id:                     e.id,
-    created_at:             e.created_at,
-    affiliate_id:           e.affiliate_id,
-    affiliate_name:         affiliateMap.get(e.affiliate_id) ?? "Unknown",
-    referred_user_name:     userMap.get(e.referred_user_id) ?? "Unknown",
-    transaction_fee_amount: e.transaction_fee_amount,
-    tier_at_earning:        e.tier_at_earning,
-    amount:                 e.amount,
-    status:                 e.status,
-    tpv:                    e.transaction_ref ? (tpvByRef.get(e.transaction_ref) ?? null) : null,
-  }));
+  const enriched: AdminEarning[] = allEarnings.map((e) => {
+    const ref = e.transaction_ref ? txnByRef.get(e.transaction_ref) : undefined;
+    return {
+      id:                     e.id,
+      created_at:             e.created_at,
+      affiliate_id:           e.affiliate_id,
+      affiliate_name:         affiliateMap.get(e.affiliate_id) ?? "Unknown",
+      referred_user_name:     userMap.get(e.referred_user_id) ?? "Unknown",
+      transaction_fee_amount: e.transaction_fee_amount,
+      tier_at_earning:        e.tier_at_earning,
+      amount:                 e.amount,
+      status:                 e.status,
+      tpv:                    ref?.amount ?? null,
+      funnel_percent:         ref?.funnel_percent ?? null,
+    };
+  });
 
   // Summary stats
   const pending  = allEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);

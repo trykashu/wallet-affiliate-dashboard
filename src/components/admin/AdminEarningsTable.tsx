@@ -18,6 +18,7 @@ export interface AdminEarning {
   amount: number;
   status: EarningStatus;
   tpv: number | null;
+  funnel_percent: number | null;
 }
 
 export default function AdminEarningsTable({ earnings }: { earnings: AdminEarning[] }) {
@@ -152,6 +153,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
               <th className="th hidden md:table-cell">User</th>
               <th className="th hidden xl:table-cell">Tier</th>
               <th className="th text-right">TPV</th>
+              <th className="th text-right hidden lg:table-cell">Funnel %</th>
               <th className="th text-right hidden lg:table-cell">Cash Collected</th>
               <th className="th text-right hidden lg:table-cell">Comm %</th>
               <th className="th text-right">Commission</th>
@@ -191,6 +193,13 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
                   </span>
                 </td>
                 <td className="td text-right hidden lg:table-cell">
+                  <span className="text-xs text-brand-400 tabular-nums">
+                    {e.funnel_percent != null
+                      ? `${Number(e.funnel_percent).toFixed(Number(e.funnel_percent) % 1 === 0 ? 0 : 2).replace(/\.?0+$/, "")}%`
+                      : "—"}
+                  </span>
+                </td>
+                <td className="td text-right hidden lg:table-cell">
                   <span className="text-xs text-gray-700 tabular-nums">{fmt.currency(Number(e.transaction_fee_amount) || 0)}</span>
                 </td>
                 <td className="td text-right hidden lg:table-cell">
@@ -208,7 +217,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={pendingIds.length > 0 ? 10 : 9} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={pendingIds.length > 0 ? 11 : 10} className="px-5 py-10 text-center text-sm text-brand-400">
                   No earnings match the current filter.
                 </td>
               </tr>
