@@ -121,6 +121,8 @@ export async function GET() {
       transaction_date: string | null;
       email: string | null;
       self_referral: boolean;
+      card_last4: string | null;
+      card_issuer: string | null;
     }
 
     const rows: TxnRow[] = [];
@@ -190,6 +192,12 @@ export async function GET() {
       const dateTxn = (fields["Date Txn Started"] as string) || null;
       const emailArr = fields["Email"] as string[] | undefined;
       const email = emailArr?.[0]?.trim() || null;
+      const lastFourRaw = fields["Last 4"];
+      const cardLast4 =
+        lastFourRaw === undefined || lastFourRaw === null || lastFourRaw === ""
+          ? null
+          : String(lastFourRaw).padStart(4, "0").slice(-4);
+      const cardIssuer = (fields["Card Issuer"] as string) || null;
 
       // Self-referral check: flag if the transaction email matches the affiliate's email
       const affiliateRecord = affiliateById.get(affiliateId);
@@ -223,6 +231,8 @@ export async function GET() {
         transaction_date: dateTxn,
         email,
         self_referral: isSelfReferral,
+        card_last4: cardLast4,
+        card_issuer: cardIssuer,
       });
 
       // Track Transfer In amounts per affiliate for volume update

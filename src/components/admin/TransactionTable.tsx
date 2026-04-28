@@ -13,6 +13,9 @@ export interface AdminTransaction {
   transaction_external_id: string | null;
   transaction_date: string | null;
   created_at: string;
+  card_last4: string | null;
+  card_issuer: string | null;
+  funnel_percent: number | null;
 }
 
 type SortKey = "date" | "amount";
@@ -42,7 +45,9 @@ export default function TransactionTable({
         (tx) =>
           (tx.user_email?.toLowerCase().includes(q) ?? false) ||
           (tx.affiliate_name?.toLowerCase().includes(q) ?? false) ||
-          (tx.transaction_external_id?.toLowerCase().includes(q) ?? false)
+          (tx.transaction_external_id?.toLowerCase().includes(q) ?? false) ||
+          (tx.card_last4?.includes(q) ?? false) ||
+          (tx.card_issuer?.toLowerCase().includes(q) ?? false)
       );
     }
     if (affiliateFilter !== "all") list = list.filter((tx) => tx.affiliate_id === affiliateFilter);
@@ -97,7 +102,7 @@ export default function TransactionTable({
             </svg>
             <input
               type="text"
-              placeholder="Search email, affiliate, or txn ID..."
+              placeholder="Search email, affiliate, txn ID, last 4, or issuer..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-surface-200 bg-white text-gray-900 placeholder-brand-400/50 focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
@@ -125,6 +130,8 @@ export default function TransactionTable({
               <th className="th hidden sm:table-cell">User Email</th>
               <th className="th hidden md:table-cell">Affiliate</th>
               <th className="th"><SortBtn col="amount" label="Amount" /></th>
+              <th className="th hidden xl:table-cell">Card</th>
+              <th className="th hidden xl:table-cell">Funnel %</th>
               <th className="th hidden lg:table-cell">Transaction ID</th>
             </tr>
           </thead>
@@ -147,6 +154,21 @@ export default function TransactionTable({
                     {fmt.currency(tx.amount)}
                   </span>
                 </td>
+                <td className="td hidden xl:table-cell">
+                  {tx.card_last4 ? (
+                    <span className="text-xs text-gray-700 font-mono tabular-nums">
+                      {tx.card_issuer ? <span className="text-brand-400 mr-1">{tx.card_issuer}</span> : null}
+                      &middot;&middot;&middot;&middot; {tx.card_last4}
+                    </span>
+                  ) : (
+                    <span className="text-xs text-brand-400">&mdash;</span>
+                  )}
+                </td>
+                <td className="td hidden xl:table-cell">
+                  <span className="text-xs text-brand-400 tabular-nums">
+                    {tx.funnel_percent != null ? `${Number(tx.funnel_percent).toFixed(0)}%` : "\u2014"}
+                  </span>
+                </td>
                 <td className="td hidden lg:table-cell">
                   <span className="text-[11px] text-brand-400 font-mono">
                     {tx.transaction_external_id
@@ -160,7 +182,7 @@ export default function TransactionTable({
             ))}
             {sorted.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={7} className="px-5 py-10 text-center text-sm text-brand-400">
                   No transactions match the current filters.
                 </td>
               </tr>

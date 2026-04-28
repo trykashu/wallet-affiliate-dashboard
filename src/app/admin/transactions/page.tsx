@@ -20,7 +20,7 @@ export default async function AdminTransactionsPage() {
 
   const [txResult, affiliatesResult, usersResult] = await Promise.all([
     db.from("transactions")
-      .select("id, affiliate_id, referred_user_id, amount, transaction_type, transaction_external_id, transaction_date, email, created_at")
+      .select("id, affiliate_id, referred_user_id, amount, transaction_type, transaction_external_id, transaction_date, email, created_at, card_last4, card_issuer, funnel_percent")
       .eq("transaction_type", "Transfer In")
       .order("transaction_date", { ascending: false })
       .limit(1000),
@@ -41,17 +41,29 @@ export default async function AdminTransactionsPage() {
   const userMap = new Map<string, string>();
   for (const u of users) userMap.set(u.id, u.email);
 
-  const enriched: AdminTransaction[] = transactions.map((tx) => ({
-    id:                      tx.id,
-    affiliate_id:            tx.affiliate_id,
-    affiliate_name:          tx.affiliate_id ? (affiliateMap.get(tx.affiliate_id) ?? "Unknown") : null,
-    user_email:              tx.email ?? (tx.referred_user_id ? (userMap.get(tx.referred_user_id) ?? null) : null),
-    amount:                  tx.amount,
-    transaction_type:        tx.transaction_type,
-    transaction_external_id: tx.transaction_external_id,
-    transaction_date:        tx.transaction_date,
-    created_at:              tx.created_at,
-  }));
+  type TxnExtra = Transaction & {
+    card_last4?: string | null;
+    card_issuer?: string | null;
+    funnel_percent?: number | null;
+  };
+
+  const enriched: AdminTransaction[] = transactions.map((tx) => {
+    const t = tx as TxnExtra;
+    return {
+      id:                      t.id,
+      affiliate_id:            t.affiliate_id,
+      affiliate_name:          t.affiliate_id ? (affiliateMap.get(t.affiliate_id) ?? "Unknown") : null,
+      user_email:              t.email ?? (t.referred_user_id ? (userMap.get(t.referred_user_id) ?? null) : null),
+      amount:                  t.amount,
+      transaction_type:        t.transaction_type,
+      transaction_external_id: t.transaction_external_id,
+      transaction_date:        t.transaction_date,
+      created_at:              t.created_at,
+      card_last4:              t.card_last4 ?? null,
+      card_issuer:             t.card_issuer ?? null,
+      funnel_percent:          t.funnel_percent ?? null,
+    };
+  });
 
   const affiliateNames = affiliates.map((a) => ({ id: a.id, name: a.agent_name }));
 
