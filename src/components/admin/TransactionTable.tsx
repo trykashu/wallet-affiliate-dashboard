@@ -166,7 +166,9 @@ export default function TransactionTable({
                 </td>
                 <td className="td">
                   <span className="text-xs text-brand-400 tabular-nums">
-                    {tx.funnel_percent != null ? `${Number(tx.funnel_percent).toFixed(0)}%` : "\u2014"}
+                    {tx.funnel_percent != null
+                      ? `${Number(tx.funnel_percent).toFixed(Number(tx.funnel_percent) % 1 === 0 ? 0 : 2).replace(/\.?0+$/, "")}%`
+                      : "\u2014"}
                   </span>
                 </td>
                 <td className="td hidden lg:table-cell">
