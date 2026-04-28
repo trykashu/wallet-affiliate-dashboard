@@ -350,3 +350,12 @@ MERCURY_API_TOKEN         (Mercury bank API for payout tracking)
 MERCURY_ACCOUNT_ID        (Mercury bank account)
 CRON_SECRET               (auth for cron job endpoints)
 ```
+
+---
+
+## 10. Supabase Auth Config (Dashboard-managed, not in repo)
+
+These live in the Supabase dashboard under **Authentication → Providers → Email**, not in env vars or code:
+
+- **Email OTP Expiration: `86400` seconds (24 hours) — this is Supabase's hard max.** Governs the lifetime of `inviteUserByEmail` tokens (initial affiliate invites), magic-link logins, and password recovery links. There is no Supabase setting to make invites longer-lived than 24h. If a true non-expiring invite is ever required, the only path is a **custom invite-token table** (app-generated random token, no expiry, consumed on first use, custom email + custom `/invite/[token]` route that uses the service role to mint the auth user). Confirmed 2026-04-28.
+- Existing already-sent invites are NOT retroactively extended when the OTP expiry is changed — expiry is stamped at mint time. Use [reinvite-affiliate](src/app/api/admin/reinvite-affiliate/route.ts) to refresh an expired invite.
