@@ -1,14 +1,16 @@
 import AppSidebar from "@/components/layout/AppSidebar";
 import type { NavItem } from "@/components/layout/AppSidebar";
+import DemoPageTitle from "@/components/layout/DemoPageTitle";
 
 export const dynamic = "force-dynamic";
 
 const DEMO_NAV: NavItem[] = [
-  { label: "Dashboard",      href: "/demo",           icon: "grid"   as const, exact: true },
-  { label: "Users",          href: "/demo#users",     icon: "users"  as const },
-  { label: "Earnings",       href: "/demo#earnings",  icon: "wallet" as const },
-  { label: "Analytics",      href: "/demo#analytics", icon: "chart"  as const },
-  { label: "Referral Links", href: "/demo#links",     icon: "link"   as const },
+  { label: "Dashboard",      href: "/demo",                icon: "grid"    as const, exact: true },
+  { label: "Users",          href: "/demo/users",          icon: "users"   as const },
+  { label: "Earnings",       href: "/demo/earnings",       icon: "wallet"  as const },
+  { label: "Payouts",        href: "/demo/payouts",        icon: "dollar"  as const },
+  { label: "Referral Links", href: "/demo/referral-link",  icon: "link"    as const },
+  { label: "Support",        href: "/demo/support",        icon: "support" as const },
 ];
 
 export const metadata = {
@@ -58,7 +60,7 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
         {/* Top bar */}
         <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-surface-200/60">
           <div className="pl-16 pr-4 sm:pr-6 lg:pl-8 lg:pr-8 h-16 flex items-center justify-between gap-4">
-            <h1 className="text-lg font-bold text-gray-900">Dashboard</h1>
+            <DemoPageTitle />
             <div className="flex items-center gap-3 flex-shrink-0">
               <div className="hidden sm:flex flex-col items-end">
                 <p className="text-sm font-semibold text-gray-900 leading-tight">Alex Rivera</p>
