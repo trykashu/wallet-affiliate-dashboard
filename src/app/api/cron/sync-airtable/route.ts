@@ -14,11 +14,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-// Internal base URL for calling sibling sync routes
+// Internal base URL for calling sibling sync routes.
+// Prefer APP_URL (public custom domain) over VERCEL_URL — the per-deployment
+// `*.vercel.app` host is gated by SSO protection, so internal fetches to it
+// hit an auth wall.
 function getBaseUrl(): string {
-  // In Vercel, use the deployment URL
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
   if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
-  if (process.env.APP_URL) return process.env.APP_URL;
   return "http://localhost:3000";
 }
 
