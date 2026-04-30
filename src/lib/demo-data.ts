@@ -12,6 +12,9 @@ import type {
   StageDuration,
   Earning,
   LeaderboardSnapshot,
+  Transaction,
+  Payout,
+  PayoutAccount,
 } from "@/types/database";
 
 // ── Affiliate ───────────────────────────────────────────────────────────────
@@ -209,3 +212,77 @@ export const DEMO_LEADERBOARD: LeaderboardSnapshot[] = Array.from({ length: 10 }
   percentile:          Math.round((i / 9) * 100 * 100) / 100,
   created_at:          new Date().toISOString(),
 }));
+
+// ── Transactions (for TransactionLedger on Earnings page) ────────────────────
+
+interface DemoTransactionWithUser extends Transaction {
+  user_name: string | null;
+  user_email: string | null;
+}
+
+export const DEMO_TRANSACTIONS: DemoTransactionWithUser[] = DEMO_REFERRED_USERS
+  .filter((u) => u.first_transaction_amount !== null)
+  .map((u, i) => ({
+    id:                       `demo-txn-${i}`,
+    referred_user_id:         u.id,
+    affiliate_id:             DEMO_AFFILIATE.id,
+    airtable_record_id:       `demo-airtable-${i}`,
+    amount:                   u.first_transaction_amount ?? 0,
+    transaction_type:         "Transfer In",
+    transaction_external_id:  `TXN-${String(1000 + i).padStart(6, "0")}`,
+    transaction_date:         u.first_transaction_at ?? makeDate(10 - i),
+    email:                    u.email,
+    self_referral:            false,
+    created_at:               u.first_transaction_at ?? makeDate(10 - i),
+    updated_at:               u.first_transaction_at ?? makeDate(10 - i),
+    user_name:                u.full_name,
+    user_email:               u.email,
+  }));
+
+// ── Payout Account ──────────────────────────────────────────────────────────
+
+export const DEMO_PAYOUT_ACCOUNT: PayoutAccount = {
+  id:                   "demo-payout-acct-001",
+  affiliate_id:         DEMO_AFFILIATE.id,
+  provider:             "stripe_connect",
+  provider_id:          "acct_demo_stripe_001",
+  account_name:         "Rivera Growth Partners — Stripe",
+  routing_number:       null,
+  account_number_last4: "4821",
+  is_default:           true,
+  is_verified:          true,
+  metadata:             null,
+  created_at:           "2025-08-15T00:00:00Z",
+  updated_at:           "2025-08-15T00:00:00Z",
+};
+
+export const DEMO_MERCURY_ACCOUNT_DISPLAY = {
+  account_name: "Rivera Growth — Mercury Checking",
+  is_verified:  true,
+  last4:        "4821",
+};
+
+// ── Payouts ─────────────────────────────────────────────────────────────────
+
+export const DEMO_PAYOUTS: Payout[] = Array.from({ length: 6 }, (_, i) => ({
+  id:                    `demo-payout-${i}`,
+  affiliate_id:          DEMO_AFFILIATE.id,
+  payout_account_id:     DEMO_PAYOUT_ACCOUNT.id,
+  amount:                Math.round((800 + i * 240) * 100) / 100,
+  currency:              "usd",
+  status:                (i === 0 ? "requested" : i === 1 ? "processing" : "completed") as
+    "requested" | "processing" | "completed",
+  provider_reference_id: i > 1 ? `mrc_demo_${i}` : null,
+  period:                `monthly_2026_${String(4 - Math.min(i, 3)).padStart(2, "0")}`,
+  created_at:            makeDate(i * 14 + 3),
+  updated_at:            makeDate(i * 14 + 1),
+}));
+
+// ── Min payout amount (mirrors payout_settings) ─────────────────────────────
+
+export const DEMO_MIN_PAYOUT_AMOUNT = 25;
+
+// ── Previous-period rank (for Earnings ranking comparison) ──────────────────
+
+export const DEMO_PREV_RANK = 4;
+export const DEMO_TOTAL_AFFILIATES = 47;
