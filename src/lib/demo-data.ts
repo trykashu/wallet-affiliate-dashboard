@@ -229,7 +229,7 @@ export const DEMO_TRANSACTIONS: DemoTransactionWithUser[] = DEMO_REFERRED_USERS
     airtable_record_id:       `demo-airtable-${i}`,
     amount:                   u.first_transaction_amount ?? 0,
     transaction_type:         "Transfer In",
-    transaction_external_id:  `TXN-${String(1000 + i).padStart(6, "0")}`,
+    transaction_external_id:  `TXN-${String(1000 + i)}`,
     transaction_date:         u.first_transaction_at ?? makeDate(10 - i),
     email:                    u.email,
     self_referral:            false,
@@ -259,7 +259,7 @@ export const DEMO_PAYOUT_ACCOUNT: PayoutAccount = {
 export const DEMO_MERCURY_ACCOUNT_DISPLAY = {
   account_name: "Rivera Growth — Mercury Checking",
   is_verified:  true,
-  last4:        "4821",
+  last4:        DEMO_PAYOUT_ACCOUNT.account_number_last4,
 };
 
 // ── Payouts ─────────────────────────────────────────────────────────────────
@@ -273,7 +273,11 @@ export const DEMO_PAYOUTS: Payout[] = Array.from({ length: 6 }, (_, i) => ({
   status:                (i === 0 ? "requested" : i === 1 ? "processing" : "completed") as
     "requested" | "processing" | "completed",
   provider_reference_id: i > 1 ? `mrc_demo_${i}` : null,
-  period:                `monthly_2026_${String(4 - Math.min(i, 3)).padStart(2, "0")}`,
+  period:                (() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    return `monthly_${d.getFullYear()}_${String(d.getMonth() + 1).padStart(2, "0")}`;
+  })(),
   created_at:            makeDate(i * 14 + 3),
   updated_at:            makeDate(i * 14 + 1),
 }));
