@@ -259,7 +259,7 @@ export const DEMO_PAYOUT_ACCOUNT: PayoutAccount = {
 export const DEMO_MERCURY_ACCOUNT_DISPLAY = {
   account_name: "Rivera Growth — Mercury Checking",
   is_verified:  true,
-  last4:        DEMO_PAYOUT_ACCOUNT.account_number_last4,
+  last4:        DEMO_PAYOUT_ACCOUNT.account_number_last4 ?? undefined,
 };
 
 // ── Payouts ─────────────────────────────────────────────────────────────────
