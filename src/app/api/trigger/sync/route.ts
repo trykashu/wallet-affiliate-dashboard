@@ -31,13 +31,22 @@ async function verifyAdmin(): Promise<boolean> {
   }
 }
 
-type SyncType = "affiliates" | "transactions" | "all";
+type SyncType = "affiliates" | "users" | "highlevel" | "transactions" | "all";
 
-const VALID_TYPES: SyncType[] = ["affiliates", "transactions", "all"];
+const VALID_TYPES: SyncType[] = ["affiliates", "users", "highlevel", "transactions", "all"];
+
+// Order mirrors /api/cron/sync-airtable: affiliates → users → highlevel → transactions.
+// users depends on affiliates; transactions depends on referred_users.
+const ALL_SEQUENCE: ("affiliates" | "users" | "highlevel" | "transactions")[] = [
+  "affiliates",
+  "users",
+  "highlevel",
+  "transactions",
+];
 
 async function runSync(
   origin: string,
-  type: "affiliates" | "transactions"
+  type: "affiliates" | "users" | "highlevel" | "transactions"
 ): Promise<{ type: string; ok: boolean; data: unknown }> {
   try {
     const res = await fetch(`${origin}/api/sync/${type}`, {
@@ -77,12 +86,12 @@ export async function GET(request: NextRequest) {
 
   const results: Record<string, unknown> = {};
 
-  if (syncType === "affiliates" || syncType === "all") {
-    results.affiliates = await runSync(origin, "affiliates");
-  }
-
-  if (syncType === "transactions" || syncType === "all") {
-    results.transactions = await runSync(origin, "transactions");
+  if (syncType === "all") {
+    for (const step of ALL_SEQUENCE) {
+      results[step] = await runSync(origin, step);
+    }
+  } else {
+    results[syncType] = await runSync(origin, syncType);
   }
 
   const allOk = Object.values(results).every(
