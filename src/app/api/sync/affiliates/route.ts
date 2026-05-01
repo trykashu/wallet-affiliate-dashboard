@@ -81,8 +81,77 @@ export async function GET() {
       }
     }
 
-    // Batch upsert
     const db = createServiceClient();
+
+    // Pre-load existing affiliates for collision + orphan checks
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existingRaw } = await (db as any)
+      .from("affiliates")
+      .select("id, attribution_id, email, agent_name, business_name, user_id, last_login_at, status");
+
+    interface ExistingRow {
+      id: string;
+      attribution_id: string;
+      email: string | null;
+      agent_name: string | null;
+      business_name: string | null;
+      user_id: string | null;
+      last_login_at: string | null;
+      status: string;
+    }
+    const existing: ExistingRow[] = (existingRaw ?? []) as ExistingRow[];
+    const existingByAttribution = new Map(existing.map((e) => [e.attribution_id, e]));
+    const existingByEmail = new Map<string, ExistingRow>();
+    for (const e of existing) {
+      if (e.email) existingByEmail.set(e.email.toLowerCase(), e);
+    }
+
+    // Email collisions: incoming row's email is already attached to a different
+    // attribution_id. Strong signal that someone duplicated an Airtable record
+    // instead of editing it (the Daniel Dixon Jr scenario).
+    interface Collision {
+      email: string;
+      incoming_attribution_id: string;
+      existing_attribution_id: string;
+      existing_affiliate_id: string;
+      existing_user_id: string | null;
+      existing_has_login: boolean;
+    }
+    const emailCollisions: Collision[] = [];
+    for (const row of rows) {
+      const email = String(row.email || "").toLowerCase();
+      const incomingAttr = String(row.attribution_id);
+      if (!email) continue;
+      const match = existingByEmail.get(email);
+      if (match && match.attribution_id !== incomingAttr) {
+        emailCollisions.push({
+          email,
+          incoming_attribution_id: incomingAttr,
+          existing_attribution_id: match.attribution_id,
+          existing_affiliate_id: match.id,
+          existing_user_id: match.user_id,
+          existing_has_login: !!match.last_login_at,
+        });
+      }
+    }
+
+    // Orphans: affiliates in DB whose attribution_id no longer appears in
+    // Airtable. The source of truth has dropped them.
+    const incomingAttributionIds = new Set(rows.map((r) => String(r.attribution_id)));
+    const orphans = existing
+      .filter((e) => !incomingAttributionIds.has(e.attribution_id))
+      .map((e) => ({
+        affiliate_id: e.id,
+        attribution_id: e.attribution_id,
+        agent_name: e.agent_name,
+        business_name: e.business_name,
+        email: e.email,
+        status: e.status,
+        ever_logged_in: !!e.last_login_at,
+        has_user: !!e.user_id,
+      }));
+
+    // Batch upsert
     let upserted = 0;
     const errors: string[] = [];
 
@@ -108,6 +177,8 @@ export async function GET() {
       total_fetched: records.length,
       upserted,
       skipped,
+      email_collisions: emailCollisions.length > 0 ? emailCollisions : undefined,
+      orphans: orphans.length > 0 ? orphans : undefined,
       errors: errors.length > 0 ? errors : undefined,
       api_calls: apiCalls,
       pending_bank_details: pendingResult,
