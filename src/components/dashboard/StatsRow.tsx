@@ -1,5 +1,8 @@
+"use client";
+
 import type { ReferredUser } from "@/types/database";
 import { fmt } from "@/lib/fmt";
+import { useBrand } from "@/lib/brand-context";
 
 interface Props {
   users: ReferredUser[];
@@ -19,6 +22,7 @@ const STAGGER = ["stagger-1", "stagger-2", "stagger-3"];
 const TRANSACTED_SLUGS = ["transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank"];
 
 export default function StatsRow({ users }: Props) {
+  const brand = useBrand();
   const total      = users.length;
   const transacted = users.filter((u) => TRANSACTED_SLUGS.includes(u.status_slug)).length;
   const convRate   = total > 0 ? transacted / total : 0;
@@ -65,7 +69,11 @@ export default function StatsRow({ users }: Props) {
         const isAccent = card.variant === "accent";
         const isRate   = card.variant === "rate";
 
-        const iconClass = isAccent
+        // Branded affiliates get uniform accent treatment across all 3 stat icons
+        // (per-variant differentiation is a Kashu-specific design choice).
+        const iconClass = brand
+          ? "bg-accent/10 text-accent border-accent/15"
+          : isAccent
           ? "bg-accent/10 text-accent border-accent/15"
           : isRate
           ? "bg-brand-50 text-brand-600 border-brand-100"
