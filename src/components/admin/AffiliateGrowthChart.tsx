@@ -102,7 +102,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
       <div className="card p-4 sm:p-6">
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-900">Affiliates Added</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Monthly affiliate sign-ups</p>
+          <p className="text-xs text-brand-400 mt-0.5">Monthly sign-ups with completed agreements</p>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
           {barTicks.map((tick) => {
@@ -151,7 +151,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
       <div className="card p-4 sm:p-6">
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-900">Total Affiliates Over Time</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Cumulative affiliate growth</p>
+          <p className="text-xs text-brand-400 mt-0.5">Cumulative growth (signed agreements only)</p>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
           <defs>

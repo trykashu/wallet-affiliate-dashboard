@@ -36,12 +36,16 @@ export default async function AdminOverviewPage() {
   const webhooks:    WebhookEvent[] = webhookResult.data     ?? [];
 
   // -- Affiliate breakdown --
-  const activeCount    = affiliates.filter((a) => a.status === "active").length;
-  const pendingCount   = affiliates.filter((a) => a.status === "pending").length;
-  const suspendedCount = affiliates.filter((a) => a.status === "suspended").length;
+  // Charts and headline counts use only affiliates whose agreement is signed.
+  // Pre-signature rows are tracked separately in the Pipeline card below.
+  const completedAffiliates = affiliates.filter((a) => a.agreement_status === "Completed");
+  const completedCount      = completedAffiliates.length;
+  const pendingSignatureCount = affiliates.filter((a) => a.agreement_status === "Pending Partner Signature").length;
+  const declinedCount         = affiliates.filter((a) => a.agreement_status === "Declined").length;
+  const notCreatedCount       = affiliates.filter((a) => a.agreement_status === "Not Created" || !a.agreement_status).length;
 
-  // -- Total referred volume --
-  const totalVolume = affiliates.reduce((sum, a) => sum + (a.referred_volume_total ?? 0), 0);
+  // -- Total referred volume (completed affiliates only) --
+  const totalVolume = completedAffiliates.reduce((sum, a) => sum + (a.referred_volume_total ?? 0), 0);
 
   // -- Earnings breakdown --
   const pendingEarnings  = allEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
@@ -51,22 +55,22 @@ export default async function AdminOverviewPage() {
 
   return (
     <>
-      {/* Trend charts */}
-      <AffiliateGrowthChart affiliates={affiliates} />
+      {/* Trend charts — limited to affiliates with a Completed agreement */}
+      <AffiliateGrowthChart affiliates={completedAffiliates} />
       <UserConversionChart users={users} />
 
       {/* Stat cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Affiliates"
-          value={fmt.count(affiliates.length)}
-          sub={`${activeCount} active / ${pendingCount} pending / ${suspendedCount} suspended`}
+          value={fmt.count(completedCount)}
+          sub={`${pendingSignatureCount} awaiting signature / ${declinedCount} declined`}
           accentColor="brand"
         />
         <StatCard
           label="Total Referred Users"
           value={fmt.count(users.length)}
-          sub={`Across ${activeCount} active affiliates`}
+          sub={`Across ${completedCount} signed affiliates`}
           accentColor="accent"
         />
         <StatCard
@@ -82,6 +86,15 @@ export default async function AdminOverviewPage() {
           accentColor="brand"
         />
       </div>
+
+      {/* Affiliate Pipeline — pre-signature breakdown */}
+      <AffiliatePipelineCard
+        completed={completedCount}
+        pendingSignature={pendingSignatureCount}
+        declined={declinedCount}
+        notCreated={notCreatedCount}
+        total={affiliates.length}
+      />
 
       {/* Data sync controls */}
       <SyncButtons />
@@ -134,6 +147,75 @@ export default async function AdminOverviewPage() {
         )}
       </div>
     </>
+  );
+}
+
+function AffiliatePipelineCard({
+  completed,
+  pendingSignature,
+  declined,
+  notCreated,
+  total,
+}: {
+  completed: number;
+  pendingSignature: number;
+  declined: number;
+  notCreated: number;
+  total: number;
+}) {
+  const stages: { label: string; count: number; tone: "accent" | "amber" | "red" | "muted" }[] = [
+    { label: "Completed",                count: completed,        tone: "accent" },
+    { label: "Pending Partner Signature", count: pendingSignature, tone: "amber"  },
+    { label: "Declined",                 count: declined,         tone: "red"    },
+    { label: "Not Created",              count: notCreated,       tone: "muted"  },
+  ];
+  const max = Math.max(...stages.map((s) => s.count), 1);
+
+  const toneClasses: Record<typeof stages[number]["tone"], { bar: string; text: string }> = {
+    accent: { bar: "bg-accent",         text: "text-accent"     },
+    amber:  { bar: "bg-amber-400",      text: "text-amber-700"  },
+    red:    { bar: "bg-red-400",        text: "text-red-700"    },
+    muted:  { bar: "bg-surface-300",    text: "text-brand-400"  },
+  };
+
+  return (
+    <div className="card overflow-hidden">
+      <div className="px-5 py-4 border-b border-surface-200/60 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Affiliate Pipeline</h3>
+          <p className="text-xs text-brand-400 mt-0.5">
+            Where {fmt.count(total)} affiliate records sit in the agreement flow
+          </p>
+        </div>
+      </div>
+      <div className="px-5 py-5 space-y-3">
+        {stages.map((s) => {
+          const pct = total > 0 ? (s.count / total) * 100 : 0;
+          const barW = (s.count / max) * 100;
+          return (
+            <div key={s.label} className="flex items-center gap-3">
+              <div className="w-44 flex-shrink-0">
+                <p className="text-xs font-medium text-gray-900">{s.label}</p>
+              </div>
+              <div className="flex-1 h-2 bg-surface-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${toneClasses[s.tone].bar} rounded-full transition-all`}
+                  style={{ width: `${barW}%` }}
+                />
+              </div>
+              <div className="w-28 flex-shrink-0 flex items-baseline justify-end gap-2">
+                <span className={`text-sm font-semibold tabular-nums ${toneClasses[s.tone].text}`}>
+                  {fmt.count(s.count)}
+                </span>
+                <span className="text-[10px] text-brand-400 tabular-nums">
+                  {pct.toFixed(0)}%
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
