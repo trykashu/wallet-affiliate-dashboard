@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { ReferredUser, FunnelEvent, FunnelStatusSlug } from "@/types/database";
 import { funnelColor, funnelLabel } from "@/lib/funnel-colors";
+import { useBrand } from "@/lib/brand-context";
 
 interface Props {
   users: ReferredUser[];
@@ -73,6 +74,9 @@ function MetricBadge({
 }
 
 export default function ConversionFunnel({ users, events, stageDurations }: Props) {
+  const brand = useBrand();
+  const accentHex = brand?.accent_hex;
+
   const { funnelData, total } = useMemo(() => {
     const durationBySlug = Object.fromEntries(
       (stageDurations ?? []).map((d) => [d.status_slug, d])
@@ -122,13 +126,13 @@ export default function ConversionFunnel({ users, events, stageDurations }: Prop
     const funnelData = FUNNEL_STAGES.map((slug, i) => ({
       slug,
       label:        funnelLabel(slug),
-      color:        funnelColor(slug),
+      color:        funnelColor(slug, accentHex),
       reachedCount: reachedCounts[i],
       duration:     durationBySlug[slug] ?? null,
     }));
 
     return { funnelData, total };
-  }, [users, events, stageDurations]);
+  }, [users, events, stageDurations, accentHex]);
 
   // SVG trapezoid geometry
   const W = 700;

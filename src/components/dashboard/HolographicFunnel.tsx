@@ -9,6 +9,7 @@ import type {
 } from "@/types/database";
 import { funnelColor, funnelLabel } from "@/lib/funnel-colors";
 import { fmt } from "@/lib/fmt";
+import { useBrand } from "@/lib/brand-context";
 
 /* ── Types ─────────────────────────────────────────────── */
 interface Props {
@@ -82,6 +83,9 @@ export default function HolographicFunnel({
   stageDurations,
   events,
 }: Props) {
+  const brand = useBrand();
+  const accentHex = brand?.accent_hex;
+
   /* ── Data computation ────────────────────────────────── */
   const { funnelData, total, funnelTop } = useMemo(() => {
     const statusBySlug = Object.fromEntries(
@@ -137,13 +141,13 @@ export default function HolographicFunnel({
     const funnelData = FUNNEL_STAGES.map((slug, i) => ({
       slug,
       label: funnelLabel(slug),
-      color: funnelColor(slug),
+      color: funnelColor(slug, accentHex),
       reachedCount: reachedCounts[i],
       duration: durationBySlug[slug] ?? null,
     }));
 
     return { funnelData, total, funnelTop };
-  }, [users, statuses, stageDurations, events]);
+  }, [users, statuses, stageDurations, events, accentHex]);
 
   /* ── Derived metrics ─────────────────────────────────── */
   const lastStageName = FUNNEL_STAGES[FUNNEL_STAGES.length - 1];

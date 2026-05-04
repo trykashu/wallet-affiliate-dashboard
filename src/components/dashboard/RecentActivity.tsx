@@ -1,6 +1,9 @@
+"use client";
+
 import type { FunnelStatusSlug } from "@/types/database";
 import { funnelColor, funnelLabelColor, funnelLabel } from "@/lib/funnel-colors";
 import { fmt } from "@/lib/fmt";
+import { useBrand } from "@/lib/brand-context";
 
 export interface RecentEvent {
   id: string;
@@ -15,6 +18,9 @@ interface Props {
 }
 
 export default function RecentActivity({ events }: Props) {
+  const brand = useBrand();
+  const accentHex = brand?.accent_hex;
+
   return (
     <div className="card flex flex-col h-full">
 
@@ -46,7 +52,7 @@ export default function RecentActivity({ events }: Props) {
             <div className="absolute left-[11px] top-5 bottom-5 w-px bg-gradient-to-b from-surface-300/60 via-surface-200/40 to-transparent pointer-events-none" />
 
             {events.map((event, idx) => {
-              const dotColor = funnelColor(event.to_status);
+              const dotColor = funnelColor(event.to_status, accentHex);
               const userName = event.referred_users?.full_name ?? "Unknown User";
 
               return (
@@ -81,9 +87,9 @@ export default function RecentActivity({ events }: Props) {
                           <span
                             className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-lg"
                             style={{
-                              color: funnelLabelColor(event.from_status),
-                              background: funnelColor(event.from_status) + "12",
-                              border: `1px solid ${funnelColor(event.from_status)}20`,
+                              color: funnelLabelColor(event.from_status, accentHex),
+                              background: funnelColor(event.from_status, accentHex) + "12",
+                              border: `1px solid ${funnelColor(event.from_status, accentHex)}20`,
                             }}
                           >
                             {funnelLabel(event.from_status)}
@@ -96,7 +102,7 @@ export default function RecentActivity({ events }: Props) {
                       <span
                         className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-lg"
                         style={{
-                          color: funnelLabelColor(event.to_status),
+                          color: funnelLabelColor(event.to_status, accentHex),
                           background: dotColor + "15",
                           border: `1px solid ${dotColor}25`,
                         }}
