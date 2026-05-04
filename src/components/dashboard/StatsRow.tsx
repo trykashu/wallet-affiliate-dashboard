@@ -85,7 +85,7 @@ export default function StatsRow({ users }: Props) {
             {/* Ambient corner glow */}
             <div
               className="absolute -top-10 -right-10 w-36 h-36 rounded-full blur-3xl pointer-events-none opacity-40 transition-opacity duration-500 group-hover:opacity-60"
-              style={{ background: isAccent ? "rgba(0,222,143,0.2)" : "rgba(12,81,71,0.06)" }}
+              style={{ background: isAccent ? "rgb(var(--kw-accent-rgb) / 0.2)" : "rgb(var(--kw-brand-600-rgb) / 0.06)" }}
             />
 
             {/* Icon pill */}

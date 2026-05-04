@@ -91,8 +91,8 @@ export default function EarningsGraph({ data }: Props) {
           >
             <defs>
               <linearGradient id="earningsAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#00DE8F" stopOpacity="0.20" />
-                <stop offset="100%" stopColor="#00DE8F" stopOpacity="0" />
+                <stop offset="0%" stopColor="var(--wl-accent)" stopOpacity="0.20" />
+                <stop offset="100%" stopColor="var(--wl-accent)" stopOpacity="0" />
               </linearGradient>
             </defs>
 
@@ -125,7 +125,7 @@ export default function EarningsGraph({ data }: Props) {
             {/* Line */}
             <path
               d={totalPath} fill="none"
-              stroke="#00DE8F" strokeWidth="2.5"
+              stroke="var(--wl-accent)" strokeWidth="2.5"
               strokeLinecap="round" className="chart-line"
             />
 
@@ -148,7 +148,7 @@ export default function EarningsGraph({ data }: Props) {
                 key={i}
                 cx={pt.x} cy={pt.y}
                 r={hoveredIdx === i ? 5 : 3.5}
-                fill="#ffffff" stroke="#00DE8F" strokeWidth="2"
+                fill="#ffffff" stroke="var(--wl-accent)" strokeWidth="2"
                 style={{ transition: "r 150ms ease-out" }}
               />
             ))}
@@ -160,7 +160,7 @@ export default function EarningsGraph({ data }: Props) {
                 <line
                   x1={pts[hoveredIdx].x} y1={padY}
                   x2={pts[hoveredIdx].x} y2={padY + innerH}
-                  stroke="#00DE8F" strokeWidth="1" strokeOpacity="0.3"
+                  stroke="var(--wl-accent)" strokeWidth="1" strokeOpacity="0.3"
                   strokeDasharray="3 3"
                 />
                 {/* Tooltip box */}
@@ -168,7 +168,7 @@ export default function EarningsGraph({ data }: Props) {
                   x={Math.min(pts[hoveredIdx].x - 40, W - 88)}
                   y={Math.max(pts[hoveredIdx].y - 38, 2)}
                   width="80" height="28" rx="6"
-                  fill="#0C5147" fillOpacity="0.92"
+                  fill="var(--wl-sidebar-bg)" fillOpacity="0.92"
                 />
                 <text
                   x={Math.min(pts[hoveredIdx].x, W - 48)}

@@ -51,7 +51,7 @@ export default function ReferralLinkCard({
         className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all duration-200 active:scale-[0.97] flex-shrink-0 ${
           copied
             ? "bg-accent text-brand-900 shadow-glow-sm"
-            : "bg-accent text-brand-900 hover:bg-accent/90 shadow-[0_2px_12px_rgba(0,222,143,0.25)]"
+            : "bg-accent text-brand-900 hover:bg-accent/90 shadow-[0_2px_12px_rgb(var(--kw-accent-rgb)/0.25)]"
         }`}
       >
         {copied ? (

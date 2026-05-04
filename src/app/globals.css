@@ -11,15 +11,18 @@
   --kw-highlight: #E1FFA0;
   /* Accent hover (darker accent — used in btn-accent) */
   --kw-accent-600: #00C07C;
+  --wl-accent:      #00DE8F;
+  --wl-sidebar-bg:  #0C5147;
+  --wl-sidebar-fg:  #FFFFFF;
 }
 
 @layer base {
   body {
     background-color: #F4F6FB;
     background-image:
-      radial-gradient(ellipse 120% 80% at -10% -20%, rgba(0,222,143,0.04) 0%, transparent 50%),
-      radial-gradient(ellipse 80% 70% at 110% 110%, rgba(12,81,71,0.05) 0%, transparent 50%),
-      radial-gradient(ellipse 60% 60% at 50% 0%, rgba(0,222,143,0.02) 0%, transparent 60%);
+      radial-gradient(ellipse 120% 80% at -10% -20%, rgb(var(--kw-accent-rgb) / 0.04) 0%, transparent 50%),
+      radial-gradient(ellipse 80% 70% at 110% 110%, rgb(var(--kw-brand-600-rgb) / 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 60% at 50% 0%, rgb(var(--kw-accent-rgb) / 0.02) 0%, transparent 60%);
     @apply text-gray-900 antialiased;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
     text-rendering: optimizeLegibility;
@@ -45,7 +48,7 @@
   /* Selection color */
   ::selection {
     background-color: rgba(0, 222, 143, 0.15);
-    color: #0C5147;
+    color: var(--wl-sidebar-bg);
   }
 }
 
@@ -157,7 +160,7 @@
            shadow-card-accent
            hover:shadow-card-glow hover:-translate-y-0.5
            transition-all duration-300;
-    background-image: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(0,222,143,0.04) 100%);
+    background-image: linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgb(var(--kw-accent-rgb) / 0.04) 100%);
   }
 
   /* ── Divider ─────────────────────────────────────────────── */
@@ -170,7 +173,7 @@
   /* ── Accent top border ───────────────────────────────────── */
   .accent-top {
     @apply border-t-2;
-    border-top-color: #00DE8F;
+    border-top-color: var(--wl-accent);
   }
 
   /* ── Focus ring ──────────────────────────────────────────── */
@@ -210,7 +213,7 @@
 
 /* ── Gradient text — brand teal → mint ───────────────────── */
 .text-gradient {
-  background: linear-gradient(135deg, #0C5147 0%, #00DE8F 100%);
+  background: linear-gradient(135deg, var(--wl-sidebar-bg) 0%, var(--wl-accent) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -218,7 +221,7 @@
 
 /* Mint-only gradient text (for earnings / positive numbers) */
 .text-gradient-mint {
-  background: linear-gradient(135deg, #00C07C 0%, #00DE8F 80%);
+  background: linear-gradient(135deg, var(--kw-accent-600) 0%, var(--wl-accent) 80%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

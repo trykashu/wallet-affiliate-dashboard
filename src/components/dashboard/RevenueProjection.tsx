@@ -164,8 +164,8 @@ export default function RevenueProjection({ projections, actuals }: Props) {
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="projAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#00DE8F" stopOpacity="0.12" />
-              <stop offset="100%" stopColor="#00DE8F" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--wl-accent)" stopOpacity="0.12" />
+              <stop offset="100%" stopColor="var(--wl-accent)" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -194,18 +194,18 @@ export default function RevenueProjection({ projections, actuals }: Props) {
 
           {/* Confidence band */}
           {bandPathD && (
-            <path d={bandPathD} fill="#00DE8F" fillOpacity="0.08" />
+            <path d={bandPathD} fill="var(--wl-accent)" fillOpacity="0.08" />
           )}
 
           {/* Actual line (solid) */}
           {actualPath && (
-            <path d={actualPath} fill="none" stroke="#00DE8F" strokeWidth="2.5"
+            <path d={actualPath} fill="none" stroke="var(--wl-accent)" strokeWidth="2.5"
               strokeLinecap="round" className="chart-line" />
           )}
 
           {/* Projected line (dashed) */}
           {projectedPath && (
-            <path d={projectedPath} fill="none" stroke="#00DE8F" strokeWidth="2"
+            <path d={projectedPath} fill="none" stroke="var(--wl-accent)" strokeWidth="2"
               strokeDasharray="6 3" strokeLinecap="round" strokeOpacity="0.7" />
           )}
 
@@ -213,7 +213,7 @@ export default function RevenueProjection({ projections, actuals }: Props) {
           {combinedPts.map((pt, i) => (
             <circle key={i} cx={pt.x} cy={pt.y}
               r={pt.isActual ? 3.5 : 3}
-              fill="#ffffff" stroke="#00DE8F" strokeWidth="2"
+              fill="#ffffff" stroke="var(--wl-accent)" strokeWidth="2"
               strokeOpacity={pt.confidence}
             />
           ))}
