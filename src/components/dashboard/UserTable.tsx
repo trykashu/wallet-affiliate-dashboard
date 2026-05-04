@@ -3,14 +3,23 @@
 import { useState, useMemo } from "react";
 import type { ReferredUser } from "@/types/database";
 import { fmt } from "@/lib/fmt";
+import { useBrand } from "@/lib/brand-context";
 
 interface Props {
   users: ReferredUser[];
 }
 
 export default function UserTable({ users }: Props) {
+  const brand = useBrand();
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [search, setSearch] = useState("");
+
+  const avatarChipClass = brand
+    ? "bg-accent/[0.08] border-accent/20"
+    : "bg-brand-50 border-brand-100";
+  const avatarLetterClass = brand
+    ? "text-accent"
+    : "text-brand-600";
 
   const filtered = useMemo(() => {
     let result = users;
@@ -108,8 +117,8 @@ export default function UserTable({ users }: Props) {
                 <tr key={user.id} className="hover:bg-surface-50/80 transition-colors duration-100">
                   <td className="td">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-brand-50 border border-brand-100 flex items-center justify-center flex-shrink-0">
-                        <span className="text-xs font-bold text-brand-600">
+                      <div className={`w-8 h-8 rounded-xl border flex items-center justify-center flex-shrink-0 ${avatarChipClass}`}>
+                        <span className={`text-xs font-bold ${avatarLetterClass}`}>
                           {(user.full_name ?? "?").charAt(0).toUpperCase()}
                         </span>
                       </div>
