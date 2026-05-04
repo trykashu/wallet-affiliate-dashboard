@@ -16,7 +16,7 @@ export type FunnelStatusSlug =
 
 export type AffiliateStatus = 'active' | 'suspended' | 'pending';
 
-export type AffiliateTier = 'gold' | 'platinum';
+export type AffiliateTier = 'gold' | 'platinum' | 'custom';
 
 export type EarningStatus = 'pending' | 'approved' | 'paid' | 'reversed';
 

@@ -26,11 +26,12 @@ const BATCH_SIZE = 50;
 const TIER_MAP: Record<string, string> = {
   "Gold Tier - T2": "gold",
   "Platinum Tier - T1": "platinum",
+  "Custom - T0": "custom",
 };
 
-function mapTier(raw: unknown): "gold" | "platinum" {
+function mapTier(raw: unknown): "gold" | "platinum" | "custom" {
   if (typeof raw === "string" && TIER_MAP[raw]) {
-    return TIER_MAP[raw] as "gold" | "platinum";
+    return TIER_MAP[raw] as "gold" | "platinum" | "custom";
   }
   return "gold";
 }

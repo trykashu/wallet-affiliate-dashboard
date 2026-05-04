@@ -16,6 +16,11 @@ const TIER_CONFIG: Record<AffiliateTier, { label: string; classes: string; dot: 
     classes: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border-slate-300",
     dot:     "bg-gradient-to-br from-slate-400 to-slate-600",
   },
+  custom: {
+    label:   "Custom",
+    classes: "bg-purple-500/10 text-purple-700 border-purple-500/20",
+    dot:     "bg-purple-500",
+  },
 };
 
 export default function TierBadge({ tier, size = "sm" }: Props) {

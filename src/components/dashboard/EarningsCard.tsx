@@ -18,6 +18,7 @@ interface Props {
 const TIER_BADGE: Record<AffiliateTier, { label: string; class: string }> = {
   gold:     { label: "Gold",     class: "bg-amber-50 text-amber-700 border-amber-200" },
   platinum: { label: "Platinum", class: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border-slate-300" },
+  custom:   { label: "Custom",   class: "bg-purple-500/10 text-purple-700 border-purple-500/20" },
 };
 
 /** Next payout is the 15th of the following month. */

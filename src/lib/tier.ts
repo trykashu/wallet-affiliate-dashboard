@@ -7,6 +7,7 @@
  *
  * Gold:     5% of Kashu's fee
  * Platinum: 10% of Kashu's fee
+ * Custom:   0% of Kashu's fee (bespoke compensation handled outside this system)
  *
  * Example (Gold, $2500 TPV, 8.5% fee):
  *   Kashu fee  = $2500 × 0.085 = $212.50
@@ -29,10 +30,15 @@ export type KashuFeeRate = keyof typeof KASHU_FEE_RATES;
 export const COMMISSION_RATES: Record<AffiliateTier, number> = {
   gold: 0.05,     // 5% of Kashu's fee
   platinum: 0.10,  // 10% of Kashu's fee
+  custom: 0,      // bespoke compensation handled outside this system
 };
 
-/** Determine the tier based on total referred transaction volume. */
-export function getTierForVolume(referredVolume: number): AffiliateTier {
+/**
+ * Determine the tier based on total referred transaction volume.
+ * NOTE: Only returns 'gold' or 'platinum'. The 'custom' tier is manually
+ * assigned and is never derived from volume.
+ */
+export function getTierForVolume(referredVolume: number): Exclude<AffiliateTier, "custom"> {
   if (referredVolume >= TIER_THRESHOLDS.platinum) return "platinum";
   return "gold";
 }
