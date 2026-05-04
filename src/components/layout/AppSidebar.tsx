@@ -158,14 +158,23 @@ export default function AppSidebar({
               >
                 {/* Active indicator -- glowing accent bar */}
                 {active && (
-                  <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-accent shadow-[0_0_8px_rgba(0,222,143,0.5)]" />
+                  <span
+                    className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full ${brand ? "" : "bg-accent shadow-[0_0_8px_rgba(0,222,143,0.5)]"}`}
+                    style={brand ? { backgroundColor: "var(--wl-accent)" } : undefined}
+                  />
                 )}
-                <span className={`flex-shrink-0 transition-colors ${active ? "text-accent" : "text-white/40 group-hover:text-white/70"}`}>
+                <span
+                  className={`flex-shrink-0 transition-colors ${active ? (brand ? "" : "text-accent") : "text-white/40 group-hover:text-white/70"}`}
+                  style={active && brand ? { color: "var(--wl-accent)" } : undefined}
+                >
                   {Icons[item.icon]}
                 </span>
                 <span className="flex-1 text-[13px]">{item.label}</span>
                 {active && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent/60" />
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full ${brand ? "" : "bg-accent/60"}`}
+                    style={brand ? { backgroundColor: "var(--wl-accent)", opacity: 0.6 } : undefined}
+                  />
                 )}
               </a>
             </div>
@@ -185,9 +194,15 @@ export default function AppSidebar({
             onClick={() => setMobileOpen(false)}
           >
             {profileActive && (
-              <span className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full bg-accent shadow-[0_0_8px_rgba(0,222,143,0.5)]" />
+              <span
+                className={`absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-5 rounded-r-full ${brand ? "" : "bg-accent shadow-[0_0_8px_rgba(0,222,143,0.5)]"}`}
+                style={brand ? { backgroundColor: "var(--wl-accent)" } : undefined}
+              />
             )}
-            <span className={`flex-shrink-0 transition-colors ${profileActive ? "text-accent" : "text-white/40 group-hover:text-white/70"}`}>
+            <span
+              className={`flex-shrink-0 transition-colors ${profileActive ? (brand ? "" : "text-accent") : "text-white/40 group-hover:text-white/70"}`}
+              style={profileActive && brand ? { color: "var(--wl-accent)" } : undefined}
+            >
               {Icons.profile}
             </span>
             <span className="flex-1 text-[13px]">My Profile</span>
@@ -197,10 +212,27 @@ export default function AppSidebar({
         {/* User card */}
         <div className="flex items-center gap-3 px-3 py-3 rounded-2xl bg-white/[0.05] border border-white/[0.06] mt-1 backdrop-blur-sm">
           <div className="relative flex-shrink-0">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-accent/30 to-accent/10 border border-accent/20 flex items-center justify-center">
-              <span className="text-accent text-xs font-bold">{initials}</span>
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center ${brand ? "border" : "bg-gradient-to-br from-accent/30 to-accent/10 border border-accent/20"}`}
+              style={brand ? {
+                background: `linear-gradient(135deg, color-mix(in srgb, ${brand.accent_hex} 30%, transparent), color-mix(in srgb, ${brand.accent_hex} 10%, transparent))`,
+                borderColor: `color-mix(in srgb, ${brand.accent_hex} 20%, transparent)`,
+              } : undefined}
+            >
+              <span
+                className={`text-xs font-bold ${brand ? "" : "text-accent"}`}
+                style={brand ? { color: "var(--wl-accent)" } : undefined}
+              >
+                {initials}
+              </span>
             </div>
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-accent border-2 border-brand-600" />
+            <span
+              className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 ${brand ? "" : "bg-accent border-brand-600"}`}
+              style={brand ? {
+                backgroundColor: brand.accent_hex,
+                borderColor: brand.sidebar_bg_hex,
+              } : undefined}
+            />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-semibold text-white/90 truncate leading-tight">{displayName}</p>
