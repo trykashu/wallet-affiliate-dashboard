@@ -44,8 +44,10 @@ export default async function AdminOverviewPage() {
   const declinedCount         = affiliates.filter((a) => a.agreement_status === "Declined").length;
   const notCreatedCount       = affiliates.filter((a) => a.agreement_status === "Not Created" || !a.agreement_status).length;
 
-  // -- Total referred volume (completed affiliates only) --
-  const totalVolume = completedAffiliates.reduce((sum, a) => sum + (a.referred_volume_total ?? 0), 0);
+  // -- Total referred volume — across ALL affiliates including pending-signature.
+  // Pre-signed affiliates can still drive real volume, and surfacing it is useful
+  // leverage to get them to sign.
+  const totalVolume = affiliates.reduce((sum, a) => sum + (a.referred_volume_total ?? 0), 0);
 
   // -- Earnings breakdown --
   const pendingEarnings  = allEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
