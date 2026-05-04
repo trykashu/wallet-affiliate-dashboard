@@ -161,8 +161,8 @@ export default function EarningsCard({ summary, tier, referredVolume }: Props) {
         </div>
       </div>
 
-      {/* Volume progress to Platinum */}
-      {!isPlatinum && (
+      {/* Volume tracker — Platinum threshold for gold; lifetime total for custom; hidden for platinum */}
+      {tier === "gold" && (
         <div className="px-5 py-3.5 border-t border-surface-200/60">
           <div className="flex items-center justify-between text-xs mb-2">
             <span className="text-brand-400 font-medium">Volume to Platinum</span>
@@ -177,6 +177,17 @@ export default function EarningsCard({ summary, tier, referredVolume }: Props) {
             />
           </div>
           <p className="text-[10px] text-brand-400/60 mt-1 tabular-nums">{volumePct}% to Platinum tier</p>
+        </div>
+      )}
+
+      {tier === "custom" && (
+        <div className="px-5 py-3.5 border-t border-surface-200/60">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-brand-400 font-medium">Lifetime referred volume</span>
+            <span className="font-semibold text-gray-900 tabular-nums">
+              {fmt.currencyCompact(referredVolume)}
+            </span>
+          </div>
         </div>
       )}
     </div>
