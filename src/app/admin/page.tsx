@@ -38,11 +38,23 @@ export default async function AdminOverviewPage() {
   // -- Affiliate breakdown --
   // Charts and headline counts use only affiliates whose agreement is signed.
   // Pre-signature rows are tracked separately in the Pipeline card below.
-  const completedAffiliates = affiliates.filter((a) => a.agreement_status === "Completed");
-  const completedCount      = completedAffiliates.length;
-  const pendingSignatureCount = affiliates.filter((a) => a.agreement_status === "Pending Partner Signature").length;
-  const declinedCount         = affiliates.filter((a) => a.agreement_status === "Declined").length;
-  const notCreatedCount       = affiliates.filter((a) => a.agreement_status === "Not Created" || !a.agreement_status).length;
+  const completedAffiliates       = affiliates.filter((a) => a.agreement_status === "Completed");
+  const pendingSignatureAffiliates = affiliates.filter((a) => a.agreement_status === "Pending Partner Signature");
+  const declinedAffiliates         = affiliates.filter((a) => a.agreement_status === "Declined");
+  const notCreatedAffiliates       = affiliates.filter((a) => a.agreement_status === "Not Created" || !a.agreement_status);
+
+  const completedCount        = completedAffiliates.length;
+  const pendingSignatureCount = pendingSignatureAffiliates.length;
+  const declinedCount         = declinedAffiliates.length;
+  const notCreatedCount       = notCreatedAffiliates.length;
+
+  const sumVolume = (rows: Affiliate[]) =>
+    rows.reduce((s, a) => s + (Number(a.referred_volume_total) || 0), 0);
+
+  const completedVolume        = sumVolume(completedAffiliates);
+  const pendingSignatureVolume = sumVolume(pendingSignatureAffiliates);
+  const declinedVolume         = sumVolume(declinedAffiliates);
+  const notCreatedVolume       = sumVolume(notCreatedAffiliates);
 
   // -- Total referred volume — across ALL affiliates including pending-signature.
   // Pre-signed affiliates can still drive real volume, and surfacing it is useful
@@ -92,9 +104,13 @@ export default async function AdminOverviewPage() {
       {/* Affiliate Pipeline — pre-signature breakdown */}
       <AffiliatePipelineCard
         completed={completedCount}
+        completedVolume={completedVolume}
         pendingSignature={pendingSignatureCount}
+        pendingSignatureVolume={pendingSignatureVolume}
         declined={declinedCount}
+        declinedVolume={declinedVolume}
         notCreated={notCreatedCount}
+        notCreatedVolume={notCreatedVolume}
         total={affiliates.length}
       />
 
@@ -154,22 +170,30 @@ export default async function AdminOverviewPage() {
 
 function AffiliatePipelineCard({
   completed,
+  completedVolume,
   pendingSignature,
+  pendingSignatureVolume,
   declined,
+  declinedVolume,
   notCreated,
+  notCreatedVolume,
   total,
 }: {
   completed: number;
+  completedVolume: number;
   pendingSignature: number;
+  pendingSignatureVolume: number;
   declined: number;
+  declinedVolume: number;
   notCreated: number;
+  notCreatedVolume: number;
   total: number;
 }) {
-  const stages: { label: string; count: number; tone: "accent" | "amber" | "red" | "muted" }[] = [
-    { label: "Completed",                count: completed,        tone: "accent" },
-    { label: "Pending Partner Signature", count: pendingSignature, tone: "amber"  },
-    { label: "Declined",                 count: declined,         tone: "red"    },
-    { label: "Not Created",              count: notCreated,       tone: "muted"  },
+  const stages: { label: string; count: number; volume: number; tone: "accent" | "amber" | "red" | "muted" }[] = [
+    { label: "Completed",                 count: completed,        volume: completedVolume,        tone: "accent" },
+    { label: "Pending Partner Signature", count: pendingSignature, volume: pendingSignatureVolume, tone: "amber"  },
+    { label: "Declined",                  count: declined,         volume: declinedVolume,         tone: "red"    },
+    { label: "Not Created",               count: notCreated,       volume: notCreatedVolume,       tone: "muted"  },
   ];
   const max = Math.max(...stages.map((s) => s.count), 1);
 
@@ -205,12 +229,17 @@ function AffiliatePipelineCard({
                   style={{ width: `${barW}%` }}
                 />
               </div>
-              <div className="w-28 flex-shrink-0 flex items-baseline justify-end gap-2">
-                <span className={`text-sm font-semibold tabular-nums ${toneClasses[s.tone].text}`}>
-                  {fmt.count(s.count)}
-                </span>
-                <span className="text-[10px] text-brand-400 tabular-nums">
-                  {pct.toFixed(0)}%
+              <div className="w-44 flex-shrink-0 flex flex-col items-end leading-tight">
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-sm font-semibold tabular-nums ${toneClasses[s.tone].text}`}>
+                    {fmt.count(s.count)}
+                  </span>
+                  <span className="text-[10px] text-brand-400 tabular-nums">
+                    {pct.toFixed(0)}%
+                  </span>
+                </div>
+                <span className="text-[11px] text-brand-400 tabular-nums">
+                  {fmt.currencyCompact(s.volume)} volume
                 </span>
               </div>
             </div>
