@@ -11,14 +11,6 @@
   --kw-highlight: #E1FFA0;
   /* Accent hover (darker accent — used in btn-accent) */
   --kw-accent-600: #00C07C;
-  /* Funnel post-signup stage colors */
-  --kw-funnel-signed-up:        #BBF7D0;
-  --kw-funnel-transaction-run:  #4ADE80;
-  --kw-funnel-funds-in-wallet:  #22C55E;
-  --kw-funnel-ach-initiated:    #16A34A;
-  --kw-funnel-funds-in-bank:    #00DE8F;
-  /* Funnel signed_up label override (dark green for legibility on light pastel bg) */
-  --kw-funnel-signed-up-label:  #15803D;
 }
 
 @layer base {
