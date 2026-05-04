@@ -1,4 +1,4 @@
-import { getAffiliateContext } from "@/lib/affiliate-context";
+import { getAffiliateContext, DEFAULT_SIGNUP_BASE_URL } from "@/lib/affiliate-context";
 import { fmt } from "@/lib/fmt";
 import type { FunnelStatusSlug, ReferredUser, FunnelEvent, FunnelStatus, StageDuration } from "@/types/database";
 import StatsRow from "@/components/dashboard/StatsRow";
@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function DashboardPage() {
   const ctx = await getAffiliateContext();
   if (!ctx) return null;
-  const { db, affiliate, affiliateId } = ctx;
+  const { db, affiliate, affiliateId, brand } = ctx;
 
   // ── 1. Fetch referred users ──────────────────────────────────
   const { data: usersRaw } = await db
@@ -56,7 +56,8 @@ export default async function DashboardPage() {
   const now = new Date();
   // ── 7. Referral link ────────────────────────────────────────
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
-  const referralUrl = `https://signup.kashupay.com?referrer=${affiliate.attribution_id}`;
+  const baseUrl = brand?.signup_base_url ?? DEFAULT_SIGNUP_BASE_URL;
+  const referralUrl = `${baseUrl}?referrer=${affiliate.attribution_id}`;
 
   // ── 8. Greeting + hero stats ─────────────────────────────────
   const hour = now.getHours();

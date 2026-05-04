@@ -11,7 +11,7 @@
  * Usage in any dashboard server component:
  *   const ctx = await getAffiliateContext();
  *   if (!ctx) return null;
- *   const { db, affiliate, affiliateId, isViewingAs, viewingAsName } = ctx;
+ *   const { db, affiliate, affiliateId, isViewingAs, viewingAsName, brand } = ctx;
  *
  *   // Query with explicit affiliate_id (works in both modes)
  *   const { data } = await db.from("referred_users")
@@ -24,7 +24,11 @@ import { cookies }             from "next/headers";
 import { createServiceClient } from "./supabase/service";
 import { createClient }        from "./supabase/server";
 import { isAdminEmail }        from "./admin";
-import type { Affiliate }      from "@/types/database";
+import type { Affiliate, WhitelabelBrand } from "@/types/database";
+
+/** Default Kashu signup landing URL — used when an affiliate's whitelabel brand
+ *  has no `signup_base_url` configured (or the affiliate has no brand at all). */
+export const DEFAULT_SIGNUP_BASE_URL = "https://signup.kashupay.com";
 
 export interface AffiliateContext {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,6 +37,7 @@ export interface AffiliateContext {
   affiliateId:    string;
   isViewingAs:    boolean;
   viewingAsName:  string | null;
+  brand:          WhitelabelBrand | null;
 }
 
 export const VIEW_AS_COOKIE = "wallet_view_as";
@@ -52,6 +57,19 @@ export async function getViewAsPayload(): Promise<ViewAsCookiePayload | null> {
   } catch {
     return null;
   }
+}
+
+/** Fetch the whitelabel brand for an affiliate (null if unset). */
+async function fetchBrand(brandId: string | null): Promise<WhitelabelBrand | null> {
+  if (!brandId) return null;
+  const svc = createServiceClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: brandRaw } = await (svc as any)
+    .from("whitelabel_brands")
+    .select("*")
+    .eq("id", brandId)
+    .single();
+  return (brandRaw ?? null) as WhitelabelBrand | null;
 }
 
 /**
@@ -78,12 +96,16 @@ export async function getAffiliateContext(): Promise<AffiliateContext | null> {
 
       if (!affiliateRaw) return null;
 
+      const affiliate = affiliateRaw as Affiliate;
+      const brand = await fetchBrand(affiliate.whitelabel_brand_id);
+
       return {
         db,
-        affiliate:      affiliateRaw as Affiliate,
+        affiliate,
         affiliateId:    viewAs.affiliate_id,
         isViewingAs:    true,
         viewingAsName:  viewAs.affiliate_name,
+        brand,
       };
     }
     // Not an admin — fall through to normal mode (ignore the cookie)
@@ -117,12 +139,15 @@ export async function getAffiliateContext(): Promise<AffiliateContext | null> {
     }
 
     if (!affiliateRaw) return null;
+    const affiliate = affiliateRaw as Affiliate;
+    const brand = await fetchBrand(affiliate.whitelabel_brand_id);
     return {
       db,
-      affiliate:      affiliateRaw as Affiliate,
-      affiliateId:    affiliateRaw.id,
+      affiliate,
+      affiliateId:    affiliate.id,
       isViewingAs:    false,
       viewingAsName:  null,
+      brand,
     };
   }
 
@@ -134,6 +159,7 @@ export async function getAffiliateContext(): Promise<AffiliateContext | null> {
   if (!affiliateRaw) return null;
 
   const affiliate = affiliateRaw as Affiliate;
+  const brand = await fetchBrand(affiliate.whitelabel_brand_id);
 
   return {
     db,
@@ -141,5 +167,6 @@ export async function getAffiliateContext(): Promise<AffiliateContext | null> {
     affiliateId:    affiliate.id,
     isViewingAs:    false,
     viewingAsName:  null,
+    brand,
   };
 }

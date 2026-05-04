@@ -1,4 +1,4 @@
-import { getAffiliateContext } from "@/lib/affiliate-context";
+import { getAffiliateContext, DEFAULT_SIGNUP_BASE_URL } from "@/lib/affiliate-context";
 import ReferralLinkCard from "@/components/dashboard/ReferralLinkCard";
 import QRCodeGenerator from "@/components/dashboard/QRCodeGenerator";
 
@@ -7,10 +7,11 @@ export const dynamic = "force-dynamic";
 export default async function ReferralLinkPage() {
   const ctx = await getAffiliateContext();
   if (!ctx) return null;
-  const { affiliate } = ctx;
+  const { affiliate, brand } = ctx;
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL ?? "";
-  const referralUrl = `https://signup.kashupay.com?referrer=${affiliate.attribution_id}`;
+  const baseUrl = brand?.signup_base_url ?? DEFAULT_SIGNUP_BASE_URL;
+  const referralUrl = `${baseUrl}?referrer=${affiliate.attribution_id}`;
 
   return (
     <>

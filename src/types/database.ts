@@ -245,6 +245,7 @@ export interface WhitelabelBrand {
   sidebar_bg_hex:  string;
   sidebar_fg_hex:  string;
   accent_hex:      string;
+  signup_base_url: string | null;
   created_at:      string;
   updated_at:      string;
 }
