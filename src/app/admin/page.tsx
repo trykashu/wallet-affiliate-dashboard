@@ -49,7 +49,7 @@ export default async function AdminOverviewPage() {
   const notCreatedCount       = notCreatedAffiliates.length;
 
   const sumVolume = (rows: Affiliate[]) =>
-    rows.reduce((s, a) => s + (Number(a.referred_volume_total) || 0), 0);
+    rows.reduce((s, a) => s + (a.referred_volume_total ?? 0), 0);
 
   const completedVolume        = sumVolume(completedAffiliates);
   const pendingSignatureVolume = sumVolume(pendingSignatureAffiliates);
@@ -239,7 +239,7 @@ function AffiliatePipelineCard({
                   </span>
                 </div>
                 <span className="text-[11px] text-brand-400 tabular-nums">
-                  {fmt.currencyCompact(s.volume)} volume
+                  {s.volume > 0 ? fmt.currencyCompact(s.volume) : "$0"} volume
                 </span>
               </div>
             </div>
