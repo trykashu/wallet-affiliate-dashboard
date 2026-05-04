@@ -9,6 +9,7 @@ import RealtimeRefresh         from "@/components/layout/RealtimeRefresh";
 import NotificationBell        from "@/components/layout/NotificationBell";
 import PageTitle               from "@/components/ui/PageTitle";
 import type { Affiliate, WhitelabelBrand } from "@/types/database";
+import { BrandProvider } from "@/lib/brand-context";
 
 export const dynamic = "force-dynamic";
 
@@ -234,7 +235,7 @@ export default async function DashboardLayout({
 
         {/* -- Page content -- */}
         <main className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-5 sm:space-y-7 animate-fade-in">
-          {children}
+          <BrandProvider brand={brand}>{children}</BrandProvider>
         </main>
 
         <AutoRefresh />
