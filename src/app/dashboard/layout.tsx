@@ -8,7 +8,7 @@ import AutoRefresh             from "@/components/layout/AutoRefresh";
 import RealtimeRefresh         from "@/components/layout/RealtimeRefresh";
 import NotificationBell        from "@/components/layout/NotificationBell";
 import PageTitle               from "@/components/ui/PageTitle";
-import type { Affiliate }      from "@/types/database";
+import type { Affiliate, WhitelabelBrand } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -81,6 +81,21 @@ export default async function DashboardLayout({
   if (!affiliate) {
     if (isAdmin) redirect("/admin");
     return <AccountPending userEmail={user?.email ?? ""} />;
+  }
+
+  // ── Load whitelabel brand if this affiliate belongs to one ───────────────
+  // Admin view-as deliberately ignores branding so admins always see Kashu chrome.
+  let brand: WhitelabelBrand | null = null;
+  if (affiliate.whitelabel_brand_id && !isViewingAs) {
+    const { createServiceClient } = await import("@/lib/supabase/service");
+    const svc = createServiceClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: brandRaw } = await (svc as any)
+      .from("whitelabel_brands")
+      .select("*")
+      .eq("id", affiliate.whitelabel_brand_id)
+      .single();
+    brand = (brandRaw ?? null) as WhitelabelBrand | null;
   }
 
   // SSR unread notification count (skip in preview without user)
