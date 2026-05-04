@@ -37,6 +37,7 @@ export const DEMO_AFFILIATE: Affiliate = {
   last_login_at:         new Date().toISOString(),
   created_at:            "2025-08-01T00:00:00Z",
   updated_at:            new Date().toISOString(),
+  whitelabel_brand_id:   null,
 };
 
 // ── Referred Users ──────────────────────────────────────────────────────────

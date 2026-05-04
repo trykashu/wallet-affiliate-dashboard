@@ -53,6 +53,7 @@ export interface Affiliate {
   last_login_at: string | null;
   created_at: string;
   updated_at: string;
+  whitelabel_brand_id: string | null;
 }
 
 export interface ReferredUser {
@@ -230,6 +231,18 @@ export interface WebhookEvent {
   error_message: string | null;
   created_at: string;
   processed_at: string | null;
+}
+
+export interface WhitelabelBrand {
+  id:              string;
+  slug:            string;
+  display_name:    string;
+  logo_path:       string;
+  sidebar_bg_hex:  string;
+  sidebar_fg_hex:  string;
+  accent_hex:      string;
+  created_at:      string;
+  updated_at:      string;
 }
 
 export interface Transaction {
