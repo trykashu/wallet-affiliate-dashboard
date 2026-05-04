@@ -85,6 +85,45 @@ export default function HolographicFunnel({
 }: Props) {
   const brand = useBrand();
   const accentHex = brand?.accent_hex;
+  const sidebarBgHex = brand?.sidebar_bg_hex;
+
+  const brandPalette = useMemo(() => {
+    function parseHex(hex: string): [number, number, number] {
+      const h = hex.replace("#", "");
+      const n = parseInt(h, 16);
+      return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+    }
+    function rgbStr([r, g, b]: [number, number, number]) {
+      return `${r},${g},${b}`;
+    }
+    function darken([r, g, b]: [number, number, number], factor: number): [number, number, number] {
+      return [Math.round(r * factor), Math.round(g * factor), Math.round(b * factor)];
+    }
+    if (accentHex && sidebarBgHex) {
+      const accentRgb = parseHex(accentHex);
+      const darkAnchorRgb = parseHex(sidebarBgHex);
+      return {
+        bright:    rgbStr(accentRgb),
+        accent:    rgbStr(accentRgb),
+        deep:      rgbStr(darken(accentRgb, 0.7)),
+        anchor:    rgbStr(darkAnchorRgb),
+        accentHex: accentHex,
+      };
+    }
+    return {
+      bright:    "0,190,120",
+      accent:    "0,222,143",
+      deep:      "0,160,100",
+      anchor:    "12,81,71",
+      accentHex: "#00DE8F",
+    };
+  }, [accentHex, sidebarBgHex]);
+
+  const variantColors = {
+    success: accentHex ?? VARIANT_COLORS.success,
+    warning: VARIANT_COLORS.warning,
+    danger:  VARIANT_COLORS.danger,
+  };
 
   /* ── Data computation ────────────────────────────────── */
   const { funnelData, total, funnelTop } = useMemo(() => {
@@ -180,7 +219,7 @@ export default function HolographicFunnel({
         : "Needs Attention";
   const healthColor =
     healthRate >= 0.15
-      ? "#00DE8F"
+      ? (accentHex ?? "#00DE8F")
       : healthRate >= 0.08
         ? "#FBBF24"
         : "#EF4444";
@@ -260,8 +299,8 @@ export default function HolographicFunnel({
         const alpha = 0.08 + 0.5 * brightness;
         const col =
           s % 3 === 0
-            ? `rgba(0,190,120,${alpha})`
-            : `rgba(12,81,71,${alpha})`;
+            ? `rgba(${brandPalette.bright},${alpha})`
+            : `rgba(${brandPalette.anchor},${alpha})`;
         ctx.beginPath();
         for (let ri = 0; ri < RING_PCTS.length; ri++) {
           const pct = RING_PCTS[ri];
@@ -293,15 +332,15 @@ export default function HolographicFunnel({
         const size = p.size * (1 - p.pct * 0.5);
 
         const g = ctx.createRadialGradient(x, y, 0, x, y, size * 3);
-        g.addColorStop(0, `rgba(0,190,120,${p.alpha * fade * 0.7})`);
-        g.addColorStop(1, "rgba(0,222,143,0)");
+        g.addColorStop(0, `rgba(${brandPalette.bright},${p.alpha * fade * 0.7})`);
+        g.addColorStop(1, `rgba(${brandPalette.accent},0)`);
         ctx.beginPath();
         ctx.arc(x, y, size * 3, 0, Math.PI * 2);
         ctx.fillStyle = g;
         ctx.fill();
         ctx.beginPath();
         ctx.arc(x, y, size * 0.6, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(0,160,100,${p.alpha * fade})`;
+        ctx.fillStyle = `rgba(${brandPalette.deep},${p.alpha * fade})`;
         ctx.fill();
       }
 
@@ -359,8 +398,8 @@ export default function HolographicFunnel({
       const tipY = cy + fh / 2;
       const tp = 0.6 + 0.4 * Math.sin(t * 3);
       const tipG = ctx.createRadialGradient(cx, tipY, 0, cx, tipY, botR * 3);
-      tipG.addColorStop(0, `rgba(0,222,143,${0.6 * tp})`);
-      tipG.addColorStop(0.4, `rgba(12,81,71,${0.1 * tp})`);
+      tipG.addColorStop(0, `rgba(${brandPalette.accent},${0.6 * tp})`);
+      tipG.addColorStop(0.4, `rgba(${brandPalette.anchor},${0.1 * tp})`);
       tipG.addColorStop(1, "rgba(255,255,255,0)");
       ctx.beginPath();
       ctx.arc(cx, tipY, botR * 3, 0, Math.PI * 2);
@@ -369,7 +408,7 @@ export default function HolographicFunnel({
 
       return yPositions;
     },
-    []
+    [brandPalette]
   );
 
   const yPosEmittedRef = useRef(false);
@@ -563,7 +602,7 @@ export default function HolographicFunnel({
                     {i > 0 && (
                       <span
                         className="text-[10px] font-semibold tabular-nums"
-                        style={{ color: VARIANT_COLORS[variant] }}
+                        style={{ color: variantColors[variant] }}
                       >
                         {(stageConversion * 100).toFixed(0)}% conv
                       </span>

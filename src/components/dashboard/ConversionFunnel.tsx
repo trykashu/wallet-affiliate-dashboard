@@ -197,7 +197,12 @@ export default function ConversionFunnel({ users, events, stageDurations }: Prop
 
   const healthRate = funnelTop > 0 ? lastStageReached / funnelTop : 0;
   const healthLabel = healthRate >= 0.15 ? "Excellent" : healthRate >= 0.08 ? "Good" : "Needs Attention";
-  const healthColor = healthRate >= 0.15 ? "text-emerald-600" : healthRate >= 0.08 ? "text-amber-600" : "text-red-600";
+  const healthColorClass = healthRate >= 0.15
+    ? (accentHex ? "" : "text-emerald-600")
+    : healthRate >= 0.08
+      ? "text-amber-600"
+      : "text-red-600";
+  const healthColorStyle = healthRate >= 0.15 && accentHex ? { color: accentHex } : undefined;
 
   if (total === 0) {
     return (
@@ -333,7 +338,7 @@ export default function ConversionFunnel({ users, events, stageDurations }: Prop
           </div>
           <div>
             <p className="text-[10px] uppercase tracking-[0.1em] text-brand-400 font-medium mb-1">Funnel Health</p>
-            <p className={`text-lg sm:text-xl font-bold ${healthColor}`}>{healthLabel}</p>
+            <p className={`text-lg sm:text-xl font-bold ${healthColorClass}`} style={healthColorStyle}>{healthLabel}</p>
           </div>
         </div>
       </div>
