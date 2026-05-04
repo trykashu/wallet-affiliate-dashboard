@@ -118,6 +118,8 @@ export default async function EarningsPage() {
           summary={earningsSummary}
           tier={affiliate.tier}
           referredVolume={affiliate.referred_volume_total}
+          customCommissionRate={affiliate.custom_commission_rate}
+          customCommissionBasis={affiliate.custom_commission_basis}
         />
         <LeaderboardCard
           snapshot={mySnapshot}

@@ -13,6 +13,8 @@ interface Props {
   summary: EarningsSummary;
   tier: AffiliateTier;
   referredVolume: number;
+  customCommissionRate?:  number | null;
+  customCommissionBasis?: 'tpv' | 'kashu_fee' | null;
 }
 
 const TIER_BADGE: Record<AffiliateTier, { label: string; class: string }> = {
@@ -54,7 +56,7 @@ function getNextPayoutDate(): { label: string; daysUntil: number; periodLabel: s
   return { label, daysUntil, periodLabel };
 }
 
-export default function EarningsCard({ summary, tier, referredVolume }: Props) {
+export default function EarningsCard({ summary, tier, referredVolume, customCommissionRate, customCommissionBasis }: Props) {
   const hasPending   = summary.pending > 0;
   const hasThisMonth = summary.thisMonth > 0;
   const paidPct      = summary.total > 0 ? Math.round((summary.paid / summary.total) * 100) : 0;
@@ -74,7 +76,13 @@ export default function EarningsCard({ summary, tier, referredVolume }: Props) {
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Earnings Overview</h3>
           <p className="text-[10px] text-brand-400 mt-0.5">
-            {tier === "gold" ? "5%" : "10%"} commission on Kashu&apos;s fee
+            {tier === "gold"
+              ? "5% commission on Kashu's fee"
+              : tier === "platinum"
+                ? "10% commission on Kashu's fee"
+                : customCommissionRate && customCommissionBasis
+                  ? `${(customCommissionRate * 100).toFixed(2).replace(/\.?0+$/, "")}% commission on ${customCommissionBasis === "tpv" ? "TPV" : "Kashu's fee"}`
+                  : "Custom commission terms"}
           </p>
         </div>
         <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold border rounded-full px-2.5 py-1 ${tierInfo.class}`}>

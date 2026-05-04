@@ -54,6 +54,8 @@ export interface Affiliate {
   created_at: string;
   updated_at: string;
   whitelabel_brand_id: string | null;
+  custom_commission_rate: number | null;
+  custom_commission_basis: 'tpv' | 'kashu_fee' | null;
 }
 
 export interface ReferredUser {
@@ -98,6 +100,8 @@ export interface Earning {
   status: EarningStatus;
   created_at: string;
   updated_at: string;
+  custom_commission_rate: number | null;
+  custom_commission_basis: 'tpv' | 'kashu_fee' | null;
 }
 
 export interface StageDuration {

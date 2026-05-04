@@ -38,6 +38,8 @@ export const DEMO_AFFILIATE: Affiliate = {
   created_at:            "2025-08-01T00:00:00Z",
   updated_at:            new Date().toISOString(),
   whitelabel_brand_id:   null,
+  custom_commission_rate:  null,
+  custom_commission_basis: null,
 };
 
 // ── Referred Users ──────────────────────────────────────────────────────────
@@ -169,6 +171,8 @@ export const DEMO_EARNINGS: Earning[] = DEMO_REFERRED_USERS
     status:                (i < 8 ? "paid" : i < 12 ? "approved" : "pending") as "paid" | "approved" | "pending",
     created_at:            makeDate(30 - i * 2),
     updated_at:            makeDate(28 - i * 2),
+    custom_commission_rate:  null,
+    custom_commission_basis: null,
   }));
 
 // ── Earnings Summary ────────────────────────────────────────────────────────

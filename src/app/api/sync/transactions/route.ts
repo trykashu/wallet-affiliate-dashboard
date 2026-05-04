@@ -52,7 +52,7 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: affiliates } = await (db as any)
       .from("affiliates")
-      .select("id, attribution_id, business_name, agent_name, email, tier, tier_override, referred_volume_total");
+      .select("id, attribution_id, business_name, agent_name, email, tier, tier_override, referred_volume_total, custom_commission_rate, custom_commission_basis");
 
     const affiliateById = new Map<string, {
       id: string;
@@ -60,6 +60,8 @@ export async function GET() {
       tier: AffiliateTier;
       tier_override: boolean;
       referred_volume_total: number;
+      custom_commission_rate: number | null;
+      custom_commission_basis: 'tpv' | 'kashu_fee' | null;
     }>();
     const affiliatesByAttribution = new Map<string, string>();
     const affiliatesByBiz = new Map<string, string>();
@@ -72,6 +74,8 @@ export async function GET() {
         tier: a.tier,
         tier_override: a.tier_override,
         referred_volume_total: Number(a.referred_volume_total) || 0,
+        custom_commission_rate: a.custom_commission_rate !== null && a.custom_commission_rate !== undefined ? Number(a.custom_commission_rate) : null,
+        custom_commission_basis: a.custom_commission_basis ?? null,
       });
       if (a.attribution_id) {
         affiliatesByAttribution.set(a.attribution_id.toLowerCase(), a.id);
@@ -431,21 +435,31 @@ export async function GET() {
 
       const aff = affiliateById.get(eligible.affiliateId);
       const tier: AffiliateTier = aff?.tier || "gold";
-      const earningAmount = calculateEarning(eligible.amount, tier);
+      const customCommission =
+        tier === "custom" && aff?.custom_commission_rate !== null && aff?.custom_commission_rate !== undefined && aff?.custom_commission_basis
+          ? { rate: aff.custom_commission_rate, basis: aff.custom_commission_basis }
+          : undefined;
+      const earningAmount = calculateEarning(eligible.amount, tier, "default", customCommission);
       const kashuFeeForEarning = calculateKashuFee(eligible.amount);
+
+      const earningRow: Record<string, unknown> = {
+        affiliate_id: eligible.affiliateId,
+        referred_user_id: eligible.referredUserId,
+        amount: earningAmount,
+        transaction_fee_amount: kashuFeeForEarning,
+        tier_at_earning: tier,
+        transaction_ref: txnRef,
+        status: "pending",
+      };
+      if (tier === "custom" && customCommission) {
+        earningRow.custom_commission_rate = customCommission.rate;
+        earningRow.custom_commission_basis = customCommission.basis;
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: earningError } = await (db as any)
         .from("earnings")
-        .insert({
-          affiliate_id: eligible.affiliateId,
-          referred_user_id: eligible.referredUserId,
-          amount: earningAmount,
-          transaction_fee_amount: kashuFeeForEarning,
-          tier_at_earning: tier,
-          transaction_ref: txnRef,
-          status: "pending",
-        });
+        .insert(earningRow);
 
       if (!earningError) earningsCreated++;
     }

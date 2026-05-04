@@ -53,23 +53,31 @@ export function calculateKashuFee(tpv: number, feeRate: KashuFeeRate = "default"
   return tpv * KASHU_FEE_RATES[feeRate];
 }
 
+export interface CustomCommission {
+  rate:  number;             // e.g. 0.0175 for 1.75%
+  basis: 'tpv' | 'kashu_fee';
+}
+
 /**
  * Calculate the affiliate earning from a transaction.
  *
- * @param tpv - Total processed volume (the transaction amount)
- * @param tier - Affiliate tier (gold or platinum)
- * @param feeRate - Kashu fee rate (default 8.5%, reduced 7.5%)
- * @returns The affiliate earning amount (rounded to 2 decimals)
- *
- * Example: calculateEarning(2500, "gold") → 10.63
- *   Kashu fee = 2500 × 0.085 = 212.50
- *   Earning   = 212.50 × 0.05 = 10.625 → 10.63
+ * Gold / Platinum: percentage of Kashu's fee (table-driven via COMMISSION_RATES).
+ * Custom:          must pass `customCommission`; uses partner's rate + basis.
+ *                  Without customCommission, returns 0.
  */
 export function calculateEarning(
   tpv: number,
   tier: AffiliateTier,
-  feeRate: KashuFeeRate = "default"
+  feeRate: KashuFeeRate = "default",
+  customCommission?: CustomCommission,
 ): number {
+  if (tier === "custom") {
+    if (!customCommission) return 0;
+    const base = customCommission.basis === "tpv"
+      ? tpv
+      : calculateKashuFee(tpv, feeRate);
+    return Math.round(base * customCommission.rate * 100) / 100;
+  }
   const kashuFee = calculateKashuFee(tpv, feeRate);
   return Math.round(kashuFee * getCommissionRate(tier) * 100) / 100;
 }
