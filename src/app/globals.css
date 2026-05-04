@@ -47,7 +47,7 @@
 
   /* Selection color */
   ::selection {
-    background-color: rgba(0, 222, 143, 0.15);
+    background-color: rgb(var(--kw-accent-rgb) / 0.15);
     color: var(--wl-sidebar-bg);
   }
 }

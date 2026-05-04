@@ -49,16 +49,16 @@ const config: Config = {
         "stat":       ["1.75rem", { lineHeight: "1", letterSpacing: "-0.02em", fontWeight: "700" }],
       },
       boxShadow: {
-        glow:           "0 0 0 3px rgba(0, 222, 143, 0.25)",
-        "glow-sm":      "0 0 8px rgba(0, 222, 143, 0.35)",
-        "glow-md":      "0 0 20px rgba(0, 222, 143, 0.35), 0 4px 12px rgba(0,0,0,0.08)",
-        "glow-lg":      "0 0 40px rgba(0, 222, 143, 0.25), 0 8px 30px rgba(0,0,0,0.10)",
+        glow:           "0 0 0 3px rgb(var(--kw-accent-rgb) / 0.25)",
+        "glow-sm":      "0 0 8px rgb(var(--kw-accent-rgb) / 0.35)",
+        "glow-md":      "0 0 20px rgb(var(--kw-accent-rgb) / 0.35), 0 4px 12px rgba(0,0,0,0.08)",
+        "glow-lg":      "0 0 40px rgb(var(--kw-accent-rgb) / 0.25), 0 8px 30px rgba(0,0,0,0.10)",
         // Elevated card system
         card:           "0 1px 2px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.03), 0 0 0 1px rgba(0,0,0,0.02)",
         "card-md":      "0 4px 24px rgba(0,0,0,0.06), 0 1px 4px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.02)",
         "card-lg":      "0 12px 48px rgba(0,0,0,0.08), 0 2px 8px rgba(0,0,0,0.04)",
-        "card-accent":  "0 0 0 1px rgba(0,222,143,0.18), 0 4px 24px rgba(0,222,143,0.10), 0 1px 3px rgba(0,0,0,0.04)",
-        "card-glow":    "0 0 0 1px rgba(0,222,143,0.12), 0 8px 40px rgba(0,222,143,0.08), 0 2px 12px rgba(0,0,0,0.04)",
+        "card-accent":  "0 0 0 1px rgb(var(--kw-accent-rgb) / 0.18), 0 4px 24px rgb(var(--kw-accent-rgb) / 0.10), 0 1px 3px rgba(0,0,0,0.04)",
+        "card-glow":    "0 0 0 1px rgb(var(--kw-accent-rgb) / 0.12), 0 8px 40px rgb(var(--kw-accent-rgb) / 0.08), 0 2px 12px rgba(0,0,0,0.04)",
         sidebar:        "4px 0 48px rgba(0,0,0,0.3), 1px 0 0 rgba(255,255,255,0.05)",
         "inner-glow":   "inset 0 1px 0 rgba(255,255,255,0.8), inset 0 -1px 0 rgba(0,0,0,0.02)",
         "glass":        "0 8px 32px rgba(0,0,0,0.06), 0 0 0 1px rgba(255,255,255,0.6), inset 0 1px 0 rgba(255,255,255,0.8)",
@@ -97,8 +97,8 @@ const config: Config = {
           "100%": { strokeDashoffset: "0" },
         },
         pulseGlow: {
-          "0%, 100%": { boxShadow: "0 0 8px rgba(0,222,143,0.25), 0 1px 3px rgba(0,0,0,0.06)" },
-          "50%":      { boxShadow: "0 0 32px rgba(0,222,143,0.45), 0 4px 16px rgba(0,0,0,0.08)" },
+          "0%, 100%": { boxShadow: "0 0 8px rgb(var(--kw-accent-rgb) / 0.25), 0 1px 3px rgba(0,0,0,0.06)" },
+          "50%":      { boxShadow: "0 0 32px rgb(var(--kw-accent-rgb) / 0.45), 0 4px 16px rgba(0,0,0,0.08)" },
         },
         shimmer: {
           "0%":   { backgroundPosition: "-200% 0" },
