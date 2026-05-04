@@ -12,7 +12,7 @@ const config: Config = {
         // Official Kashu brand palette
         brand: {
           50:  "#F0FDF8",
-          100: "#E1FFA0",
+          100: "var(--kw-highlight)",
           200: "#A8D5CB",
           300: "#5E9E96",
           400: "#64748B",
@@ -25,10 +25,10 @@ const config: Config = {
         },
         accent: {
           DEFAULT: "rgb(var(--kw-accent-rgb) / <alpha-value>)",
-          500: "#E1FFA0",
-          600: "#00C07C",
+          500: "var(--kw-highlight)",
+          600: "var(--kw-accent-600)",
         },
-        highlight: "#E1FFA0",
+        highlight: "var(--kw-highlight)",
         // Surface system for the elevated light theme
         surface: {
           50:  "#FAFBFE",   // page background

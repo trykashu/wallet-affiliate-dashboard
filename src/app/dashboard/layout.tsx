@@ -149,6 +149,14 @@ export default async function DashboardLayout({
           "--kw-brand-600-rgb": brand600Rgb,
           "--kw-brand-700-rgb": brand700Rgb,
           "--kw-accent-rgb":    accentRgb,
+          "--kw-highlight":               `color-mix(in srgb, ${brand.accent_hex} 25%, white)`,
+          "--kw-accent-600":              `color-mix(in srgb, ${brand.accent_hex} 85%, black)`,
+          "--kw-funnel-signed-up":        `color-mix(in srgb, ${brand.accent_hex} 25%, white)`,
+          "--kw-funnel-transaction-run":  `color-mix(in srgb, ${brand.accent_hex} 50%, white)`,
+          "--kw-funnel-funds-in-wallet":  `color-mix(in srgb, ${brand.accent_hex} 75%, white)`,
+          "--kw-funnel-ach-initiated":    `color-mix(in srgb, ${brand.accent_hex} 90%, black)`,
+          "--kw-funnel-funds-in-bank":    brand.accent_hex,
+          "--kw-funnel-signed-up-label":  `color-mix(in srgb, ${brand.accent_hex} 70%, black)`,
         } as React.CSSProperties;
       })()
     : undefined;

@@ -9,11 +9,11 @@ const FUNNEL_COLORS: Record<FunnelStatusSlug, string> = {
   waitlist:          "#E5E7EB", // gray-200 — waiting
   booked_call:       "#D1D5DB", // gray-300 — scheduled
   sent_onboarding:   "#9CA3AF", // gray-400 — onboarding sent
-  signed_up:         "#BBF7D0", // green-200
-  transaction_run:   "#4ADE80", // green-400
-  funds_in_wallet:   "#22C55E", // green-500
-  ach_initiated:     "#16A34A", // green-600
-  funds_in_bank:     "#00DE8F", // Kashu mint
+  signed_up:         "var(--kw-funnel-signed-up)",
+  transaction_run:   "var(--kw-funnel-transaction-run)",
+  funds_in_wallet:   "var(--kw-funnel-funds-in-wallet)",
+  ach_initiated:     "var(--kw-funnel-ach-initiated)",
+  funds_in_bank:     "var(--kw-funnel-funds-in-bank)",
 };
 
 /** Light stages need dark text for legibility */
@@ -21,7 +21,7 @@ const LABEL_COLOR_OVERRIDES: Partial<Record<FunnelStatusSlug, string>> = {
   waitlist:        "#374151", // gray-700
   booked_call:     "#374151", // gray-700
   sent_onboarding: "#ffffff", // white on gray-400
-  signed_up:       "#15803D",
+  signed_up:       "var(--kw-funnel-signed-up-label)",
 };
 
 const FUNNEL_LABELS: Record<FunnelStatusSlug, string> = {
