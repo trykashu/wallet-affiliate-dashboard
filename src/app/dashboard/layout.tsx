@@ -84,9 +84,10 @@ export default async function DashboardLayout({
   }
 
   // ── Load whitelabel brand if this affiliate belongs to one ───────────────
-  // Admin view-as deliberately ignores branding so admins always see Kashu chrome.
+  // View-as also renders partner chrome so admin sees the actual user experience
+  // (debugging is WYSIWYG). The view-as banner is sufficient admin signal.
   let brand: WhitelabelBrand | null = null;
-  if (affiliate.whitelabel_brand_id && !isViewingAs) {
+  if (affiliate.whitelabel_brand_id) {
     const { createServiceClient } = await import("@/lib/supabase/service");
     const svc = createServiceClient();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
