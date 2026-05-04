@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 import TierBadge from "@/components/ui/TierBadge";
-import type { AffiliateTier } from "@/types/database";
+import type { AffiliateTier, WhitelabelBrand } from "@/types/database";
 
 /* -- Icon set (inline SVG, no external deps) -- */
 const Icons = {
@@ -84,6 +84,7 @@ interface AppSidebarProps {
   hideSignOut?:  boolean;
   hideProfile?:  boolean;
   profileHref?:  string;
+  brand?:        WhitelabelBrand | null;
 }
 
 export default function AppSidebar({
@@ -96,6 +97,7 @@ export default function AppSidebar({
   hideSignOut,
   hideProfile,
   profileHref,
+  brand,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -130,8 +132,8 @@ export default function AppSidebar({
       {/* Logo */}
       <div className="relative flex items-center px-5 h-16 border-b border-white/[0.06] flex-shrink-0">
         <Image
-          src="/kashu-logo-white.png"
-          alt="Kashu"
+          src={brand ? brand.logo_path : "/kashu-logo-white.png"}
+          alt={brand ? brand.display_name : "Kashu"}
           width={100}
           height={32}
           className="relative object-contain z-10"
@@ -231,15 +233,19 @@ export default function AppSidebar({
   return (
     <>
       {/* Desktop sidebar */}
-      <aside className="hidden lg:flex flex-col w-64 bg-brand-600 fixed inset-y-0 left-0 z-40 shadow-sidebar overflow-hidden">
+      <aside
+        className={`hidden lg:flex flex-col w-64 fixed inset-y-0 left-0 z-40 shadow-sidebar overflow-hidden ${brand ? "" : "bg-brand-600"}`}
+        style={brand ? { backgroundColor: brand.sidebar_bg_hex } : undefined}
+      >
         {sidebar}
       </aside>
 
       {/* Mobile hamburger */}
       <button
         onClick={() => setMobileOpen(true)}
-        className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-brand-600/90 backdrop-blur-sm rounded-2xl
-                   flex items-center justify-center shadow-card-md text-white border border-white/10"
+        className={`lg:hidden fixed top-4 left-4 z-50 w-10 h-10 backdrop-blur-sm rounded-2xl
+                   flex items-center justify-center shadow-card-md text-white border border-white/10 ${brand ? "" : "bg-brand-600/90"}`}
+        style={brand ? { backgroundColor: brand.sidebar_bg_hex } : undefined}
         aria-label="Open menu"
       >
         {Icons.menu}
@@ -252,7 +258,10 @@ export default function AppSidebar({
             className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-fade-in"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="relative w-64 bg-brand-600 flex flex-col shadow-sidebar animate-slide-in overflow-hidden">
+          <aside
+            className={`relative w-64 flex flex-col shadow-sidebar animate-slide-in overflow-hidden ${brand ? "" : "bg-brand-600"}`}
+            style={brand ? { backgroundColor: brand.sidebar_bg_hex } : undefined}
+          >
             <button
               onClick={() => setMobileOpen(false)}
               className="absolute top-4 right-3 text-white/40 hover:text-white p-1.5 rounded-xl hover:bg-white/10 transition-all z-20"

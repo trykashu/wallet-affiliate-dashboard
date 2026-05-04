@@ -122,8 +122,14 @@ export default async function DashboardLayout({
     redirect("/admin");
   }
 
+  const brandStyle = brand ? {
+    "--wl-sidebar-bg": brand.sidebar_bg_hex,
+    "--wl-sidebar-fg": brand.sidebar_fg_hex,
+    "--wl-accent":     brand.accent_hex,
+  } as React.CSSProperties : undefined;
+
   return (
-    <div className="flex min-h-screen relative">
+    <div className="flex min-h-screen relative" style={brandStyle}>
       {/* Page-level ambient orbs */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
         <div className="ambient-orb w-[600px] h-[600px] bg-accent/[0.03] -top-48 -right-48" />
@@ -137,6 +143,7 @@ export default async function DashboardLayout({
         navItems={[...AFFILIATE_NAV]}
         isAdmin={isAdmin && !isViewingAs}
         tier={affiliate.tier}
+        brand={brand}
       />
 
       <div className="flex-1 lg:pl-64 min-w-0 relative z-10">
