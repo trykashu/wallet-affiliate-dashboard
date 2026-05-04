@@ -12,6 +12,20 @@ import type { Affiliate, WhitelabelBrand } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
+function hexToRgbTriple(hex: string): string {
+  const h = hex.replace("#", "");
+  const n = parseInt(h, 16);
+  const r = (n >> 16) & 255;
+  const g = (n >> 8) & 255;
+  const b = n & 255;
+  return `${r} ${g} ${b}`;
+}
+
+function darkenRgbTriple(triple: string, factor = 0.85): string {
+  const [r, g, b] = triple.split(" ").map(Number);
+  return `${Math.round(r * factor)} ${Math.round(g * factor)} ${Math.round(b * factor)}`;
+}
+
 const AFFILIATE_NAV = [
   { label: "Dashboard",      href: "/dashboard",                icon: "grid"    as const, exact: true },
   { label: "Users",          href: "/dashboard/users",          icon: "users"   as const },
@@ -123,11 +137,21 @@ export default async function DashboardLayout({
     redirect("/admin");
   }
 
-  const brandStyle = brand ? {
-    "--wl-sidebar-bg": brand.sidebar_bg_hex,
-    "--wl-sidebar-fg": brand.sidebar_fg_hex,
-    "--wl-accent":     brand.accent_hex,
-  } as React.CSSProperties : undefined;
+  const brandStyle = brand
+    ? (() => {
+        const brand600Rgb = hexToRgbTriple(brand.sidebar_bg_hex);
+        const brand700Rgb = darkenRgbTriple(brand600Rgb, 0.85);
+        const accentRgb   = hexToRgbTriple(brand.accent_hex);
+        return {
+          "--wl-sidebar-bg": brand.sidebar_bg_hex,
+          "--wl-sidebar-fg": brand.sidebar_fg_hex,
+          "--wl-accent":     brand.accent_hex,
+          "--kw-brand-600-rgb": brand600Rgb,
+          "--kw-brand-700-rgb": brand700Rgb,
+          "--kw-accent-rgb":    accentRgb,
+        } as React.CSSProperties;
+      })()
+    : undefined;
 
   return (
     <div className="flex min-h-screen relative" style={brandStyle}>

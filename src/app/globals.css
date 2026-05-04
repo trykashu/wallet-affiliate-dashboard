@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Kashu brand defaults; partner-branded dashboard layouts override these. */
+  --kw-brand-600-rgb: 12 81 71;
+  --kw-brand-700-rgb: 10 64 57;
+  --kw-accent-rgb:    0 222 143;
+}
+
 @layer base {
   body {
     background-color: #F4F6FB;
