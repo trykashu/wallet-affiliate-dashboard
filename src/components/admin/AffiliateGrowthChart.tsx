@@ -134,6 +134,23 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
             );
           })}
 
+          {/* Count labels above each bar */}
+          {monthlyCounts.map((count, i) => {
+            if (count === 0) return null;
+            const barHeight = (count / barMaxVal) * innerH;
+            const x = padX + i * barSlotW + barSlotW / 2;
+            const y = padY + innerH - barHeight - 4;
+            return (
+              <text
+                key={`label-${i}`}
+                x={x} y={y}
+                fill="#0C5147" fontSize="10" fontWeight="600" textAnchor="middle"
+              >
+                {count}
+              </text>
+            );
+          })}
+
           {months.map((m, i) => (
             <text
               key={m}
