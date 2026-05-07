@@ -56,6 +56,7 @@ export interface Affiliate {
   whitelabel_brand_id: string | null;
   custom_commission_rate: number | null;
   custom_commission_basis: 'tpv' | 'kashu_fee' | null;
+  airtable_created_at: string | null;
 }
 
 export interface ReferredUser {

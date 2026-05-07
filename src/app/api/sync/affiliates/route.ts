@@ -53,6 +53,7 @@ function buildAffiliateRow(rec: AirtableRecord): Record<string, unknown> | null 
     agreement_status: (f["Agreement Status"] as string) || null,
     tier: mapTier(f["Affiliate Tier"]),
     status: "active",
+    airtable_created_at: rec.createdTime,
   };
 }
 

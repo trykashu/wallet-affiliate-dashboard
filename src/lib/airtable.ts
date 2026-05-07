@@ -7,6 +7,7 @@ const AIRTABLE_API_BASE = "https://api.airtable.com/v0";
 
 export interface AirtableRecord {
   id: string;
+  createdTime: string;
   fields: Record<string, unknown>;
 }
 

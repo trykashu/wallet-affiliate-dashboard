@@ -3,8 +3,11 @@
 import { useMemo } from "react";
 
 interface Props {
-  affiliates: Array<{ id: string; created_at: string }>;
+  affiliates: Array<{ id: string; created_at: string; airtable_created_at: string | null }>;
 }
+
+const effectiveDate = (a: { created_at: string; airtable_created_at: string | null }) =>
+  a.airtable_created_at ?? a.created_at;
 
 function smoothPath(points: { x: number; y: number }[]) {
   if (points.length <= 1)
@@ -39,7 +42,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
     const countMap: Record<string, number> = {};
     for (const m of months) countMap[m] = 0;
     for (const a of affiliates) {
-      const k = monthKey(new Date(a.created_at));
+      const k = monthKey(new Date(effectiveDate(a)));
       if (k in countMap) countMap[k]++;
     }
 
@@ -48,7 +51,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
     const cumulativeCounts = months.map((m) => {
       const [y, mo] = m.split("-").map(Number);
       const endOfMonth = new Date(y, mo, 0, 23, 59, 59, 999);
-      return affiliates.filter((a) => new Date(a.created_at) <= endOfMonth).length;
+      return affiliates.filter((a) => new Date(effectiveDate(a)) <= endOfMonth).length;
     });
 
     return { months, monthlyCounts, cumulativeCounts };

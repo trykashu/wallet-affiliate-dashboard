@@ -40,6 +40,7 @@ export const DEMO_AFFILIATE: Affiliate = {
   whitelabel_brand_id:   null,
   custom_commission_rate:  null,
   custom_commission_basis: null,
+  airtable_created_at:     null,
 };
 
 // ── Referred Users ──────────────────────────────────────────────────────────
