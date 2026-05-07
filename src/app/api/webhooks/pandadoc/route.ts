@@ -188,6 +188,18 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, queued: true });
   }
 
+  // Stamp the agreement completion timestamp (PandaDoc's date_completed,
+  // falling back to now() if absent). Only set if currently null — never
+  // overwrite a manually set value.
+  if (affiliate) {
+    const dateCompleted = (data.date_completed as string | undefined) ?? new Date().toISOString();
+    await svc
+      .from("affiliates")
+      .update({ agreement_completed_at: dateCompleted })
+      .eq("id", affiliate.id)
+      .is("agreement_completed_at", null);
+  }
+
   // Process based on validation results
   if (bankDetails.routing_valid && bankDetails.account_valid) {
     // Save bank details — check for existing, then update or insert

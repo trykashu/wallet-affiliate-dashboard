@@ -54,6 +54,7 @@ function buildAffiliateRow(rec: AirtableRecord): Record<string, unknown> | null 
     tier: mapTier(f["Affiliate Tier"]),
     status: "active",
     airtable_created_at: rec.createdTime,
+    pandadoc_id: (rec.fields["PandaDoc ID"] as string) || null,
   };
 }
 

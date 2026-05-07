@@ -41,6 +41,8 @@ export const DEMO_AFFILIATE: Affiliate = {
   custom_commission_rate:  null,
   custom_commission_basis: null,
   airtable_created_at:     null,
+  agreement_completed_at:  null,
+  pandadoc_id:             null,
 };
 
 // ── Referred Users ──────────────────────────────────────────────────────────

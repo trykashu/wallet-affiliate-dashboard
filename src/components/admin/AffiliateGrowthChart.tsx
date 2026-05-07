@@ -3,11 +3,11 @@
 import { useMemo } from "react";
 
 interface Props {
-  affiliates: Array<{ id: string; created_at: string; airtable_created_at: string | null }>;
+  affiliates: Array<{ id: string; created_at: string; airtable_created_at: string | null; agreement_completed_at: string | null }>;
 }
 
-const effectiveDate = (a: { created_at: string; airtable_created_at: string | null }) =>
-  a.airtable_created_at ?? a.created_at;
+const effectiveDate = (a: { created_at: string; airtable_created_at: string | null; agreement_completed_at: string | null }) =>
+  a.agreement_completed_at ?? a.airtable_created_at ?? a.created_at;
 
 function smoothPath(points: { x: number; y: number }[]) {
   if (points.length <= 1)
@@ -105,7 +105,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
       <div className="card p-4 sm:p-6">
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-900">Affiliates Added</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Monthly sign-ups with completed agreements</p>
+          <p className="text-xs text-brand-400 mt-0.5">Monthly contracts signed (PandaDoc completion date)</p>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
           {barTicks.map((tick) => {
@@ -171,7 +171,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
       <div className="card p-4 sm:p-6">
         <div className="mb-4">
           <h3 className="text-sm font-semibold text-gray-900">Total Affiliates Over Time</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Cumulative growth (signed agreements only)</p>
+          <p className="text-xs text-brand-400 mt-0.5">Cumulative contracts signed</p>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
           <defs>

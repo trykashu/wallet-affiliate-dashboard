@@ -57,6 +57,8 @@ export interface Affiliate {
   custom_commission_rate: number | null;
   custom_commission_basis: 'tpv' | 'kashu_fee' | null;
   airtable_created_at: string | null;
+  agreement_completed_at: string | null;
+  pandadoc_id: string | null;
 }
 
 export interface ReferredUser {
