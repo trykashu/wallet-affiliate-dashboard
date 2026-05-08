@@ -49,7 +49,7 @@ export default function ToolsClient({
         </p>
       </div>
 
-      <div className="flex gap-1 p-1 bg-surface-100 rounded-xl border border-surface-200/60 w-fit">
+      <div className="flex gap-1 p-1 bg-surface-100 rounded-2xl border border-surface-200/60 w-fit">
         <TabButton active={tab === "share"} onClick={() => setTab("share")}>
           Share
         </TabButton>
@@ -61,16 +61,18 @@ export default function ToolsClient({
         </TabButton>
       </div>
 
-      {tab === "share" ? (
-        <ShareTab
-          affiliate={affiliate}
-          brand={brand}
-          referralUrl={referralUrl}
-          templates={templates}
-        />
-      ) : (
-        <ResourcesTab resources={resources} />
-      )}
+      <div key={tab} className="animate-reveal-up">
+        {tab === "share" ? (
+          <ShareTab
+            affiliate={affiliate}
+            brand={brand}
+            referralUrl={referralUrl}
+            templates={templates}
+          />
+        ) : (
+          <ResourcesTab resources={resources} />
+        )}
+      </div>
     </div>
   );
 }
@@ -87,13 +89,19 @@ function TabButton({
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${
+      className={`relative px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
         active
           ? "bg-white text-gray-900 shadow-card"
           : "text-brand-400 hover:text-gray-900"
       }`}
     >
       {children}
+      {active && (
+        <span
+          aria-hidden
+          className="absolute left-1/2 -translate-x-1/2 -bottom-0.5 w-1 h-1 rounded-full bg-accent"
+        />
+      )}
     </button>
   );
 }

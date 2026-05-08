@@ -203,8 +203,8 @@ export default function AdminResources({ initialRows }: { initialRows: Affiliate
 
       {editing && (
         <>
-          <div className="fixed inset-0 bg-gray-900/30 z-40" onClick={close} />
-          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-card-md p-6 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-gray-900/30 z-40 drawer-backdrop" onClick={close} />
+          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-card-md p-6 z-50 overflow-y-auto drawer-panel">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 {editing.id ? "Edit resource" : "New resource"}
