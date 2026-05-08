@@ -71,12 +71,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 4. Skip if affiliate already has a dashboard account
+  // 4. Skip if affiliate already has a dashboard account.
+  // Returns 200 (not 409) so idempotent re-invocations from automation
+  // workflows don't fail. The flag distinguishes a real send from a no-op.
   if (affiliate.user_id) {
-    return NextResponse.json(
-      { error: "Affiliate already has a dashboard account" },
-      { status: 409 },
-    );
+    return NextResponse.json({
+      success: true,
+      already_invited: true,
+      affiliate_id: affiliate.id,
+    });
   }
 
   // 5. Send invite via Supabase Auth admin
