@@ -9,7 +9,7 @@ const DEMO_NAV: NavItem[] = [
   { label: "Users",          href: "/demo/users",          icon: "users"   as const },
   { label: "Earnings",       href: "/demo/earnings",       icon: "wallet"  as const },
   { label: "Payouts",        href: "/demo/payouts",        icon: "dollar"  as const },
-  { label: "Referral Links", href: "/demo/referral-link",  icon: "link"    as const },
+  { label: "Tools",          href: "/demo/tools",          icon: "link"    as const },
   { label: "Support",        href: "/demo/support",        icon: "support" as const },
 ];
 

@@ -32,7 +32,7 @@ const AFFILIATE_NAV = [
   { label: "Users",          href: "/dashboard/users",          icon: "users"   as const },
   { label: "Earnings",       href: "/dashboard/earnings",       icon: "wallet"  as const },
   { label: "Payouts",        href: "/dashboard/payouts",        icon: "dollar"  as const },
-  { label: "Referral Links", href: "/dashboard/referral-link",  icon: "link"    as const },
+  { label: "Tools",          href: "/dashboard/tools",          icon: "link"    as const },
   { label: "Support",        href: "/dashboard/support",        icon: "support" as const },
 ] as const;
 
