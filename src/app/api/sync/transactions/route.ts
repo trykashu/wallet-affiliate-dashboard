@@ -248,8 +248,11 @@ export async function GET() {
         funnel_percent: funnelPercent,
       });
 
-      // Track Transfer In amounts per affiliate for volume update
-      if (transactionType === "Transfer In" && amount > 0) {
+      // Track Transfer In amounts per affiliate for volume update.
+      // Self-referrals are explicitly excluded — an affiliate cannot earn
+      // commission on their own deposit, and counting self-funded volume
+      // would also inflate tier-upgrade thresholds.
+      if (transactionType === "Transfer In" && amount > 0 && !isSelfReferral) {
         const prev = affiliateTransferInTotals.get(affiliateId) || 0;
         affiliateTransferInTotals.set(affiliateId, prev + amount);
 
@@ -322,7 +325,8 @@ export async function GET() {
         .from("transactions")
         .select("amount")
         .eq("affiliate_id", affiliateId)
-        .eq("transaction_type", "Transfer In");
+        .eq("transaction_type", "Transfer In")
+        .eq("self_referral", false);
 
       const totalVolume = (txnData || []).reduce(
         (sum: number, t: { amount: number }) => sum + Number(t.amount),

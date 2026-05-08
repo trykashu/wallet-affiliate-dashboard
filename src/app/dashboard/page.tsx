@@ -47,7 +47,8 @@ export default async function DashboardPage() {
     .from("transactions")
     .select("amount")
     .eq("affiliate_id", affiliateId)
-    .eq("transaction_type", "Transfer In");
+    .eq("transaction_type", "Transfer In")
+    .eq("self_referral", false);
   const totalVolume = (volumeRows ?? []).reduce(
     (acc: number, r: { amount: number }) => acc + (r.amount ?? 0),
     0
