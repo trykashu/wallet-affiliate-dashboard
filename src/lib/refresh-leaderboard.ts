@@ -14,7 +14,9 @@ function currentPeriod(): string {
   return `monthly_${year}_${month}`;
 }
 
-function computeTier(volume: number, tierOverride: boolean): AffiliateTier {
+function computeTier(currentTier: AffiliateTier, volume: number, tierOverride: boolean): AffiliateTier {
+  // Custom tier is manually assigned and never overwritten by volume math.
+  if (currentTier === "custom") return "custom";
   if (tierOverride || volume >= TIER_THRESHOLDS.platinum) return "platinum";
   return "gold";
 }
@@ -134,8 +136,8 @@ export async function refreshLeaderboard(): Promise<RefreshResult> {
     const affiliate = affiliates.find((a: { id: string }) => a.id === snap.affiliate_id);
     if (!affiliate) continue;
 
-    const newTier = computeTier(snap.referred_volume, affiliate.tier_override);
     const prevTier: AffiliateTier = affiliate.tier ?? "gold";
+    const newTier = computeTier(prevTier, snap.referred_volume, affiliate.tier_override);
 
     if (prevTier !== newTier) {
       await db.from("affiliates").update({ tier: newTier }).eq("id", snap.affiliate_id);
