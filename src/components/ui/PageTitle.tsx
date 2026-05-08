@@ -8,6 +8,7 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/dashboard/earnings":         { title: "Earnings",        sub: "Commissions, residuals, and payout history"        },
   "/dashboard/payouts":          { title: "Payouts",         sub: "Manage withdrawals and payout accounts"            },
   "/dashboard/referral-link":    { title: "Referral Links",  sub: "Share links for user recruitment"                  },
+  "/dashboard/tools":             { title: "Tools",           sub: "Everything you need to share Kashu"                },
   "/dashboard/support":          { title: "Support",         sub: "Report issues, share feedback, or request features" },
   "/dashboard/profile":          { title: "My Profile",      sub: "Account & security settings"                       },
   "/admin":                      { title: "Admin Overview",  sub: "Program stats and recent activity"                 },
