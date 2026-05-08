@@ -54,22 +54,27 @@ export async function refreshLeaderboard(): Promise<RefreshResult> {
     .in("affiliate_id", affiliateIds);
 
   const usersByAffiliate: Record<string, { total: number; completed: number }> = {};
+  // Mirror the "Transacted" definition used by the affiliate dashboard
+  // (StatsRow / dashboard hero): users at transaction_run or beyond.
+  const TRANSACTED_SLUGS = new Set(["transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank"]);
   for (const u of userAgg ?? []) {
     if (!usersByAffiliate[u.affiliate_id]) {
       usersByAffiliate[u.affiliate_id] = { total: 0, completed: 0 };
     }
     usersByAffiliate[u.affiliate_id].total += 1;
-    if (u.status_slug === "funds_in_bank") {
+    if (TRANSACTED_SLUGS.has(u.status_slug)) {
       usersByAffiliate[u.affiliate_id].completed += 1;
     }
   }
 
   // Aggregate earnings per affiliate
+  // Include pending earnings — the dashboard EarningsCard shows
+  // pending + approved + paid as the lifetime total.
   const { data: earningsAgg } = await db
     .from("earnings")
     .select("affiliate_id, amount")
     .in("affiliate_id", affiliateIds)
-    .in("status", ["approved", "paid"]);
+    .in("status", ["pending", "approved", "paid"]);
 
   const earningsByAffiliate: Record<string, number> = {};
   for (const e of earningsAgg ?? []) {
