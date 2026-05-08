@@ -26,7 +26,15 @@ function unpackZips() {
     if (existsSync(dst)) { console.log(`skip unpack: ${z}`); continue; }
     mkdirSync(dst, { recursive: true });
     console.log(`unzip ${z} ...`);
-    execFileSync("unzip", ["-q", src, "-d", dst]);
+    try {
+      execFileSync("unzip", ["-q", src, "-d", dst]);
+    } catch (e: unknown) {
+      // unzip exits 2 for benign warnings (e.g. zips with leading "/" entries).
+      // Only treat exit codes >2 as fatal; verify files extracted otherwise.
+      const status = (e as { status?: number }).status;
+      if (status !== undefined && status > 2) throw e;
+      console.warn(`unzip emitted warnings (exit ${status}); continuing`);
+    }
   }
 }
 
