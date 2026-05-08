@@ -29,7 +29,7 @@ export default async function AdminAffiliatesPage() {
 
   const [affiliatesResult, usersResult, earningsResult, payoutAccountsResult] = await Promise.all([
     db.from("affiliates").select("*").order("created_at", { ascending: false }),
-    db.from("referred_users").select("id, affiliate_id, first_transaction_amount"),
+    db.from("referred_users").select("id, affiliate_id"),
     db.from("earnings").select("affiliate_id, amount, status"),
     db.from("payout_accounts").select("affiliate_id").eq("is_verified", true),
   ]);
@@ -59,7 +59,9 @@ export default async function AdminAffiliatesPage() {
 
   const enriched: AffiliateWithCounts[] = affiliates.map((a) => {
     const refUsers = usersByAffiliate.get(a.id) ?? [];
-    const volume = refUsers.reduce((sum, u) => sum + (u.first_transaction_amount ?? 0), 0);
+    // Use the maintained running total — first_transaction_amount is only
+    // the per-user first-deposit snapshot and undercounts true volume.
+    const volume = Number(a.referred_volume_total) || 0;
     return {
       ...a,
       referredUserCount: refUsers.length,
