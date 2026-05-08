@@ -12,6 +12,8 @@ const PAGE_META: Record<string, { title: string; sub: string }> = {
   "/dashboard/support":          { title: "Support",         sub: "Report issues, share feedback, or request features" },
   "/dashboard/profile":          { title: "My Profile",      sub: "Account & security settings"                       },
   "/admin":                      { title: "Admin Overview",  sub: "Program stats and recent activity"                 },
+  "/admin/resources":            { title: "Resources",       sub: "Manage downloadable affiliate content"             },
+  "/admin/share-templates":      { title: "Share Templates", sub: "Pre-written social copy for affiliates"            },
   "/admin/affiliates":           { title: "Affiliates",      sub: "Manage affiliate accounts and tiers"               },
   "/admin/users":                { title: "Users",           sub: "All referred users across affiliates"              },
   "/admin/transactions":         { title: "Transactions",    sub: "All transaction volume across affiliates"          },

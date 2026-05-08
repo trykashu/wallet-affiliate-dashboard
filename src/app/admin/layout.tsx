@@ -13,6 +13,8 @@ const ADMIN_NAV = [
   { label: "Funnel",      href: "/admin/funnel",       icon: "chart"   as const },
   { label: "Earnings",    href: "/admin/earnings",     icon: "wallet"  as const },
   { label: "Payouts",     href: "/admin/payouts",      icon: "dollar"  as const },
+  { label: "Resources",       href: "/admin/resources",         icon: "grid"    as const },
+  { label: "Share Templates", href: "/admin/share-templates",   icon: "link"    as const },
   { label: "Settings",    href: "/admin/settings",     icon: "support" as const },
 ];
 
