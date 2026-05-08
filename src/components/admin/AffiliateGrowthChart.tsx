@@ -3,11 +3,14 @@
 import { useMemo } from "react";
 
 interface Props {
-  affiliates: Array<{ id: string; created_at: string; airtable_created_at: string | null; agreement_completed_at: string | null }>;
+  affiliates: Array<{ id: string; created_at: string; agreement_completed_at: string | null }>;
 }
 
-const effectiveDate = (a: { created_at: string; airtable_created_at: string | null; agreement_completed_at: string | null }) =>
-  a.agreement_completed_at ?? a.airtable_created_at ?? a.created_at;
+// Use signed-contract date when available, otherwise the dashboard row creation
+// date (= when the invite was sent). airtable_created_at is intentionally
+// excluded — it reflects pre-program Airtable backfill, not real onboarding.
+const effectiveDate = (a: { created_at: string; agreement_completed_at: string | null }) =>
+  a.agreement_completed_at ?? a.created_at;
 
 function smoothPath(points: { x: number; y: number }[]) {
   if (points.length <= 1)
