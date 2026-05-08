@@ -379,3 +379,34 @@ export interface Database {
     };
   };
 }
+
+// --- Affiliate /tools tab ---
+
+export interface AffiliateResource {
+  id: string;
+  title: string;
+  description: string | null;
+  kind: "video" | "pdf" | "image" | "archive";
+  category: "onboarding" | "tutorial" | "brand" | "compliance" | "guide";
+  storage_path: string;
+  public_url: string;
+  thumbnail_path: string | null;
+  file_size_bytes: number | null;
+  duration_seconds: number | null;
+  sort_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ShareTemplate {
+  id: string;
+  title: string;
+  platform: "instagram" | "twitter" | "linkedin" | "general";
+  category: "intro" | "case-study" | "promo" | "follow-up";
+  body: string;
+  sort_order: number;
+  is_published: boolean;
+  created_at: string;
+  updated_at: string;
+}

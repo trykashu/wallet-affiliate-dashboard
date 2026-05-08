@@ -15,6 +15,8 @@ import type {
   Transaction,
   Payout,
   PayoutAccount,
+  AffiliateResource,
+  ShareTemplate,
 } from "@/types/database";
 
 // ── Affiliate ───────────────────────────────────────────────────────────────
@@ -298,3 +300,121 @@ export const DEMO_MIN_PAYOUT_AMOUNT = 25;
 
 export const DEMO_PREV_RANK = 4;
 export const DEMO_TOTAL_AFFILIATES = 47;
+
+// ── /tools tab content ──────────────────────────────────────────────────────
+
+const demoNow = "2026-05-01T00:00:00Z";
+
+export const DEMO_RESOURCES: AffiliateResource[] = [
+  {
+    id: "demo-r-onboarding", title: "Affiliate Onboarding",
+    description: "Welcome video for new Kashu affiliates.",
+    kind: "video", category: "onboarding",
+    storage_path: "videos/onboarding.mp4",
+    public_url: "https://placehold.co/1280x720.mp4",
+    thumbnail_path: null, file_size_bytes: 524671015,
+    duration_seconds: 540, sort_order: 0, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-r-overview", title: "Kashu Overview",
+    description: "End-to-end walkthrough of the wallet.",
+    kind: "video", category: "tutorial",
+    storage_path: "videos/overview.mp4",
+    public_url: "https://placehold.co/1280x720.mp4",
+    thumbnail_path: null, file_size_bytes: 319524942,
+    duration_seconds: 320, sort_order: 10, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-r-creating-account", title: "Creating an Account",
+    description: "Show users how to sign up.",
+    kind: "video", category: "tutorial",
+    storage_path: "videos/creating_account.mp4",
+    public_url: "https://placehold.co/1280x720.mp4",
+    thumbnail_path: null, file_size_bytes: 127867438,
+    duration_seconds: 180, sort_order: 20, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-r-playbook", title: "Creator Playbook",
+    description: "Best practices for promoting Kashu.",
+    kind: "pdf", category: "guide",
+    storage_path: "docs/creator_playbook.pdf",
+    public_url: "https://placehold.co/playbook.pdf",
+    thumbnail_path: null, file_size_bytes: 3139178,
+    duration_seconds: null, sort_order: 10, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-r-faqs", title: "Affiliate FAQs",
+    description: "Common questions, answered.",
+    kind: "pdf", category: "guide",
+    storage_path: "docs/affiliate_faqs.pdf",
+    public_url: "https://placehold.co/faqs.pdf",
+    thumbnail_path: null, file_size_bytes: 3293474,
+    duration_seconds: null, sort_order: 20, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-r-conduct", title: "Affiliate Code of Conduct",
+    description: "What we expect from you.",
+    kind: "pdf", category: "compliance",
+    storage_path: "docs/code_of_conduct.pdf",
+    public_url: "https://placehold.co/conduct.pdf",
+    thumbnail_path: null, file_size_bytes: 2237442,
+    duration_seconds: null, sort_order: 10, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-r-brand-kit", title: "Brand Kit (PDF)",
+    description: "Logos, colors, type — at a glance.",
+    kind: "pdf", category: "brand",
+    storage_path: "brand/brand_kit.pdf",
+    public_url: "https://placehold.co/brand_kit.pdf",
+    thumbnail_path: null, file_size_bytes: 506522,
+    duration_seconds: null, sort_order: 10, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-r-brand-zip", title: "Brand Assets (full zip)",
+    description: "Everything: logos, icons, renders.",
+    kind: "archive", category: "brand",
+    storage_path: "brand/brand_assets.zip",
+    public_url: "https://placehold.co/brand_assets.zip",
+    thumbnail_path: null, file_size_bytes: 18608149,
+    duration_seconds: null, sort_order: 99, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+];
+
+export const DEMO_SHARE_TEMPLATES: ShareTemplate[] = [
+  {
+    id: "demo-t-linkedin-intro", title: "Intro post — long form",
+    platform: "linkedin", category: "intro",
+    body: "I've been recommending @Kashu to friends and clients lately — it's the cleanest wallet experience I've used. If you want to give it a try, here's my link: {{referral_link}}",
+    sort_order: 10, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-t-twitter-intro", title: "Intro post — short",
+    platform: "twitter", category: "intro",
+    body: "If you want to try a wallet that just works, this is it 👇 {{referral_link}}",
+    sort_order: 20, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-t-instagram-intro", title: "Instagram caption — intro",
+    platform: "instagram", category: "intro",
+    body: "New favorite app drop 🔗 — {{referral_link}}\n\n— {{agent_name}}",
+    sort_order: 30, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+  {
+    id: "demo-t-general-promo", title: "Promo — referral nudge",
+    platform: "general", category: "promo",
+    body: "Thinking about trying Kashu? Use my link and I'll walk you through setup: {{referral_link}}",
+    sort_order: 50, is_published: true,
+    created_at: demoNow, updated_at: demoNow,
+  },
+];

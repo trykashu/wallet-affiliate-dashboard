@@ -82,4 +82,13 @@ export const fmt = {
     if (days < 30) return `${days}d ago`;
     return dateFmt.format(date);
   },
+
+  /** 1.2 KB / 740.0 MB / 1.30 GB — file size */
+  bytes: (n: number | null | undefined) => {
+    if (n == null) return "—";
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 ** 2) return `${(n / 1024).toFixed(1)} KB`;
+    if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
+    return `${(n / 1024 ** 3).toFixed(2)} GB`;
+  },
 } as const;
