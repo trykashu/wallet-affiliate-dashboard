@@ -333,7 +333,11 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                     <span className="text-sm font-medium text-gray-900 tabular-nums">{fmt.currency(aff.totalEarnings)}</span>
                   </td>
                   <td className="td hidden sm:table-cell">
-                    {!aff.hasLogin ? (
+                    {aff.status === "archived" ? (
+                      <span className="inline-flex items-center text-[10px] font-semibold text-brand-400 bg-surface-100 border border-surface-200 rounded-full px-2 py-0.5 opacity-70">
+                        Archived
+                      </span>
+                    ) : !aff.hasLogin ? (
                       <span className="inline-flex items-center text-[10px] font-semibold text-brand-400 bg-surface-100 border border-surface-200 rounded-full px-2 py-0.5">
                         Not Invited
                       </span>

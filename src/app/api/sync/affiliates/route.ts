@@ -52,7 +52,10 @@ function buildAffiliateRow(rec: AirtableRecord): Record<string, unknown> | null 
     phone: (f["Agent Phone Number"] as string) || null,
     agreement_status: (f["Agreement Status"] as string) || null,
     tier: mapTier(f["Affiliate Tier"]),
-    status: "active",
+    // Declined affiliates are archived so they don't pollute active counts.
+    // The /api/automation/decline-affiliate endpoint can flip status sooner;
+    // this keeps the value consistent on every subsequent sync.
+    status: ((f["Agreement Status"] as string) === "Declined" ? "archived" : "active"),
     airtable_created_at: rec.createdTime,
     pandadoc_id: (rec.fields["PandaDoc ID"] as string) || null,
   };

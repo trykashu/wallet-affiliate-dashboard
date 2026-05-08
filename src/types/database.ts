@@ -14,7 +14,7 @@ export type FunnelStatusSlug =
   | 'ach_initiated'
   | 'funds_in_bank';
 
-export type AffiliateStatus = 'active' | 'suspended' | 'pending';
+export type AffiliateStatus = 'active' | 'suspended' | 'pending' | 'archived';
 
 export type AffiliateTier = 'gold' | 'platinum' | 'custom';
 

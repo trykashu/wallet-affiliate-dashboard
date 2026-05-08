@@ -62,6 +62,8 @@ export default async function AdminAffiliatesPage() {
     // Use the maintained running total — first_transaction_amount is only
     // the per-user first-deposit snapshot and undercounts true volume.
     const volume = Number(a.referred_volume_total) || 0;
+    // Spread preserves all Affiliate fields including `status`, which
+    // AffiliateTable uses to render the "Archived" badge.
     return {
       ...a,
       referredUserCount: refUsers.length,
