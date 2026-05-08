@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // Uploads "Affiliate Content Package/" to Supabase Storage and upserts
 // affiliate_resources rows. Idempotent.
+// Note: videos are hosted externally (YouTube/Vimeo) and added via the admin
+// UI, not via this script. Only PDFs + brand assets are pushed to Storage.
 // Run:  NODE_OPTIONS=--max-old-space-size=4096 npx tsx scripts/upload-affiliate-content.ts
 //       (the larger heap is needed because the largest video is ~525 MB and Buffer
 //        upload via supabase-js peaks at ~2x the file size during serialization.)
@@ -53,28 +55,6 @@ const HOW_TO = `${UNPACKED}/How to Use Kashu`;
 const BRAND  = `${UNPACKED}/Brand Assets`;
 
 const MANIFEST: ManifestItem[] = [
-  { localPath: `${ROOT}/Affiliate Onboarding Video.mp4`, storagePath: "videos/onboarding.mp4",
-    title: "Affiliate Onboarding", description: "Welcome video for new Kashu affiliates.",
-    kind: "video", category: "onboarding", sort_order: 0, generateThumb: true },
-  { localPath: `${HOW_TO}/Overview.mp4`,                storagePath: "videos/overview.mp4",
-    title: "Kashu Overview", description: "End-to-end walkthrough of the wallet.",
-    kind: "video", category: "tutorial", sort_order: 10, generateThumb: true },
-  { localPath: `${HOW_TO}/Creating_Account.mp4`,        storagePath: "videos/creating_account.mp4",
-    title: "Creating an Account", description: "Show users how to sign up.",
-    kind: "video", category: "tutorial", sort_order: 20, generateThumb: true },
-  { localPath: `${HOW_TO}/Verify_Identity.mp4`,         storagePath: "videos/verify_identity.mp4",
-    title: "Verifying Identity", description: "Walk through KYC.",
-    kind: "video", category: "tutorial", sort_order: 30, generateThumb: true },
-  { localPath: `${HOW_TO}/Connecting_Credit_Card.mp4`,  storagePath: "videos/connecting_credit_card.mp4",
-    title: "Connecting a Card", description: "Funding via credit card.",
-    kind: "video", category: "tutorial", sort_order: 40, generateThumb: true },
-  { localPath: `${HOW_TO}/Depositing_Funds.mp4`,        storagePath: "videos/depositing_funds.mp4",
-    title: "Depositing Funds", description: "Moving money into the wallet.",
-    kind: "video", category: "tutorial", sort_order: 50, generateThumb: true },
-  { localPath: `${HOW_TO}/Moving_Funds.mp4`,            storagePath: "videos/moving_funds.mp4",
-    title: "Moving Funds", description: "Sending money out.",
-    kind: "video", category: "tutorial", sort_order: 60, generateThumb: true },
-
   { localPath: `${ROOT}/Creator Playbook.pdf`,          storagePath: "docs/creator_playbook.pdf",
     title: "Creator Playbook", description: "Best practices for promoting Kashu.",
     kind: "pdf", category: "guide", sort_order: 10 },

@@ -36,9 +36,11 @@ export default function AdminResources({ initialRows }: { initialRows: Affiliate
   const [editing, setEditing] = useState<ResourceInput | null>(null);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [externalMode, setExternalMode] = useState(false);
 
   function openNew() {
     setEditing({ ...EMPTY_FORM });
+    setExternalMode(false);
     setError(null);
   }
   function openEdit(r: AffiliateResource) {
@@ -56,6 +58,7 @@ export default function AdminResources({ initialRows }: { initialRows: Affiliate
       sort_order: r.sort_order,
       is_published: r.is_published,
     });
+    setExternalMode(/youtube|vimeo|external\//.test(r.storage_path));
     setError(null);
   }
   function close() { setEditing(null); setError(null); }
@@ -249,29 +252,57 @@ export default function AdminResources({ initialRows }: { initialRows: Affiliate
                 </Field>
               </div>
 
-              <Field label="Storage path">
+              <div className="flex items-center justify-between p-3 rounded-xl bg-surface-50 border border-surface-200/60">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">External URL</p>
+                  <p className="text-[10px] text-brand-400 leading-tight">
+                    For YouTube/Vimeo videos. Paste the URL instead of uploading a file.
+                  </p>
+                </div>
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" checked={externalMode}
+                         onChange={(e) => setExternalMode(e.target.checked)} />
+                  <span className="text-sm text-gray-900">{externalMode ? "On" : "Off"}</span>
+                </label>
+              </div>
+
+              <Field label={externalMode ? "Row key (slug, no spaces)" : "Storage path"}>
                 <input className="input-base w-full font-mono text-xs"
-                       placeholder="e.g. brand/new_logo.svg"
+                       placeholder={externalMode ? "e.g. external/youtube/onboarding-video" : "e.g. brand/new_logo.svg"}
                        value={editing.storage_path}
                        onChange={(e) => setEditing({ ...editing, storage_path: e.target.value })} />
                 <p className="text-[10px] text-brand-400 mt-1">
-                  Path inside the affiliate-content bucket. Set this before uploading a file.
+                  {externalMode
+                    ? "A unique slug to identify this row. Convention: external/<provider>/<slug>."
+                    : "Path inside the affiliate-content bucket. Set this before uploading a file."}
                 </p>
               </Field>
 
-              <Field label="Upload file">
-                <input type="file" className="text-xs text-gray-900 file:btn-accent file:text-xs file:px-3 file:py-1.5 file:rounded-xl file:border-0 file:mr-3"
-                       onChange={async (e) => {
-                         const f = e.target.files?.[0];
-                         if (f) await handleFileUpload(f);
-                         e.target.value = "";
-                       }} />
-                {editing.public_url && (
-                  <p className="text-[10px] text-brand-400 mt-1 truncate">
-                    Uploaded → {editing.public_url}
+              {externalMode ? (
+                <Field label="Public URL">
+                  <input type="url" className="input-base w-full"
+                         placeholder="https://www.youtube.com/watch?v=... or https://vimeo.com/..."
+                         value={editing.public_url}
+                         onChange={(e) => setEditing({ ...editing, public_url: e.target.value })} />
+                  <p className="text-[10px] text-brand-400 mt-1">
+                    The URL that will be embedded. YouTube/Vimeo links auto-detected; everything else renders inline via the native video player.
                   </p>
-                )}
-              </Field>
+                </Field>
+              ) : (
+                <Field label="Upload file">
+                  <input type="file" className="text-xs text-gray-900 file:btn-accent file:text-xs file:px-3 file:py-1.5 file:rounded-xl file:border-0 file:mr-3"
+                         onChange={async (e) => {
+                           const f = e.target.files?.[0];
+                           if (f) await handleFileUpload(f);
+                           e.target.value = "";
+                         }} />
+                  {editing.public_url && (
+                    <p className="text-[10px] text-brand-400 mt-1 truncate">
+                      Uploaded → {editing.public_url}
+                    </p>
+                  )}
+                </Field>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Sort order">
