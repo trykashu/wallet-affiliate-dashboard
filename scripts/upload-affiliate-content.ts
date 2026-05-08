@@ -8,7 +8,6 @@ import { createClient } from "@supabase/supabase-js";
 import { execFileSync } from "node:child_process";
 import { readFileSync, statSync, existsSync, mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import "dotenv/config";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\\n|"|\s/g, "");
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\\n|"|\s/g, "");

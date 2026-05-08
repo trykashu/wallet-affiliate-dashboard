@@ -3,7 +3,6 @@
 // Idempotent: skips a row if a template with the same title already exists.
 // Run: npx tsx scripts/seed-share-templates.ts
 import { createClient } from "@supabase/supabase-js";
-import "dotenv/config";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\\n|"|\s/g, "");
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\\n|"|\s/g, "");
