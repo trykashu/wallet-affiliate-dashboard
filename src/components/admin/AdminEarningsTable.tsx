@@ -7,6 +7,34 @@ import TierBadge from "@/components/ui/TierBadge";
 import { COMMISSION_RATES } from "@/lib/tier";
 import type { EarningStatus, AffiliateTier } from "@/types/database";
 
+function isContractSigned(status: string | null): boolean {
+  return status === "Completed" || status === "signed";
+}
+
+function contractLabel(status: string | null): string {
+  if (!status || status === "Not Created") return "No contract";
+  if (status === "Completed" || status === "signed") return "Signed";
+  if (status === "Pending Partner Signature") return "Awaiting partner";
+  if (status === "Pending Kashu Signature") return "Awaiting Kashu";
+  if (status === "Declined") return "Declined";
+  return status;
+}
+
+function contractBadgeClass(status: string | null): string {
+  const base = "text-[10px] font-semibold px-2 py-0.5 rounded-full border";
+  if (status === "Completed" || status === "signed") {
+    return `${base} text-emerald-700 bg-emerald-50 border-emerald-200`;
+  }
+  if (status === "Declined") {
+    return `${base} text-red-700 bg-red-50 border-red-200`;
+  }
+  if (!status || status === "Not Created") {
+    return `${base} text-brand-400 bg-surface-100 border-surface-200`;
+  }
+  // Pending Partner / Pending Kashu
+  return `${base} text-amber-700 bg-amber-50 border-amber-200`;
+}
+
 export interface AdminEarning {
   id: string;
   created_at: string;
@@ -19,21 +47,29 @@ export interface AdminEarning {
   status: EarningStatus;
   tpv: number | null;
   funnel_percent: number | null;
+  contract_status: string | null;
 }
 
 export default function AdminEarningsTable({ earnings }: { earnings: AdminEarning[] }) {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<EarningStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<EarningStatus | "all" | "blocked">("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [approving, setApproving] = useState(false);
 
   const filtered = useMemo(() => {
     if (statusFilter === "all") return earnings;
+    if (statusFilter === "blocked") {
+      return earnings.filter((e) => e.status === "pending" && !isContractSigned(e.contract_status));
+    }
     return earnings.filter((e) => e.status === statusFilter);
   }, [earnings, statusFilter]);
 
-  const pendingIds = useMemo(
-    () => filtered.filter((e) => e.status === "pending").map((e) => e.id),
+  const eligiblePendingIds = useMemo(
+    () => filtered.filter((e) => e.status === "pending" && isContractSigned(e.contract_status)).map((e) => e.id),
+    [filtered]
+  );
+  const blockedPendingCount = useMemo(
+    () => filtered.filter((e) => e.status === "pending" && !isContractSigned(e.contract_status)).length,
     [filtered]
   );
 
@@ -47,12 +83,12 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
   }, []);
 
   const toggleSelectAll = useCallback(() => {
-    if (selected.size === pendingIds.length && pendingIds.length > 0) {
+    if (selected.size === eligiblePendingIds.length && eligiblePendingIds.length > 0) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(pendingIds));
+      setSelected(new Set(eligiblePendingIds));
     }
-  }, [pendingIds, selected.size]);
+  }, [eligiblePendingIds, selected.size]);
 
   const handleBulkApprove = useCallback(async () => {
     if (selected.size === 0) return;
@@ -95,12 +131,17 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
               : earnings.length}{" "}
             earnings
           </p>
+          {blockedPendingCount > 0 && (
+            <p className="text-[10px] text-amber-700 mt-0.5">
+              {blockedPendingCount} pending blocked by unsigned contract
+            </p>
+          )}
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as EarningStatus | "all")}
+            onChange={(e) => setStatusFilter(e.target.value as EarningStatus | "all" | "blocked")}
             className="text-xs rounded-lg border border-surface-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
           >
             <option value="all">All statuses</option>
@@ -108,9 +149,10 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
             <option value="approved">Approved</option>
             <option value="paid">Paid</option>
             <option value="reversed">Reversed</option>
+            <option value="blocked">Blocked by contract</option>
           </select>
 
-          {pendingIds.length > 0 && (
+          {eligiblePendingIds.length > 0 && (
             <button
               onClick={handleBulkApprove}
               disabled={selected.size === 0 || approving}
@@ -138,11 +180,11 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-surface-200/60 bg-surface-50/60">
-              {pendingIds.length > 0 && (
+              {eligiblePendingIds.length > 0 && (
                 <th className="th w-10">
                   <input
                     type="checkbox"
-                    checked={selected.size === pendingIds.length && pendingIds.length > 0}
+                    checked={selected.size === eligiblePendingIds.length && eligiblePendingIds.length > 0}
                     onChange={toggleSelectAll}
                     className="rounded border-surface-200"
                   />
@@ -150,6 +192,7 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
               )}
               <th className="th">Date</th>
               <th className="th hidden sm:table-cell">Affiliate</th>
+              <th className="th hidden md:table-cell">Contract</th>
               <th className="th hidden md:table-cell">User</th>
               <th className="th hidden xl:table-cell">Tier</th>
               <th className="th text-right">TPV</th>
@@ -161,63 +204,81 @@ export default function AdminEarningsTable({ earnings }: { earnings: AdminEarnin
             </tr>
           </thead>
           <tbody className="divide-y divide-surface-200/60">
-            {filtered.map((e) => (
-              <tr key={e.id} className="hover:bg-surface-100/40 transition-colors">
-                {pendingIds.length > 0 && (
-                  <td className="td w-10">
-                    {e.status === "pending" ? (
-                      <input
-                        type="checkbox"
-                        checked={selected.has(e.id)}
-                        onChange={() => toggleSelect(e.id)}
-                        className="rounded border-surface-200"
-                      />
-                    ) : null}
+            {filtered.map((e) => {
+              const blocked = e.status === "pending" && !isContractSigned(e.contract_status);
+              return (
+                <tr
+                  key={e.id}
+                  className={`hover:bg-surface-100/40 transition-colors ${blocked ? "opacity-60" : ""}`}
+                >
+                  {eligiblePendingIds.length > 0 && (
+                    <td className="td w-10">
+                      {e.status === "pending" && isContractSigned(e.contract_status) ? (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(e.id)}
+                          onChange={() => toggleSelect(e.id)}
+                          className="rounded border-surface-200"
+                        />
+                      ) : e.status === "pending" ? (
+                        <span title="Contract not signed — cannot approve" className="inline-flex w-4 h-4 items-center justify-center text-brand-400">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round"
+                              d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+                          </svg>
+                        </span>
+                      ) : null}
+                    </td>
+                  )}
+                  <td className="td">
+                    <span className="text-xs text-brand-400">{fmt.date(e.created_at)}</span>
                   </td>
-                )}
-                <td className="td">
-                  <span className="text-xs text-brand-400">{fmt.date(e.created_at)}</span>
-                </td>
-                <td className="td hidden sm:table-cell">
-                  <span className="text-xs text-gray-700 font-medium">{e.affiliate_name}</span>
-                </td>
-                <td className="td hidden md:table-cell">
-                  <span className="text-xs text-gray-600">{e.referred_user_name}</span>
-                </td>
-                <td className="td hidden xl:table-cell">
-                  <TierBadge tier={e.tier_at_earning} />
-                </td>
-                <td className="td text-right">
-                  <span className="text-xs text-gray-700 tabular-nums">
-                    {e.tpv != null ? fmt.currency(e.tpv) : <span className="text-brand-400">&mdash;</span>}
-                  </span>
-                </td>
-                <td className="td text-right hidden lg:table-cell">
-                  <span className="text-xs text-brand-400 tabular-nums">
-                    {e.funnel_percent != null
-                      ? `${Number(e.funnel_percent).toFixed(Number(e.funnel_percent) % 1 === 0 ? 0 : 2).replace(/\.?0+$/, "")}%`
-                      : "—"}
-                  </span>
-                </td>
-                <td className="td text-right hidden lg:table-cell">
-                  <span className="text-xs text-gray-700 tabular-nums">{fmt.currency(Number(e.transaction_fee_amount) || 0)}</span>
-                </td>
-                <td className="td text-right hidden lg:table-cell">
-                  <span className="text-xs text-brand-400 tabular-nums">
-                    {(COMMISSION_RATES[e.tier_at_earning] * 100).toFixed(0)}%
-                  </span>
-                </td>
-                <td className="td text-right">
-                  <span className="text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(e.amount)}</span>
-                </td>
-                <td className="td">
-                  {statusBadge(e.status)}
-                </td>
-              </tr>
-            ))}
+                  <td className="td hidden sm:table-cell">
+                    <span className="text-xs text-gray-700 font-medium">{e.affiliate_name}</span>
+                  </td>
+                  <td className="td hidden md:table-cell">
+                    <span className={contractBadgeClass(e.contract_status)}>
+                      {contractLabel(e.contract_status)}
+                    </span>
+                  </td>
+                  <td className="td hidden md:table-cell">
+                    <span className="text-xs text-gray-600">{e.referred_user_name}</span>
+                  </td>
+                  <td className="td hidden xl:table-cell">
+                    <TierBadge tier={e.tier_at_earning} />
+                  </td>
+                  <td className="td text-right">
+                    <span className="text-xs text-gray-700 tabular-nums">
+                      {e.tpv != null ? fmt.currency(e.tpv) : <span className="text-brand-400">&mdash;</span>}
+                    </span>
+                  </td>
+                  <td className="td text-right hidden lg:table-cell">
+                    <span className="text-xs text-brand-400 tabular-nums">
+                      {e.funnel_percent != null
+                        ? `${Number(e.funnel_percent).toFixed(Number(e.funnel_percent) % 1 === 0 ? 0 : 2).replace(/\.?0+$/, "")}%`
+                        : "—"}
+                    </span>
+                  </td>
+                  <td className="td text-right hidden lg:table-cell">
+                    <span className="text-xs text-gray-700 tabular-nums">{fmt.currency(Number(e.transaction_fee_amount) || 0)}</span>
+                  </td>
+                  <td className="td text-right hidden lg:table-cell">
+                    <span className="text-xs text-brand-400 tabular-nums">
+                      {(COMMISSION_RATES[e.tier_at_earning] * 100).toFixed(0)}%
+                    </span>
+                  </td>
+                  <td className="td text-right">
+                    <span className="text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(e.amount)}</span>
+                  </td>
+                  <td className="td">
+                    {statusBadge(e.status)}
+                  </td>
+                </tr>
+              );
+            })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={pendingIds.length > 0 ? 11 : 10} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={eligiblePendingIds.length > 0 ? 12 : 11} className="px-5 py-10 text-center text-sm text-brand-400">
                   No earnings match the current filter.
                 </td>
               </tr>

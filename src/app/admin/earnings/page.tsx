@@ -21,7 +21,7 @@ export default async function AdminEarningsPage() {
 
   const [earningsResult, affiliatesResult, usersResult] = await Promise.all([
     db.from("earnings").select("*").order("created_at", { ascending: false }),
-    db.from("affiliates").select("id, agent_name"),
+    db.from("affiliates").select("id, agent_name, agreement_status"),
     db.from("referred_users").select("id, full_name"),
   ]);
 
@@ -31,6 +31,9 @@ export default async function AdminEarningsPage() {
 
   const affiliateMap = new Map<string, string>();
   for (const a of affiliates) affiliateMap.set(a.id, a.agent_name);
+
+  const agreementMap = new Map<string, string | null>();
+  for (const a of affiliates) agreementMap.set(a.id, a.agreement_status ?? null);
 
   const userMap = new Map<string, string>();
   for (const u of referredUsers) userMap.set(u.id, u.full_name);
@@ -66,6 +69,7 @@ export default async function AdminEarningsPage() {
       status:                 e.status,
       tpv:                    ref?.amount ?? null,
       funnel_percent:         ref?.funnel_percent ?? null,
+      contract_status:        agreementMap.get(e.affiliate_id) ?? null,
     };
   });
 
