@@ -38,12 +38,63 @@ export async function POST(request: NextRequest) {
   const svc = createServiceClient() as any;
   const { earning_ids } = parsed.data;
 
+  // Gate by contract: only earnings whose affiliate has a signed contract are eligible.
+  const { data: lookupRows, error: lookupErr } = await svc
+    .from("earnings")
+    .select("id, affiliate_id")
+    .in("id", earning_ids);
+  if (lookupErr) {
+    console.error("[admin/earnings/approve] Lookup failed:", lookupErr);
+    return NextResponse.json({ error: "Database error" }, { status: 500 });
+  }
+
+  type EarningLookup = { id: string; affiliate_id: string };
+  const earningRows = (lookupRows as EarningLookup[] | null) ?? [];
+  const uniqueAffiliateIds = [...new Set(earningRows.map((r) => r.affiliate_id))];
+
+  let agreementByAffiliate = new Map<string, string | null>();
+  if (uniqueAffiliateIds.length > 0) {
+    const { data: affRows, error: affErr } = await svc
+      .from("affiliates")
+      .select("id, agreement_status")
+      .in("id", uniqueAffiliateIds);
+    if (affErr) {
+      console.error("[admin/earnings/approve] Affiliate lookup failed:", affErr);
+      return NextResponse.json({ error: "Database error" }, { status: 500 });
+    }
+    type AffRow = { id: string; agreement_status: string | null };
+    agreementByAffiliate = new Map<string, string | null>(
+      ((affRows as AffRow[] | null) ?? []).map((a) => [a.id, a.agreement_status ?? null])
+    );
+  }
+
+  const signedAffiliateIds = Array.from(agreementByAffiliate.entries())
+    .filter(([, status]) => status === "Completed" || status === "signed")
+    .map(([id]) => id);
+
+  const eligibleIds = earningRows
+    .filter((r) => {
+      const s = agreementByAffiliate.get(r.affiliate_id) ?? null;
+      return s === "Completed" || s === "signed";
+    })
+    .map((r) => r.id);
+  const blockedCount = earning_ids.length - eligibleIds.length;
+
+  if (eligibleIds.length === 0) {
+    return NextResponse.json({
+      approved: 0,
+      blocked: blockedCount,
+      message: "All requested earnings are blocked by unsigned contracts.",
+    }, { status: 409 });
+  }
+
   // Update earnings status to 'approved'
   const { data: updatedEarnings, error: updateError } = await svc
     .from("earnings")
     .update({ status: "approved", updated_at: new Date().toISOString() })
-    .in("id", earning_ids)
+    .in("id", eligibleIds)
     .eq("status", "pending")
+    .in("affiliate_id", signedAffiliateIds)
     .select("id, affiliate_id, amount");
 
   if (updateError) {
@@ -79,13 +130,16 @@ export async function POST(request: NextRequest) {
     resourceType: "earnings",
     metadata: {
       count: approved.length,
+      requested: earning_ids.length,
+      blocked: blockedCount,
       earning_ids: earning_ids.slice(0, 10), // log max 10 for brevity
     },
   });
 
   return NextResponse.json({
-    success: true,
-    approved_count: approved.length,
+    approved: approved.length,
+    blocked: blockedCount,
+    notifications_created: notifications.length,
   });
 }
 
