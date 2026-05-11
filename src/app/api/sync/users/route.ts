@@ -29,6 +29,49 @@ const STATUS_MAP: Record<string, FunnelStatusSlug> = {
 
 const DEFAULT_STATUS: FunnelStatusSlug = "signed_up";
 
+// Stages at or past transaction_run. Once a referred user reaches one of
+// these, the CRM-pulled status MUST NOT regress them — they've proven
+// they transacted, regardless of what the CRM lifecycle says.
+const STAGE_ORDER_USERS: FunnelStatusSlug[] = [
+  "waitlist",
+  "booked_call",
+  "sent_onboarding",
+  "signed_up",
+  "transaction_run",
+  "funds_in_wallet",
+  "ach_initiated",
+  "funds_in_bank",
+];
+
+const TRANSACTED_OR_PAST = new Set<FunnelStatusSlug>([
+  "transaction_run",
+  "funds_in_wallet",
+  "ach_initiated",
+  "funds_in_bank",
+]);
+
+/** Returns the slug to write to status_slug, given the CRM-derived slug
+ *  and the existing row state. Never regresses below transaction_run if
+ *  the existing row has a recorded first transaction or is already past. */
+function preserveAdvancedStage(
+  crmSlug: FunnelStatusSlug,
+  existing: { status_slug: string; first_transaction_amount: number | null } | undefined,
+): FunnelStatusSlug {
+  if (!existing) return crmSlug;
+  const hasTransaction =
+    existing.first_transaction_amount != null && existing.first_transaction_amount > 0;
+  const existingIsAdvanced = TRANSACTED_OR_PAST.has(existing.status_slug as FunnelStatusSlug);
+  if (hasTransaction || existingIsAdvanced) {
+    const existingSlug = existing.status_slug as FunnelStatusSlug;
+    const existingIdx = STAGE_ORDER_USERS.indexOf(existingSlug);
+    const crmIdx = STAGE_ORDER_USERS.indexOf(crmSlug);
+    if (existingIdx === -1) return crmSlug;
+    if (crmIdx === -1) return existingSlug;
+    return crmIdx > existingIdx ? crmSlug : existingSlug;
+  }
+  return crmSlug;
+}
+
 /** Extract first value from a lookup array field, or return as string. */
 function extractLookup(val: unknown): string | null {
   if (Array.isArray(val)) return val[0]?.toString() || null;
@@ -147,22 +190,35 @@ export async function GET() {
 
     // Load existing referred_users for change detection
     const walletIds = rows.map((r) => r.wallet_user_id);
-    const existingLookup: Record<string, { id: string; status_slug: string }> = {};
+    const existingLookup: Record<string, {
+      id: string;
+      status_slug: string;
+      first_transaction_amount: number | null;
+    }> = {};
 
     for (let i = 0; i < walletIds.length; i += BATCH_SIZE) {
       const batch = walletIds.slice(i, i + BATCH_SIZE);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: existing } = await (db as any)
         .from("referred_users")
-        .select("id, wallet_user_id, status_slug")
+        .select("id, wallet_user_id, status_slug, first_transaction_amount")
         .in("wallet_user_id", batch);
 
       for (const row of existing || []) {
         existingLookup[row.wallet_user_id] = {
           id: row.id,
           status_slug: row.status_slug,
+          first_transaction_amount: row.first_transaction_amount,
         };
       }
+    }
+
+    // Protect against status_slug regression: if the existing row indicates
+    // this user has transacted (or is already past transaction_run), do not
+    // downgrade them with the CRM-derived stage.
+    for (const row of rows) {
+      const existing = existingLookup[row.wallet_user_id];
+      row.status_slug = preserveAdvancedStage(row.status_slug, existing);
     }
 
     // Batch upsert
