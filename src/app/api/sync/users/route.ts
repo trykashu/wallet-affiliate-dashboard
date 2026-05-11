@@ -13,6 +13,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords, type AirtableRecord } from "@/lib/airtable";
+import { preserveAdvancedStage } from "@/lib/funnel-stage";
 import type { FunnelStatusSlug } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -28,49 +29,6 @@ const STATUS_MAP: Record<string, FunnelStatusSlug> = {
 };
 
 const DEFAULT_STATUS: FunnelStatusSlug = "signed_up";
-
-// Stages at or past transaction_run. Once a referred user reaches one of
-// these, the CRM-pulled status MUST NOT regress them — they've proven
-// they transacted, regardless of what the CRM lifecycle says.
-const STAGE_ORDER_USERS: FunnelStatusSlug[] = [
-  "waitlist",
-  "booked_call",
-  "sent_onboarding",
-  "signed_up",
-  "transaction_run",
-  "funds_in_wallet",
-  "ach_initiated",
-  "funds_in_bank",
-];
-
-const TRANSACTED_OR_PAST = new Set<FunnelStatusSlug>([
-  "transaction_run",
-  "funds_in_wallet",
-  "ach_initiated",
-  "funds_in_bank",
-]);
-
-/** Returns the slug to write to status_slug, given the CRM-derived slug
- *  and the existing row state. Never regresses below transaction_run if
- *  the existing row has a recorded first transaction or is already past. */
-function preserveAdvancedStage(
-  crmSlug: FunnelStatusSlug,
-  existing: { status_slug: string; first_transaction_amount: number | null } | undefined,
-): FunnelStatusSlug {
-  if (!existing) return crmSlug;
-  const hasTransaction =
-    existing.first_transaction_amount != null && existing.first_transaction_amount > 0;
-  const existingIsAdvanced = TRANSACTED_OR_PAST.has(existing.status_slug as FunnelStatusSlug);
-  if (hasTransaction || existingIsAdvanced) {
-    const existingSlug = existing.status_slug as FunnelStatusSlug;
-    const existingIdx = STAGE_ORDER_USERS.indexOf(existingSlug);
-    const crmIdx = STAGE_ORDER_USERS.indexOf(crmSlug);
-    if (existingIdx === -1) return crmSlug;
-    if (crmIdx === -1) return existingSlug;
-    return crmIdx > existingIdx ? crmSlug : existingSlug;
-  }
-  return crmSlug;
-}
 
 /** Extract first value from a lookup array field, or return as string. */
 function extractLookup(val: unknown): string | null {
