@@ -6,6 +6,8 @@ import { fmt }                 from "@/lib/fmt";
 import AffiliateGrowthChart    from "@/components/admin/AffiliateGrowthChart";
 import UserConversionChart     from "@/components/admin/UserConversionChart";
 import SyncButtons             from "@/components/admin/SyncButtons";
+import OverviewStatsRow        from "@/components/admin/OverviewStatsRow";
+import type { StatRow }        from "@/components/admin/StatDrillDrawer";
 import type { Affiliate, ReferredUser, Earning, WebhookEvent } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -67,6 +69,83 @@ export default async function AdminOverviewPage() {
   const paidEarnings     = allEarnings.filter((e) => e.status === "paid").reduce((s, e) => s + e.amount, 0);
   const totalEarnings    = pendingEarnings + approvedEarnings + paidEarnings;
 
+  // ── Top-10 contributors for each headline stat ───────────────────
+  // Used by the click-to-drill stat cards.
+
+  // 1. Affiliates: most recently signed (10 most recent agreement_completed_at).
+  const topAffiliates: StatRow[] = completedAffiliates
+    .slice()
+    .sort((a, b) => {
+      const av = a.agreement_completed_at ?? a.created_at ?? "";
+      const bv = b.agreement_completed_at ?? b.created_at ?? "";
+      return bv.localeCompare(av);
+    })
+    .slice(0, 10)
+    .map((a) => ({
+      affiliate_id: a.id,
+      agent_name: a.agent_name,
+      business_name: a.business_name ?? null,
+      value: 0,
+      sub: a.agreement_completed_at
+        ? `signed ${fmt.date(a.agreement_completed_at)}`
+        : `joined ${fmt.date(a.created_at)}`,
+    }));
+
+  // 2. Users: top 10 affiliates by referred user count.
+  const usersByAffiliate = new Map<string, number>();
+  for (const u of users) {
+    usersByAffiliate.set(u.affiliate_id, (usersByAffiliate.get(u.affiliate_id) ?? 0) + 1);
+  }
+  const affMap = new Map<string, Affiliate>();
+  for (const a of affiliates) affMap.set(a.id, a);
+  const topByUsers: StatRow[] = [...usersByAffiliate.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 10)
+    .map(([id, count]) => {
+      const aff = affMap.get(id);
+      return {
+        affiliate_id: id,
+        agent_name: aff?.agent_name ?? "Unknown",
+        business_name: aff?.business_name ?? null,
+        value: count,
+        sub: aff?.business_name ?? `${count} user${count === 1 ? "" : "s"}`,
+      };
+    });
+
+  // 3. Volume: top 10 affiliates by referred_volume_total.
+  const topByVolume: StatRow[] = affiliates
+    .slice()
+    .sort((a, b) => (b.referred_volume_total ?? 0) - (a.referred_volume_total ?? 0))
+    .filter((a) => (a.referred_volume_total ?? 0) > 0)
+    .slice(0, 10)
+    .map((a) => ({
+      affiliate_id: a.id,
+      agent_name: a.agent_name,
+      business_name: a.business_name ?? null,
+      value: a.referred_volume_total ?? 0,
+      sub: a.business_name ?? "",
+    }));
+
+  // 4. Earnings: top 10 affiliates by total earnings (all statuses combined).
+  const earningsByAffiliate = new Map<string, number>();
+  for (const e of allEarnings) {
+    earningsByAffiliate.set(e.affiliate_id, (earningsByAffiliate.get(e.affiliate_id) ?? 0) + e.amount);
+  }
+  const topByEarnings: StatRow[] = [...earningsByAffiliate.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .filter(([, total]) => total > 0)
+    .slice(0, 10)
+    .map(([id, total]) => {
+      const aff = affMap.get(id);
+      return {
+        affiliate_id: id,
+        agent_name: aff?.agent_name ?? "Unknown",
+        business_name: aff?.business_name ?? null,
+        value: total,
+        sub: aff?.business_name ?? "",
+      };
+    });
+
   return (
     <>
       {/* Trend charts — limited to affiliates with a Completed agreement */}
@@ -74,32 +153,20 @@ export default async function AdminOverviewPage() {
       <UserConversionChart users={users} />
 
       {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Total Affiliates"
-          value={fmt.count(completedCount)}
-          sub={`${pendingSignatureCount} awaiting signature / ${declinedCount} declined`}
-          accentColor="brand"
-        />
-        <StatCard
-          label="Total Referred Users"
-          value={fmt.count(users.length)}
-          sub={`Across ${completedCount} signed affiliates`}
-          accentColor="accent"
-        />
-        <StatCard
-          label="Total Referred Volume"
-          value={fmt.currencyCompact(totalVolume)}
-          sub="Lifetime transaction volume"
-          accentColor="accent"
-        />
-        <StatCard
-          label="Total Earnings"
-          value={fmt.currencyCompact(totalEarnings)}
-          sub={`${fmt.currency(pendingEarnings)} pending / ${fmt.currency(approvedEarnings)} approved / ${fmt.currency(paidEarnings)} paid`}
-          accentColor="brand"
-        />
-      </div>
+      <OverviewStatsRow
+        totalAffiliates={completedCount}
+        totalAffiliatesSub={`${pendingSignatureCount} awaiting signature / ${declinedCount} declined`}
+        totalUsers={users.length}
+        totalUsersSub={`Across ${completedCount} signed affiliates`}
+        totalVolume={totalVolume}
+        totalVolumeSub="Lifetime transaction volume"
+        totalEarnings={totalEarnings}
+        totalEarningsSub={`${fmt.currency(pendingEarnings)} pending / ${fmt.currency(approvedEarnings)} approved / ${fmt.currency(paidEarnings)} paid`}
+        topAffiliates={topAffiliates}
+        topByUsers={topByUsers}
+        topByVolume={topByVolume}
+        topByEarnings={topByEarnings}
+      />
 
       {/* Affiliate Pipeline — pre-signature breakdown */}
       <AffiliatePipelineCard
@@ -250,26 +317,3 @@ function AffiliatePipelineCard({
   );
 }
 
-function StatCard({
-  label,
-  value,
-  sub,
-  accentColor,
-}: {
-  label: string;
-  value: string;
-  sub: string;
-  accentColor: "brand" | "accent";
-}) {
-  return (
-    <div className="stat-card accent-top">
-      <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">{label}</p>
-      <p className={`text-display-sm font-bold tabular-nums mt-1 ${
-        accentColor === "accent" ? "text-accent" : "text-gray-900"
-      }`}>
-        {value}
-      </p>
-      <p className="text-[10px] text-brand-400 mt-1.5 leading-relaxed">{sub}</p>
-    </div>
-  );
-}
