@@ -155,6 +155,7 @@ export async function GET() {
       amount: number;
       date: string | null;
       currentStatusSlug: FunnelStatusSlug;
+      firstTxnAlreadyRecorded: boolean;
     }[] = [];
 
     for (const record of records) {
@@ -277,8 +278,17 @@ export async function GET() {
             });
           }
 
-          // Track first-transaction update (for setting first_transaction_at)
-          if (!referredUser.first_transaction_at) {
+          // Queue an update if either:
+          //   - This is the first recorded transaction for this user (set financial fields), OR
+          //   - The user's status_slug is currently before transaction_run despite having a
+          //     transaction (self-heal a previously regressed user).
+          const needsFirstTxnRecord = !referredUser.first_transaction_at;
+          const currentIdxForCheck = stageIndex(referredUser.status_slug);
+          const txnRunIdxForCheck = stageIndex("transaction_run");
+          const needsStageAdvance =
+            currentIdxForCheck >= 0 && currentIdxForCheck < txnRunIdxForCheck;
+
+          if (needsFirstTxnRecord || needsStageAdvance) {
             const alreadyQueued = firstTxnUpdates.some(
               (u) => u.referredUserId === referredUser!.id,
             );
@@ -289,6 +299,7 @@ export async function GET() {
                 amount,
                 date: dateTxn,
                 currentStatusSlug: referredUser.status_slug,
+                firstTxnAlreadyRecorded: !!referredUser.first_transaction_at,
               });
             }
           }
@@ -378,17 +389,20 @@ export async function GET() {
     let funnelEventsCreated = 0;
 
     for (const update of firstTxnUpdates) {
-      const kashuFee = calculateKashuFee(update.amount); // 8.5% of TPV
+      const updatePayload: Record<string, unknown> = {};
 
-      // Update referred_user with first transaction info
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const updatePayload: Record<string, unknown> = {
-        first_transaction_amount: update.amount,
-        first_transaction_fee: kashuFee,
-        first_transaction_at: update.date || new Date().toISOString(),
-      };
+      // Only write financial fields if this is the first recorded transaction.
+      // Otherwise we'd clobber the original first-txn metadata with whatever
+      // transaction happens to come through the sync at the moment we self-heal.
+      if (!update.firstTxnAlreadyRecorded) {
+        const kashuFee = calculateKashuFee(update.amount); // 8.5% of TPV
+        updatePayload.first_transaction_amount = update.amount;
+        updatePayload.first_transaction_fee = kashuFee;
+        updatePayload.first_transaction_at = update.date || new Date().toISOString();
+      }
 
-      // Advance to transaction_run if currently before it
+      // Advance to transaction_run if currently before it (re-check independently
+      // of the financial path — supports self-healing previously regressed users).
       const currentIdx = stageIndex(update.currentStatusSlug);
       const txnRunIdx = stageIndex("transaction_run");
       const shouldAdvance = currentIdx >= 0 && currentIdx < txnRunIdx;
@@ -396,6 +410,10 @@ export async function GET() {
       if (shouldAdvance) {
         updatePayload.status_slug = "transaction_run";
       }
+
+      // Skip the write if nothing to update (paranoia — should be unreachable
+      // since the push site requires at least one of the two conditions).
+      if (Object.keys(updatePayload).length === 0) continue;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: updateError } = await (db as any)
@@ -418,7 +436,6 @@ export async function GET() {
             });
           if (!funnelError) funnelEventsCreated++;
         }
-
       }
     }
 

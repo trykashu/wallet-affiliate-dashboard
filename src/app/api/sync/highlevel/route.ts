@@ -12,6 +12,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { calculateEarning, calculateKashuFee } from "@/lib/tier";
+import { preserveAdvancedStage } from "@/lib/funnel-stage";
 import type { FunnelStatusSlug, AffiliateTier } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -233,22 +234,35 @@ export async function GET() {
 
     // Step 5: Load existing referred_users for change detection
     const walletIds = rows.map((r) => r.wallet_user_id);
-    const existingLookup: Record<string, { id: string; status_slug: string }> = {};
+    const existingLookup: Record<string, {
+      id: string;
+      status_slug: string;
+      first_transaction_amount: number | null;
+    }> = {};
 
     for (let i = 0; i < walletIds.length; i += BATCH_SIZE) {
       const batch = walletIds.slice(i, i + BATCH_SIZE);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: existing } = await (db as any)
         .from("referred_users")
-        .select("id, wallet_user_id, status_slug")
+        .select("id, wallet_user_id, status_slug, first_transaction_amount")
         .in("wallet_user_id", batch);
 
       for (const row of existing || []) {
         existingLookup[row.wallet_user_id] = {
           id: row.id,
           status_slug: row.status_slug,
+          first_transaction_amount: row.first_transaction_amount,
         };
       }
+    }
+
+    // Protect against status_slug regression: if the existing row indicates
+    // this user has transacted (or is already past transaction_run), do not
+    // downgrade them with the CRM-derived stage.
+    for (const row of rows) {
+      const existing = existingLookup[row.wallet_user_id];
+      row.status_slug = preserveAdvancedStage(row.status_slug, existing);
     }
 
     // Step 6: Batch upsert referred_users

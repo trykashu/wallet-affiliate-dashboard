@@ -24,7 +24,14 @@ const TRANSACTED_SLUGS = ["transaction_run", "funds_in_wallet", "ach_initiated",
 export default function StatsRow({ users }: Props) {
   const brand = useBrand();
   const total      = users.length;
-  const transacted = users.filter((u) => TRANSACTED_SLUGS.includes(u.status_slug)).length;
+  // "Transacted" = any user with a recorded first transaction OR a status at/past transaction_run.
+  // We treat first_transaction_amount as the canonical signal because status_slug can be
+  // regressed by downstream syncs (the funnel-advance and the CRM-stage-pull don't always agree).
+  const transacted = users.filter(
+    (u) =>
+      (u.first_transaction_amount != null && u.first_transaction_amount > 0) ||
+      TRANSACTED_SLUGS.includes(u.status_slug),
+  ).length;
   const convRate   = total > 0 ? transacted / total : 0;
 
   const cards: CardDef[] = [
