@@ -9,7 +9,7 @@ import BatchReviewSection      from "@/components/admin/BatchReviewSection";
 import RequestedBatchesSection from "@/components/admin/RequestedBatchesSection";
 import BatchBuilderSection, { type BatchBuilderAffiliate, type BatchBuilderEarning } from "@/components/admin/BatchBuilderSection";
 import type { BatchSummary }   from "@/components/admin/BatchReviewSection";
-import type { PayoutRow, PendingAffiliatePayout } from "@/components/admin/PayoutBatchManager";
+import type { PayoutRow } from "@/components/admin/PayoutBatchManager";
 import type { Payout, Earning, Affiliate, PayoutSettings } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -86,23 +86,15 @@ export default async function AdminPayoutsPage() {
     created_at:            p.created_at,
   }));
 
-  // Compute approved balances grouped by affiliate
+  // Count affiliates whose approved balance is above the min payout threshold (for stat card subtitle)
   const balanceByAffiliate = new Map<string, number>();
   for (const e of approvedEarnings) {
     balanceByAffiliate.set(e.affiliate_id, (balanceByAffiliate.get(e.affiliate_id) ?? 0) + e.amount);
   }
-
-  const pendingPayouts: PendingAffiliatePayout[] = [];
-  for (const [affId, balance] of balanceByAffiliate) {
-    if (balance >= minPayout) {
-      pendingPayouts.push({
-        affiliate_id: affId,
-        affiliate_name: affiliateMap.get(affId) ?? "Unknown",
-        approved_balance: balance,
-      });
-    }
+  let payableAffiliateCount = 0;
+  for (const balance of balanceByAffiliate.values()) {
+    if (balance >= minPayout) payableAffiliateCount += 1;
   }
-  pendingPayouts.sort((a, b) => b.approved_balance - a.approved_balance);
 
   // Group payouts by batch_id for the review + execute UIs
   function groupByBatch(rows: Payout[]): BatchSummary[] {
@@ -185,7 +177,7 @@ export default async function AdminPayoutsPage() {
         <div className="stat-card accent-top">
           <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Ready for Payout</p>
           <p className="text-display-sm font-bold tabular-nums mt-1 text-accent">{fmt.currencyCompact(totalApproved)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">{pendingPayouts.length} affiliates above {fmt.currency(minPayout)} min</p>
+          <p className="text-[10px] text-brand-400 mt-1.5">{payableAffiliateCount} affiliates above {fmt.currency(minPayout)} min</p>
         </div>
         <div className="stat-card accent-top">
           <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">In Progress</p>
@@ -216,7 +208,7 @@ export default async function AdminPayoutsPage() {
 
       <BankDetailsUpload />
 
-      <PayoutBatchManager payouts={payoutRows} pendingPayouts={pendingPayouts} />
+      <PayoutBatchManager payouts={payoutRows} />
     </div>
   );
 }
