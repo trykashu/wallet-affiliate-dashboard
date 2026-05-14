@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { isAdminEmail } from "@/lib/admin";
+import { isFinanceEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
 
 const UpdateSchema = z.object({
@@ -21,8 +21,8 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || !isAdminEmail(user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user || !isFinanceEmail(user.email)) {
+    return NextResponse.json({ error: "Finance access required" }, { status: 403 });
   }
 
   let rawBody: unknown;
@@ -48,7 +48,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Database error" }, { status: 500 });
   }
 
-  // If completed, notify affiliate
+  // If completed, notify affiliate and mark linked earnings as paid
+  let earningsMarkedPaid = 0;
   if (status === "completed") {
     const { data: payout } = await svc
       .from("payouts")
@@ -64,6 +65,22 @@ export async function POST(request: NextRequest) {
         body: `Your payout of $${payout.amount.toFixed(2)} has been processed.`,
         is_read: false,
       });
+
+      // Mark linked earnings as paid. Guard with status='approved' so we never
+      // double-flip or accidentally regress a 'pending'/'reversed' earning.
+      const nowIso = new Date().toISOString();
+      const { data: paidRows, error: paidError } = await svc
+        .from("earnings")
+        .update({ status: "paid", updated_at: nowIso })
+        .eq("payout_id", payout_id)
+        .eq("status", "approved")
+        .select("id");
+      if (paidError) {
+        console.error("[update-status] Mark-paid failed:", paidError);
+        // Don't bail — the payout is already flipped to completed. Surface in audit.
+      } else {
+        earningsMarkedPaid = (paidRows ?? []).length;
+      }
     }
   }
 
@@ -71,10 +88,13 @@ export async function POST(request: NextRequest) {
   logSecurityEvent({
     userId: user.id,
     userEmail: user.email,
-    action: "admin.payout_status_update",
+    action: status === "completed" ? "admin.payout_complete" : "admin.payout_status_update",
     resourceType: "payouts",
     resourceId: payout_id,
-    metadata: { new_status: status },
+    metadata: {
+      new_status: status,
+      earnings_marked_paid: earningsMarkedPaid,
+    },
   });
 
   return NextResponse.json({ success: true });
