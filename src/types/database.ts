@@ -175,6 +175,12 @@ export interface PayoutAccount {
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+  country: string | null;
 }
 
 export interface PayoutSettings {
