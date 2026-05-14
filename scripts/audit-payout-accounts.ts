@@ -6,27 +6,12 @@
 //
 // Run: npx tsx scripts/audit-payout-accounts.ts
 import { createClient } from "@supabase/supabase-js";
+import { looksLikeUsPhone, looksLikeWidgetLabel } from "../src/lib/bank-quality";
 
 const URL = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\\n|"|\s/g, "");
 const KEY = process.env.SUPABASE_SERVICE_ROLE_KEY?.replace(/\\n|"|\s/g, "");
 if (!URL || !KEY) { console.error("Missing env"); process.exit(1); }
 const supa = createClient(URL, KEY, { auth: { persistSession: false } });
-
-function looksLikeUsPhone(value: string, cleaned: string): boolean {
-  const trimmed = value.trim();
-  if (/^\+?1?\s*\(\d{3}\)\s*\d{3}[\s-]?\d{4}$/.test(trimmed)) return true;
-  if (/^\+?1[\s-]\d{3}[\s-]\d{3}[\s-]\d{4}$/.test(trimmed)) return true;
-  if (/^\d{3}[\s-]\d{3}[\s-]\d{4}$/.test(trimmed)) return true;
-  if (/^\d{3}\.\d{3}\.\d{4}$/.test(trimmed)) return true;
-  if (cleaned.length === 10) return true;
-  if (cleaned.length === 11 && cleaned.startsWith("1")) return true;
-  return false;
-}
-
-function looksLikeWidgetLabel(v: string): boolean {
-  const t = v.trim();
-  return /^option\s*\d+$/i.test(t) || /^choice\s*\d+$/i.test(t);
-}
 
 (async () => {
   const { data, error } = await (supa as any)

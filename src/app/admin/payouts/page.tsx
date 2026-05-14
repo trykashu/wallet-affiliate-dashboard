@@ -2,6 +2,7 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail, isFinanceEmail } from "@/lib/admin";
+import { getBankReviewReasons } from "@/lib/bank-quality";
 import { fmt }                 from "@/lib/fmt";
 import PayoutBatchManager      from "@/components/admin/PayoutBatchManager";
 import BankDetailsUpload       from "@/components/admin/BankDetailsUpload";
@@ -57,11 +58,24 @@ export default async function AdminPayoutsPage() {
 
   const { data: verifiedAccountsRaw } = await db
     .from("payout_accounts")
-    .select("affiliate_id")
+    .select("affiliate_id, account_name, metadata")
     .eq("is_verified", true);
-  const payableAffiliateIds = new Set<string>(
-    ((verifiedAccountsRaw as { affiliate_id: string }[] | null) ?? []).map((a) => a.affiliate_id)
-  );
+  type VerifiedAccountRow = {
+    affiliate_id: string;
+    account_name: string | null;
+    metadata: { full_account_number?: string } | null;
+  };
+  const verifiedAccounts = (verifiedAccountsRaw as VerifiedAccountRow[] | null) ?? [];
+  const payableAffiliateIds = new Set<string>(verifiedAccounts.map((a) => a.affiliate_id));
+
+  const reasonsByAffiliate = new Map<string, string[]>();
+  for (const acct of verifiedAccounts) {
+    const reasons = getBankReviewReasons(acct);
+    if (reasons.length > 0) {
+      const existing = reasonsByAffiliate.get(acct.affiliate_id) ?? [];
+      reasonsByAffiliate.set(acct.affiliate_id, [...existing, ...reasons]);
+    }
+  }
 
   const allPayouts:     Payout[]   = payoutsResult.data   ?? [];
   const approvedEarnings: Earning[] = earningsResult.data  ?? [];
@@ -156,6 +170,7 @@ export default async function AdminPayoutsPage() {
       is_payable: payableAffiliateIds.has(a.id),
       contract_signed: a.agreement_status === "Completed" || a.agreement_status === "signed",
       pandadoc_id: a.pandadoc_id ?? null,
+      bank_review_reasons: reasonsByAffiliate.get(a.id) ?? [],
     }));
 
   const monthSet = new Set<string>();
