@@ -8,6 +8,12 @@ export interface BankPreview {
   routing_valid: boolean;
   account_valid: boolean;
   warnings: string[];
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+  country: string | null;
 }
 
 interface Props {
@@ -86,6 +92,24 @@ export default function BankPreviewDrawer({
               />
               <PreviewField label="Account type" value={preview.account_type ?? "—"} />
             </div>
+
+            {(preview.address1 || preview.city || preview.region || preview.postal_code) && (
+              <div className="card p-4 bg-surface-50 space-y-3">
+                <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Mailing address (for Mercury)</p>
+                <p className="text-sm text-gray-900 leading-relaxed">
+                  {preview.address1 ?? <span className="text-brand-400">— address 1 missing —</span>}
+                  {preview.address2 && <><br />{preview.address2}</>}
+                  <br />
+                  {preview.city ?? <span className="text-brand-400">— city missing —</span>}
+                  {", "}
+                  {preview.region ?? <span className="text-brand-400">— state missing —</span>}
+                  {" "}
+                  {preview.postal_code ?? <span className="text-brand-400">— zip missing —</span>}
+                  <br />
+                  <span className="text-xs text-brand-400">{preview.country ?? "US"}</span>
+                </p>
+              </div>
+            )}
 
             {preview.warnings.length > 0 && (
               <div className="card p-3 bg-amber-50 border-amber-200">
