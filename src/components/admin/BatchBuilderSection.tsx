@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
+import BankPreviewDrawer, { type BankPreview } from "@/components/admin/BankPreviewDrawer";
 
 export interface BatchBuilderEarning {
   id: string;
@@ -46,27 +47,64 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
-  const [refetchingId, setRefetchingId] = useState<string | null>(null);
+  const [previewState, setPreviewState] = useState<{
+    affiliate_id: string;
+    affiliate_name: string;
+    pandadoc_id: string | null;
+    preview: BankPreview | null;
+    loading: boolean;
+    submitting: boolean;
+    error: string | null;
+  } | null>(null);
   const [refetchError, setRefetchError] = useState<string | null>(null);
 
-  async function handleRefetchBank(affiliateId: string) {
-    setRefetchingId(affiliateId);
+  async function openRefetchPreview(row: { affiliate_id: string; affiliate_name: string; pandadoc_id: string | null }) {
+    setPreviewState({
+      affiliate_id: row.affiliate_id,
+      affiliate_name: row.affiliate_name,
+      pandadoc_id: row.pandadoc_id,
+      preview: null,
+      loading: true,
+      submitting: false,
+      error: null,
+    });
     setRefetchError(null);
     try {
       const res = await fetch("/api/admin/affiliates/refetch-bank", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ affiliate_id: affiliateId }),
+        body: JSON.stringify({ affiliate_id: row.affiliate_id, confirm: false }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.preview) {
+        setPreviewState((prev) => prev ? { ...prev, loading: false, error: body?.message ?? `Fetch failed (${res.status})` } : null);
+        return;
+      }
+      setPreviewState((prev) => prev ? { ...prev, loading: false, preview: body.preview as BankPreview } : null);
+    } catch (e) {
+      setPreviewState((prev) => prev ? { ...prev, loading: false, error: e instanceof Error ? e.message : "Fetch failed" } : null);
+    }
+  }
+
+  async function confirmRefetch() {
+    const current = previewState;
+    if (!current) return;
+    setPreviewState({ ...current, submitting: true, error: null });
+    try {
+      const res = await fetch("/api/admin/affiliates/refetch-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliate_id: current.affiliate_id, confirm: true }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.saved) {
-        throw new Error(body?.message ?? `Refetch failed (${res.status})`);
+        setPreviewState((prev) => prev ? { ...prev, submitting: false, error: body?.message ?? `Save failed (${res.status})` } : null);
+        return;
       }
+      setPreviewState(null);
       router.refresh();
     } catch (e) {
-      setRefetchError(e instanceof Error ? e.message : "Refetch failed");
-    } finally {
-      setRefetchingId(null);
+      setPreviewState((prev) => prev ? { ...prev, submitting: false, error: e instanceof Error ? e.message : "Save failed" } : null);
     }
   }
 
@@ -285,12 +323,12 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                           <span className="badge badge-amber text-[10px]">No bank on file</span>
                           {r.pandadoc_id && (
                             <button
-                              onClick={() => handleRefetchBank(r.affiliate_id)}
-                              disabled={refetchingId === r.affiliate_id}
+                              onClick={() => openRefetchPreview({ affiliate_id: r.affiliate_id, affiliate_name: r.affiliate_name, pandadoc_id: r.pandadoc_id })}
+                              disabled={previewState?.affiliate_id === r.affiliate_id}
                               title="Re-fetch bank details from PandaDoc"
                               className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
                             >
-                              {refetchingId === r.affiliate_id ? "…" : "Refetch"}
+                              {previewState?.affiliate_id === r.affiliate_id ? "…" : "Refetch"}
                             </button>
                           )}
                         </div>
@@ -368,6 +406,18 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           </div>
         </>
       )}
+
+      <BankPreviewDrawer
+        open={previewState !== null}
+        affiliateName={previewState?.affiliate_name ?? null}
+        pandadocId={previewState?.pandadoc_id ?? null}
+        preview={previewState?.preview ?? null}
+        loading={previewState?.loading ?? false}
+        submitting={previewState?.submitting ?? false}
+        error={previewState?.error ?? null}
+        onClose={() => { if (previewState?.submitting !== true) setPreviewState(null); }}
+        onConfirm={confirmRefetch}
+      />
     </div>
   );
 }
