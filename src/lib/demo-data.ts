@@ -265,6 +265,12 @@ export const DEMO_PAYOUT_ACCOUNT: PayoutAccount = {
   metadata:             null,
   created_at:           "2025-08-15T00:00:00Z",
   updated_at:           "2025-08-15T00:00:00Z",
+  address1:             "123 Demo St",
+  address2:             null,
+  city:                 "Austin",
+  region:               "TX",
+  postal_code:          "78701",
+  country:              "US",
 };
 
 export const DEMO_MERCURY_ACCOUNT_DISPLAY = {

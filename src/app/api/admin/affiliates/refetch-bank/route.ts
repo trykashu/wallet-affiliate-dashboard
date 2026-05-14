@@ -89,6 +89,12 @@ export async function POST(request: NextRequest) {
     routing_valid: bankDetails.routing_valid,
     account_valid: bankDetails.account_valid,
     warnings: bankDetails.warnings,
+    address1: bankDetails.address1,
+    address2: bankDetails.address2,
+    city: bankDetails.city,
+    region: bankDetails.region,
+    postal_code: bankDetails.postal_code,
+    country: bankDetails.country,
   };
 
   if (!bankDetails.routing_valid || !bankDetails.account_valid) {
@@ -118,6 +124,12 @@ export async function POST(request: NextRequest) {
     account_number_last4: accountNumberLast4,
     is_default: true,
     is_verified: true,
+    address1: bankDetails.address1,
+    address2: bankDetails.address2,
+    city: bankDetails.city,
+    region: bankDetails.region,
+    postal_code: bankDetails.postal_code,
+    country: bankDetails.country,
     metadata: {
       full_account_number: bankDetails.account_number,
       routing_number: bankDetails.routing_number,

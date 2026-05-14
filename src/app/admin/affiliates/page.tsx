@@ -2,6 +2,7 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
+import { getBankReviewReasons } from "@/lib/bank-quality";
 import AffiliateTable          from "@/components/admin/AffiliateTable";
 import type { Affiliate, ReferredUser, Earning } from "@/types/database";
 
@@ -15,6 +16,7 @@ export interface AffiliateWithCounts extends Affiliate {
   hasLogin: boolean;        // user_id is set (invite accepted)
   hasPassword: boolean;     // account fully set up
   lastLoginAt: string | null;
+  bank_review_reasons: string[];
 }
 
 export default async function AdminAffiliatesPage() {
@@ -31,17 +33,29 @@ export default async function AdminAffiliatesPage() {
     db.from("affiliates").select("*").order("created_at", { ascending: false }),
     db.from("referred_users").select("id, affiliate_id"),
     db.from("earnings").select("affiliate_id, amount, status"),
-    db.from("payout_accounts").select("affiliate_id").eq("is_verified", true),
+    db.from("payout_accounts").select("affiliate_id, account_name, metadata").eq("is_verified", true),
   ]);
 
   const affiliates:  Affiliate[]    = affiliatesResult.data ?? [];
   const users:       ReferredUser[] = usersResult.data      ?? [];
   const allEarnings: Earning[]      = earningsResult.data   ?? [];
 
-  // Build set of affiliates with bank accounts on file
+  type AccountRow = {
+    affiliate_id: string;
+    account_name: string | null;
+    metadata: { full_account_number?: string } | null;
+  };
+
+  // Build set of affiliates with bank accounts on file + accumulate review reasons
   const affiliatesWithBank = new Set<string>();
-  for (const pa of payoutAccountsResult.data ?? []) {
+  const reasonsByAffiliate = new Map<string, string[]>();
+  for (const pa of (payoutAccountsResult.data as AccountRow[] | null) ?? []) {
     if (pa.affiliate_id) affiliatesWithBank.add(pa.affiliate_id);
+    const reasons = getBankReviewReasons(pa);
+    if (reasons.length > 0) {
+      const existing = reasonsByAffiliate.get(pa.affiliate_id) ?? [];
+      reasonsByAffiliate.set(pa.affiliate_id, [...existing, ...reasons]);
+    }
   }
 
   // Build lookup maps
@@ -73,6 +87,7 @@ export default async function AdminAffiliatesPage() {
       hasLogin: !!a.user_id,
       hasPassword: !!a.has_password,
       lastLoginAt: a.last_login_at,
+      bank_review_reasons: reasonsByAffiliate.get(a.id) ?? [],
     };
   });
 
