@@ -19,6 +19,7 @@ export interface BatchBuilderAffiliate {
   is_payable: boolean;        // has at least one verified payout_account
   contract_signed: boolean;   // agreement_status in ('Completed','signed')
   pandadoc_id: string | null;
+  bank_review_reasons: string[];
 }
 
 interface Props {
@@ -34,6 +35,7 @@ interface AffiliateRow {
   is_payable: boolean;
   contract_signed: boolean;
   pandadoc_id: string | null;
+  bank_review_reasons: string[];
   count: number;
   total: number;
   earning_ids: string[];
@@ -134,6 +136,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           is_payable: aff?.is_payable ?? false,
           contract_signed: aff?.contract_signed ?? false,
           pandadoc_id: aff?.pandadoc_id ?? null,
+          bank_review_reasons: aff?.bank_review_reasons ?? [],
           count: 1,
           total: Number(e.amount) || 0,
           earning_ids: [e.id],
@@ -336,6 +339,15 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                       {eligible && (
                         <div className="flex items-center gap-2">
                           <span className="badge badge-accent text-[10px]">Ready</span>
+                          {r.bank_review_reasons.length > 0 && (
+                            <span
+                              title={r.bank_review_reasons.join(" · ")}
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+                            >
+                              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+                              Review
+                            </span>
+                          )}
                           {r.pandadoc_id && (
                             <button
                               onClick={() => openRefetchPreview({ affiliate_id: r.affiliate_id, affiliate_name: r.affiliate_name, pandadoc_id: r.pandadoc_id })}
