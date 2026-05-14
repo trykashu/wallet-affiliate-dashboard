@@ -23,6 +23,8 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
   const [overridingTier, setOverridingTier] = useState<string | null>(null);
   const [inviteOpen,     setInviteOpen]     = useState(false);
   const [invitingId,     setInvitingId]     = useState<string | null>(null);
+  const [refetchingId,   setRefetchingId]   = useState<string | null>(null);
+  const [refetchError,   setRefetchError]   = useState<string | null>(null);
 
   // -- Actions --
 
@@ -101,6 +103,27 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
       alert("Failed to send invite.");
     } finally {
       setInvitingId(null);
+    }
+  }, [router]);
+
+  const handleRefetchBank = useCallback(async (aff: AffiliateWithCounts) => {
+    setRefetchingId(aff.id);
+    setRefetchError(null);
+    try {
+      const res = await fetch("/api/admin/affiliates/refetch-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliate_id: aff.id }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.saved) {
+        throw new Error(body?.message ?? `Refetch failed (${res.status})`);
+      }
+      router.refresh();
+    } catch (e) {
+      setRefetchError(e instanceof Error ? e.message : "Refetch failed");
+    } finally {
+      setRefetchingId(null);
     }
   }, [router]);
 
@@ -187,6 +210,12 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
 
   return (
     <>
+      {refetchError && (
+        <div className="card p-3 mb-3 bg-red-50 border-red-200">
+          <p className="text-xs text-red-700">{refetchError}</p>
+          <button onClick={() => setRefetchError(null)} className="text-[10px] text-red-700 underline mt-1">Dismiss</button>
+        </div>
+      )}
       <div className="card overflow-hidden">
         {/* Header */}
         <div className="px-5 py-4 border-b border-surface-200/60">
@@ -364,10 +393,22 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                         On file
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                        Missing
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                          Missing
+                        </span>
+                        {aff.pandadoc_id && (
+                          <button
+                            onClick={() => handleRefetchBank(aff)}
+                            disabled={refetchingId === aff.id}
+                            title="Re-fetch bank details from PandaDoc"
+                            className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {refetchingId === aff.id ? "…" : "Refetch"}
+                          </button>
+                        )}
+                      </div>
                     )}
                   </td>
                   <td className="td">
