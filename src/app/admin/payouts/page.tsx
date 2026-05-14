@@ -7,6 +7,7 @@ import PayoutBatchManager      from "@/components/admin/PayoutBatchManager";
 import BankDetailsUpload       from "@/components/admin/BankDetailsUpload";
 import BatchReviewSection      from "@/components/admin/BatchReviewSection";
 import RequestedBatchesSection from "@/components/admin/RequestedBatchesSection";
+import BatchBuilderSection, { type BatchBuilderAffiliate, type BatchBuilderEarning } from "@/components/admin/BatchBuilderSection";
 import type { BatchSummary }   from "@/components/admin/BatchReviewSection";
 import type { PayoutRow, PendingAffiliatePayout } from "@/components/admin/PayoutBatchManager";
 import type { Payout, Earning, Affiliate, PayoutSettings } from "@/types/database";
@@ -27,9 +28,40 @@ export default async function AdminPayoutsPage() {
   const [payoutsResult, earningsResult, affiliatesResult, settingsResult] = await Promise.all([
     db.from("payouts").select("*").order("created_at", { ascending: false }),
     db.from("earnings").select("affiliate_id, amount, status").eq("status", "approved"),
-    db.from("affiliates").select("id, agent_name"),
+    db.from("affiliates").select("id, agent_name, business_name, agreement_status"),
     db.from("payout_settings").select("*").limit(1).maybeSingle(),
   ]);
+
+  // Approved earnings that aren't already in a batch — the universe the AM is choosing from.
+  const { data: unbatchedRaw } = await db
+    .from("earnings")
+    .select("id, affiliate_id, amount, transaction_ref")
+    .eq("status", "approved")
+    .is("payout_id", null);
+
+  type UnbatchedRow = { id: string; affiliate_id: string; amount: number; transaction_ref: string | null };
+  const unbatched = (unbatchedRaw as UnbatchedRow[] | null) ?? [];
+
+  const txnRefs = unbatched.map((u) => u.transaction_ref).filter((r): r is string => !!r);
+  const txnDateByRef = new Map<string, string | null>();
+  if (txnRefs.length > 0) {
+    const { data: txns } = await db
+      .from("transactions")
+      .select("airtable_record_id, transaction_date")
+      .in("airtable_record_id", txnRefs);
+    type TxnRow = { airtable_record_id: string; transaction_date: string | null };
+    for (const t of (txns as TxnRow[] | null) ?? []) {
+      txnDateByRef.set(t.airtable_record_id, t.transaction_date);
+    }
+  }
+
+  const { data: verifiedAccountsRaw } = await db
+    .from("payout_accounts")
+    .select("affiliate_id")
+    .eq("is_verified", true);
+  const payableAffiliateIds = new Set<string>(
+    ((verifiedAccountsRaw as { affiliate_id: string }[] | null) ?? []).map((a) => a.affiliate_id)
+  );
 
   const allPayouts:     Payout[]   = payoutsResult.data   ?? [];
   const approvedEarnings: Earning[] = earningsResult.data  ?? [];
@@ -114,6 +146,31 @@ export default async function AdminPayoutsPage() {
   const pendingReviewBatches = groupByBatch(allPayouts.filter((p) => p.status === "pending_review"));
   const requestedBatches = groupByBatch(allPayouts.filter((p) => p.status === "requested" && p.batch_id));
 
+  // Batch builder data
+  const builderEarnings: BatchBuilderEarning[] = unbatched.map((u) => ({
+    id: u.id,
+    affiliate_id: u.affiliate_id,
+    amount: Number(u.amount) || 0,
+    transaction_date: u.transaction_ref ? (txnDateByRef.get(u.transaction_ref) ?? null) : null,
+  }));
+
+  const referencedAffiliateIds = new Set(builderEarnings.map((e) => e.affiliate_id));
+  const builderAffiliates: BatchBuilderAffiliate[] = affiliates
+    .filter((a) => referencedAffiliateIds.has(a.id))
+    .map((a) => ({
+      affiliate_id: a.id,
+      affiliate_name: a.agent_name,
+      business_name: a.business_name ?? null,
+      is_payable: payableAffiliateIds.has(a.id),
+      contract_signed: a.agreement_status === "Completed" || a.agreement_status === "signed",
+    }));
+
+  const monthSet = new Set<string>();
+  for (const e of builderEarnings) {
+    if (e.transaction_date) monthSet.add(e.transaction_date.slice(0, 7));
+  }
+  const availableMonths = Array.from(monthSet).sort().reverse();
+
   // Summary stats
   const totalPaid     = allPayouts.filter((p) => p.status === "completed").reduce((s, p) => s + p.amount, 0);
   const totalPending  = allPayouts
@@ -141,6 +198,14 @@ export default async function AdminPayoutsPage() {
           <p className="text-[10px] text-brand-400 mt-1.5">{allPayouts.filter((p) => p.status === "completed").length} completed payouts</p>
         </div>
       </div>
+
+      {availableMonths.length > 0 && (
+        <BatchBuilderSection
+          earnings={builderEarnings}
+          affiliates={builderAffiliates}
+          availableMonths={availableMonths}
+        />
+      )}
 
       {pendingReviewBatches.length > 0 && (
         <BatchReviewSection batches={pendingReviewBatches} isFinance={isFinance} />
