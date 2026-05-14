@@ -57,6 +57,49 @@ describe("extractBankDetails — regressions from 2026-05-14", () => {
     assert.equal(result.account_type, "checking");
   });
 
+  it("rejects a dash-formatted phone number as account number", () => {
+    // Real production failure: phone written as 212-555-0143, no parens, no title.
+    // Current cleanAccountNumber strips dashes → 2125550143 → passes 4-17 digit check.
+    // Old extractor would pick this as the account number.
+    const fields: PandaDocField[] = [
+      f("David Warren-Mitchell", { title: "Account Holder Name" }),
+      f("111000614", { title: "Routing Number" }),
+      f("212-555-0143", { title: "Phone Number" }),
+      f("6122695954", { title: "Account Number" }),
+    ];
+
+    const result = extractBankDetails(fields);
+
+    assert.equal(result.account_number, "6122695954");
+    assert.notEqual(result.account_number, "2125550143");
+  });
+
+  it("rejects a bare 10-digit phone number as account number (no formatting, no title)", () => {
+    // Worst case: phone appears without formatting AND without title hint.
+    // Only the phone-shape heuristic + value-context can save us.
+    const fields: PandaDocField[] = [
+      f("David Warren-Mitchell"),
+      f("111000614"),
+      f("2125550143"),   // a bare 10-digit number that's actually a phone
+      f("6122695954"),   // a 10-digit number that's actually an account
+    ];
+
+    const result = extractBankDetails(fields);
+
+    // Both values clean to 10 digits. The phone-shape heuristic should reject
+    // BOTH as phone-shaped... but we still want an account number when one
+    // exists. Acceptable outcomes:
+    //   (a) account_number = "6122695954" (the second one, somehow disambiguated)
+    //   (b) account_number = null with a warning (no clear winner; AM must verify)
+    // We do NOT want the phone to win silently.
+    if (result.account_number !== null) {
+      assert.notEqual(result.account_number, "2125550143", "must not pick the phone");
+    } else {
+      assert.equal(result.account_valid, false);
+      assert.ok(result.warnings.length > 0);
+    }
+  });
+
   it("rejects a value that looks like a US phone even when it's the only candidate", () => {
     const fields: PandaDocField[] = [
       f("Jane Test", { title: "Account Holder Name" }),
