@@ -19,15 +19,21 @@ export default async function AdminEarningsPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
-  const [earningsResult, affiliatesResult, usersResult] = await Promise.all([
+  const [earningsResult, affiliatesResult, usersResult, payoutAccountsResult] = await Promise.all([
     db.from("earnings").select("*").order("created_at", { ascending: false }),
     db.from("affiliates").select("id, agent_name, agreement_status"),
     db.from("referred_users").select("id, full_name"),
+    db.from("payout_accounts").select("affiliate_id, is_default, is_verified").eq("is_verified", true),
   ]);
 
   const allEarnings:  Earning[]      = earningsResult.data   ?? [];
   const affiliates:   Affiliate[]    = affiliatesResult.data ?? [];
   const referredUsers: ReferredUser[] = usersResult.data     ?? [];
+
+  type AcctRow = { affiliate_id: string; is_default: boolean; is_verified: boolean };
+  const payableAffiliateIds = new Set<string>(
+    ((payoutAccountsResult.data as AcctRow[] | null) ?? []).map((a) => a.affiliate_id)
+  );
 
   const affiliateMap = new Map<string, string>();
   for (const a of affiliates) affiliateMap.set(a.id, a.agent_name);
@@ -38,19 +44,23 @@ export default async function AdminEarningsPage() {
   const userMap = new Map<string, string>();
   for (const u of referredUsers) userMap.set(u.id, u.full_name);
 
-  // Look up TPV + funnel % per earning by joining on transaction_ref ↔ transactions.airtable_record_id
+  // Look up TPV + funnel % + transaction_date per earning by joining on transaction_ref ↔ transactions.airtable_record_id
   const earningRefs = allEarnings.map((e) => e.transaction_ref).filter((r): r is string => !!r);
-  const txnByRef = new Map<string, { amount: number; funnel_percent: number | null }>();
+  const txnByRef = new Map<string, { amount: number; funnel_percent: number | null; transaction_date: string | null }>();
   if (earningRefs.length > 0) {
     const { data: refTxns } = await db
       .from("transactions")
-      .select("airtable_record_id, amount, funnel_percent")
+      .select("airtable_record_id, amount, funnel_percent, transaction_date")
       .in("airtable_record_id", earningRefs);
-    type RefRow = Pick<Transaction, "airtable_record_id" | "amount"> & { funnel_percent: number | null };
+    type RefRow = Pick<Transaction, "airtable_record_id" | "amount"> & {
+      funnel_percent: number | null;
+      transaction_date: string | null;
+    };
     for (const t of (refTxns ?? []) as RefRow[]) {
       txnByRef.set(t.airtable_record_id, {
         amount: Number(t.amount) || 0,
         funnel_percent: t.funnel_percent != null ? Number(t.funnel_percent) : null,
+        transaction_date: t.transaction_date,
       });
     }
   }
@@ -70,8 +80,20 @@ export default async function AdminEarningsPage() {
       tpv:                    ref?.amount ?? null,
       funnel_percent:         ref?.funnel_percent ?? null,
       contract_status:        agreementMap.get(e.affiliate_id) ?? null,
+      transaction_date:       ref?.transaction_date ?? null,
+      payout_id:              e.payout_id ?? null,
+      affiliate_is_payable:   payableAffiliateIds.has(e.affiliate_id),
     };
   });
+
+  // Available months for the month filter (YYYY-MM, newest first)
+  const monthSet = new Set<string>();
+  for (const e of enriched) {
+    if (e.transaction_date) {
+      monthSet.add(e.transaction_date.slice(0, 7));
+    }
+  }
+  const availableMonths = Array.from(monthSet).sort().reverse();
 
   // Summary stats
   const pending  = allEarnings.filter((e) => e.status === "pending").reduce((s, e) => s + e.amount, 0);
@@ -99,7 +121,7 @@ export default async function AdminEarningsPage() {
         </div>
       </div>
 
-      <AdminEarningsTable earnings={enriched} />
+      <AdminEarningsTable earnings={enriched} availableMonths={availableMonths} />
     </div>
   );
 }

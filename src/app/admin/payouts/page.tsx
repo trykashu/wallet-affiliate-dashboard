@@ -1,10 +1,13 @@
 import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { isAdminEmail }        from "@/lib/admin";
+import { isAdminEmail, isFinanceEmail } from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
 import PayoutBatchManager      from "@/components/admin/PayoutBatchManager";
 import BankDetailsUpload       from "@/components/admin/BankDetailsUpload";
+import BatchReviewSection      from "@/components/admin/BatchReviewSection";
+import RequestedBatchesSection from "@/components/admin/RequestedBatchesSection";
+import type { BatchSummary }   from "@/components/admin/BatchReviewSection";
 import type { PayoutRow, PendingAffiliatePayout } from "@/components/admin/PayoutBatchManager";
 import type { Payout, Earning, Affiliate, PayoutSettings } from "@/types/database";
 
@@ -16,6 +19,7 @@ export default async function AdminPayoutsPage() {
 
   if (!user) redirect("/login");
   if (!isAdminEmail(user.email)) redirect("/dashboard");
+  const isFinance = isFinanceEmail(user.email);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
@@ -68,9 +72,53 @@ export default async function AdminPayoutsPage() {
   }
   pendingPayouts.sort((a, b) => b.approved_balance - a.approved_balance);
 
+  // Group payouts by batch_id for the review + execute UIs
+  function groupByBatch(rows: Payout[]): BatchSummary[] {
+    const byBatch = new Map<string, BatchSummary>();
+    for (const p of rows) {
+      if (!p.batch_id) continue;
+      const existing = byBatch.get(p.batch_id);
+      const affName = affiliateMap.get(p.affiliate_id) ?? "Unknown";
+      if (existing) {
+        existing.payout_count += 1;
+        existing.total_amount += Number(p.amount) || 0;
+        existing.payouts.push({
+          id: p.id,
+          affiliate_id: p.affiliate_id,
+          affiliate_name: affName,
+          amount: p.amount,
+        });
+      } else {
+        byBatch.set(p.batch_id, {
+          batch_id: p.batch_id,
+          period: p.period ?? "—",
+          submitted_by: p.submitted_by ?? "—",
+          submitted_at: p.submitted_at ?? p.created_at,
+          review_notes: p.review_notes ?? null,
+          payout_count: 1,
+          total_amount: Number(p.amount) || 0,
+          payouts: [{
+            id: p.id,
+            affiliate_id: p.affiliate_id,
+            affiliate_name: affName,
+            amount: p.amount,
+          }],
+        });
+      }
+    }
+    return Array.from(byBatch.values()).sort((a, b) =>
+      (b.submitted_at ?? "").localeCompare(a.submitted_at ?? "")
+    );
+  }
+
+  const pendingReviewBatches = groupByBatch(allPayouts.filter((p) => p.status === "pending_review"));
+  const requestedBatches = groupByBatch(allPayouts.filter((p) => p.status === "requested" && p.batch_id));
+
   // Summary stats
   const totalPaid     = allPayouts.filter((p) => p.status === "completed").reduce((s, p) => s + p.amount, 0);
-  const totalPending  = allPayouts.filter((p) => p.status === "requested" || p.status === "processing").reduce((s, p) => s + p.amount, 0);
+  const totalPending  = allPayouts
+    .filter((p) => p.status === "requested" || p.status === "processing" || p.status === "pending_review")
+    .reduce((s, p) => s + p.amount, 0);
   const totalApproved = approvedEarnings.reduce((s, e) => s + e.amount, 0);
 
   return (
@@ -85,7 +133,7 @@ export default async function AdminPayoutsPage() {
         <div className="stat-card accent-top">
           <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">In Progress</p>
           <p className="text-display-sm font-bold tabular-nums mt-1 text-amber-500">{fmt.currencyCompact(totalPending)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">Requested or processing</p>
+          <p className="text-[10px] text-brand-400 mt-1.5">Pending review, requested, or processing</p>
         </div>
         <div className="stat-card accent-top">
           <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Total Paid</p>
@@ -93,6 +141,13 @@ export default async function AdminPayoutsPage() {
           <p className="text-[10px] text-brand-400 mt-1.5">{allPayouts.filter((p) => p.status === "completed").length} completed payouts</p>
         </div>
       </div>
+
+      {pendingReviewBatches.length > 0 && (
+        <BatchReviewSection batches={pendingReviewBatches} isFinance={isFinance} />
+      )}
+      {isFinance && requestedBatches.length > 0 && (
+        <RequestedBatchesSection batches={requestedBatches} />
+      )}
 
       <BankDetailsUpload />
 

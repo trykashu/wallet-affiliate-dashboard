@@ -344,6 +344,7 @@ SUPABASE_SERVICE_ROLE_KEY
 APP_URL                   (required in production)
 NEXT_PUBLIC_APP_URL       (client-accessible variant — should match APP_URL)
 ADMIN_EMAILS              (comma-separated admin email list)
+FINANCE_EMAILS            (comma-separated finance email list — subset of ADMIN_EMAILS; gates payout approve/reject/execute)
 WALLET_WEBHOOK_SECRET     (shared secret for wallet webhook auth)
 STRIPE_SECRET_KEY         (for payout Stripe Connect)
 MERCURY_API_TOKEN         (Mercury bank API for payout tracking)

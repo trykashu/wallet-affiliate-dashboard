@@ -24,7 +24,13 @@ export type PayoutProvider = 'stripe_connect' | 'manual' | 'mercury';
 
 export type PayoutAccountStatus = 'pending' | 'active' | 'disconnected';
 
-export type PayoutStatus = 'requested' | 'processing' | 'completed' | 'failed';
+export type PayoutStatus =
+  | 'pending_review'
+  | 'requested'
+  | 'processing'
+  | 'completed'
+  | 'failed'
+  | 'rejected';
 
 export type NotificationType =
   | 'funnel_change'
@@ -105,6 +111,7 @@ export interface Earning {
   updated_at: string;
   custom_commission_rate: number | null;
   custom_commission_basis: 'tpv' | 'kashu_fee' | null;
+  payout_id: string | null;
 }
 
 export interface StageDuration {
@@ -147,6 +154,12 @@ export interface Payout {
   period: string | null;
   created_at: string;
   updated_at: string;
+  batch_id: string | null;
+  submitted_by: string | null;
+  submitted_at: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  review_notes: string | null;
 }
 
 export interface PayoutAccount {

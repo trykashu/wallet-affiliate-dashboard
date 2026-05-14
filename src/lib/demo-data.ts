@@ -178,6 +178,7 @@ export const DEMO_EARNINGS: Earning[] = DEMO_REFERRED_USERS
     updated_at:            makeDate(28 - i * 2),
     custom_commission_rate:  null,
     custom_commission_basis: null,
+    payout_id:               null,
   }));
 
 // ── Earnings Summary ────────────────────────────────────────────────────────
@@ -290,6 +291,12 @@ export const DEMO_PAYOUTS: Payout[] = Array.from({ length: 6 }, (_, i) => ({
   })(),
   created_at:            makeDate(i * 14 + 3),
   updated_at:            makeDate(i * 14 + 1),
+  batch_id:              null,
+  submitted_by:          null,
+  submitted_at:          null,
+  reviewed_by:           null,
+  reviewed_at:           null,
+  review_notes:          null,
 }));
 
 // ── Min payout amount (mirrors payout_settings) ─────────────────────────────

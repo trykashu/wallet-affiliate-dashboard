@@ -1,11 +1,13 @@
-import { redirect }        from "next/navigation";
-import { createClient }    from "@/lib/supabase/server";
-import { isAdminEmail }    from "@/lib/admin";
-import AppSidebar          from "@/components/layout/AppSidebar";
+import { redirect }            from "next/navigation";
+import { createClient }        from "@/lib/supabase/server";
+import { createServiceClient } from "@/lib/supabase/service";
+import { isAdminEmail }        from "@/lib/admin";
+import AppSidebar              from "@/components/layout/AppSidebar";
+import type { NavItem }        from "@/components/layout/AppSidebar";
 
 export const dynamic = "force-dynamic";
 
-const ADMIN_NAV = [
+const BASE_ADMIN_NAV: NavItem[] = [
   { label: "Overview",    href: "/admin",              icon: "grid"    as const, exact: true },
   { label: "Affiliates",  href: "/admin/affiliates",   icon: "users"   as const },
   { label: "Users",       href: "/admin/users",        icon: "link"    as const },
@@ -18,6 +20,26 @@ const ADMIN_NAV = [
   { label: "Settings",    href: "/admin/settings",     icon: "support" as const },
 ];
 
+async function getPendingReviewBatchCount(): Promise<number> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const svc = createServiceClient() as any;
+    const { data } = await svc
+      .from("payouts")
+      .select("batch_id")
+      .eq("status", "pending_review")
+      .not("batch_id", "is", null);
+    type Row = { batch_id: string | null };
+    const distinct = new Set<string>();
+    for (const r of (data as Row[] | null) ?? []) {
+      if (r.batch_id) distinct.add(r.batch_id);
+    }
+    return distinct.size;
+  } catch {
+    return 0;
+  }
+}
+
 export default async function AdminLayout({
   children,
 }: {
@@ -28,6 +50,13 @@ export default async function AdminLayout({
 
   if (!user) redirect("/login");
   if (!isAdminEmail(user.email)) redirect("/dashboard");
+
+  const pendingReviewCount = await getPendingReviewBatchCount();
+  const adminNav: NavItem[] = BASE_ADMIN_NAV.map((item) =>
+    item.href === "/admin/payouts"
+      ? { ...item, badge: pendingReviewCount }
+      : item,
+  );
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long", month: "long", day: "numeric",
@@ -43,7 +72,7 @@ export default async function AdminLayout({
 
       <AppSidebar
         userEmail={user.email ?? ""}
-        navItems={ADMIN_NAV}
+        navItems={adminNav}
         isAdmin={true}
         hideProfile
         profileHref="/admin"

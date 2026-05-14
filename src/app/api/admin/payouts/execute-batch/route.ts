@@ -8,18 +8,25 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { isAdminEmail } from "@/lib/admin";
+import { isFinanceEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
 import { sendACHTransfer, getOrCreateRecipient } from "@/lib/mercury";
 import type { Payout, PayoutAccount } from "@/types/database";
 
-export async function POST() {
+export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user || !isAdminEmail(user.email)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!user || !isFinanceEmail(user.email)) {
+    return NextResponse.json({ error: "Finance access required" }, { status: 403 });
   }
+
+  // Optional batch_id scope
+  let batchId: string | null = null;
+  try {
+    const body = await request.json();
+    if (typeof body?.batch_id === "string") batchId = body.batch_id;
+  } catch { /* no body — execute all requested */ }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any;
@@ -30,11 +37,10 @@ export async function POST() {
   const maxDaily = settings?.max_daily_aggregate ?? 25000;
   const maxBatch = settings?.max_batch_size ?? 10;
 
-  // Get all requested payouts
-  const { data: requestedPayouts, error: fetchError } = await svc
-    .from("payouts")
-    .select("*")
-    .eq("status", "requested");
+  // Get requested payouts (optionally scoped to one batch)
+  let query = svc.from("payouts").select("*").eq("status", "requested");
+  if (batchId) query = query.eq("batch_id", batchId);
+  const { data: requestedPayouts, error: fetchError } = await query;
 
   if (fetchError) {
     console.error("[admin/payouts/execute-batch] Fetch failed:", fetchError);
@@ -216,6 +222,7 @@ export async function POST() {
     action: "admin.payout_batch_executed",
     resourceType: "payouts",
     metadata: {
+      batch_id: batchId ?? null,
       total: payoutsToExecute.length,
       executed: executedCount,
       blocked: blockedCount,
