@@ -17,6 +17,7 @@ import { fetchDocumentFields, extractBankDetails } from "@/lib/pandadoc";
 
 const BodySchema = z.object({
   affiliate_id: z.string().uuid(),
+  confirm: z.boolean().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
   }
-  const { affiliate_id } = parsed.data;
+  const { affiliate_id, confirm = false } = parsed.data;
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any;
@@ -77,18 +78,33 @@ export async function POST(request: NextRequest) {
 
   const bankDetails = extractBankDetails(fields);
 
+  // Always compute the preview payload from the extraction
+  const preview = {
+    account_holder_name: bankDetails.account_holder_name,
+    routing_number: bankDetails.routing_number,
+    account_number_last4: bankDetails.account_number
+      ? bankDetails.account_number.slice(-4)
+      : null,
+    account_type: bankDetails.account_type,
+    routing_valid: bankDetails.routing_valid,
+    account_valid: bankDetails.account_valid,
+  };
+
   if (!bankDetails.routing_valid || !bankDetails.account_valid) {
     return NextResponse.json({
       saved: false,
       reason: "invalid_bank_fields",
       message: "Bank fields could not be extracted from the PandaDoc. They may be missing or malformed.",
-      details: {
-        email: bankDetails.email,
-        routing_valid: bankDetails.routing_valid,
-        account_valid: bankDetails.account_valid,
-        account_type: bankDetails.account_type,
-      },
+      preview,
     }, { status: 422 });
+  }
+
+  if (!confirm) {
+    // Preview mode: extracted valid but not saving yet.
+    return NextResponse.json({
+      saved: false,
+      preview,
+    });
   }
 
   // Upsert payout_accounts (same shape as the webhook)
@@ -155,6 +171,7 @@ export async function POST(request: NextRequest) {
       affiliate_email: affiliate.email,
       pandadoc_id: affiliate.pandadoc_id,
       action,
+      confirm: true,
       account_holder_name: bankDetails.account_holder_name,
       account_number_last4: accountNumberLast4,
     },
@@ -163,8 +180,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json({
     saved: true,
     action,
-    account_name: bankPayload.account_name,
-    account_number_last4: accountNumberLast4,
+    preview,
   });
 }
 

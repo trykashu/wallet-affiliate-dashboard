@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
 import TierBadge from "@/components/ui/TierBadge";
 import InviteAffiliateModal from "@/components/admin/InviteAffiliateModal";
+import BankPreviewDrawer, { type BankPreview } from "@/components/admin/BankPreviewDrawer";
 import type { AffiliateWithCounts } from "@/app/admin/affiliates/page";
 import type { AffiliateStatus, AffiliateTier } from "@/types/database";
 
@@ -23,7 +24,15 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
   const [overridingTier, setOverridingTier] = useState<string | null>(null);
   const [inviteOpen,     setInviteOpen]     = useState(false);
   const [invitingId,     setInvitingId]     = useState<string | null>(null);
-  const [refetchingId,   setRefetchingId]   = useState<string | null>(null);
+  const [previewState, setPreviewState] = useState<{
+    affiliate_id: string;
+    affiliate_name: string;
+    pandadoc_id: string | null;
+    preview: BankPreview | null;
+    loading: boolean;
+    submitting: boolean;
+    error: string | null;
+  } | null>(null);
   const [refetchError,   setRefetchError]   = useState<string | null>(null);
 
   // -- Actions --
@@ -106,26 +115,55 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
     }
   }, [router]);
 
-  const handleRefetchBank = useCallback(async (aff: AffiliateWithCounts) => {
-    setRefetchingId(aff.id);
+  const openRefetchPreview = useCallback(async (aff: AffiliateWithCounts) => {
+    setPreviewState({
+      affiliate_id: aff.id,
+      affiliate_name: aff.agent_name,
+      pandadoc_id: aff.pandadoc_id,
+      preview: null,
+      loading: true,
+      submitting: false,
+      error: null,
+    });
     setRefetchError(null);
     try {
       const res = await fetch("/api/admin/affiliates/refetch-bank", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ affiliate_id: aff.id }),
+        body: JSON.stringify({ affiliate_id: aff.id, confirm: false }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.preview) {
+        setPreviewState((prev) => prev ? { ...prev, loading: false, error: body?.message ?? `Fetch failed (${res.status})` } : null);
+        return;
+      }
+      setPreviewState((prev) => prev ? { ...prev, loading: false, preview: body.preview as BankPreview } : null);
+    } catch (e) {
+      setPreviewState((prev) => prev ? { ...prev, loading: false, error: e instanceof Error ? e.message : "Fetch failed" } : null);
+    }
+  }, []);
+
+  const confirmRefetch = useCallback(async () => {
+    const current = previewState;
+    if (!current) return;
+    setPreviewState({ ...current, submitting: true, error: null });
+    try {
+      const res = await fetch("/api/admin/affiliates/refetch-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliate_id: current.affiliate_id, confirm: true }),
       });
       const body = await res.json().catch(() => ({}));
       if (!res.ok || !body.saved) {
-        throw new Error(body?.message ?? `Refetch failed (${res.status})`);
+        setPreviewState((prev) => prev ? { ...prev, submitting: false, error: body?.message ?? `Save failed (${res.status})` } : null);
+        return;
       }
+      setPreviewState(null);
       router.refresh();
     } catch (e) {
-      setRefetchError(e instanceof Error ? e.message : "Refetch failed");
-    } finally {
-      setRefetchingId(null);
+      setPreviewState((prev) => prev ? { ...prev, submitting: false, error: e instanceof Error ? e.message : "Save failed" } : null);
     }
-  }, [router]);
+  }, [previewState, router]);
 
   const handleReinvite = useCallback(async (affiliateId: string, email: string) => {
     if (!confirm(`Re-invite ${email}? This will delete their expired invite and send a fresh one.`)) return;
@@ -400,12 +438,12 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                         </span>
                         {aff.pandadoc_id && (
                           <button
-                            onClick={() => handleRefetchBank(aff)}
-                            disabled={refetchingId === aff.id}
+                            onClick={() => openRefetchPreview(aff)}
+                            disabled={previewState?.affiliate_id === aff.id}
                             title="Re-fetch bank details from PandaDoc"
                             className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
                           >
-                            {refetchingId === aff.id ? "…" : "Refetch"}
+                            {previewState?.affiliate_id === aff.id ? "…" : "Refetch"}
                           </button>
                         )}
                       </div>
@@ -537,6 +575,18 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
           }}
         />
       )}
+
+      <BankPreviewDrawer
+        open={previewState !== null}
+        affiliateName={previewState?.affiliate_name ?? null}
+        pandadocId={previewState?.pandadoc_id ?? null}
+        preview={previewState?.preview ?? null}
+        loading={previewState?.loading ?? false}
+        submitting={previewState?.submitting ?? false}
+        error={previewState?.error ?? null}
+        onClose={() => { if (previewState?.submitting !== true) setPreviewState(null); }}
+        onConfirm={confirmRefetch}
+      />
     </>
   );
 }
