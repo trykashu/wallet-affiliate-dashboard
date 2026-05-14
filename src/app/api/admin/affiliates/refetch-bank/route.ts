@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
     account_type: bankDetails.account_type,
     routing_valid: bankDetails.routing_valid,
     account_valid: bankDetails.account_valid,
+    warnings: bankDetails.warnings,
   };
 
   if (!bankDetails.routing_valid || !bankDetails.account_valid) {

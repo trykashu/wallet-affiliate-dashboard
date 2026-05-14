@@ -7,6 +7,7 @@ export interface BankPreview {
   account_type: "checking" | "savings" | null;
   routing_valid: boolean;
   account_valid: boolean;
+  warnings: string[];
 }
 
 interface Props {
@@ -85,6 +86,25 @@ export default function BankPreviewDrawer({
               />
               <PreviewField label="Account type" value={preview.account_type ?? "—"} />
             </div>
+
+            {preview.warnings.length > 0 && (
+              <div className="card p-3 bg-amber-50 border-amber-200">
+                <p className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-2">
+                  Extraction warnings
+                </p>
+                <ul className="space-y-1">
+                  {preview.warnings.map((w, i) => (
+                    <li key={i} className="text-xs text-amber-900 leading-snug flex gap-2">
+                      <span aria-hidden>⚠</span>
+                      <span>{w}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[10px] text-amber-700 mt-2 italic leading-snug">
+                  Compare against the source PandaDoc carefully before confirming.
+                </p>
+              </div>
+            )}
 
             {pandadocUrl && (
               <a
