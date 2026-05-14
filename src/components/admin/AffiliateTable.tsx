@@ -425,29 +425,29 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                     {aff.lastLoginAt ? fmt.relative(aff.lastLoginAt) : "\u2014"}
                   </td>
                   <td className="td hidden sm:table-cell">
-                    {aff.hasBankAccount ? (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
-                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                        On file
-                      </span>
-                    ) : (
-                      <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      {aff.hasBankAccount ? (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                          On file
+                        </span>
+                      ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
                           Missing
                         </span>
-                        {aff.pandadoc_id && (
-                          <button
-                            onClick={() => openRefetchPreview(aff)}
-                            disabled={previewState?.affiliate_id === aff.id}
-                            title="Re-fetch bank details from PandaDoc"
-                            className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {previewState?.affiliate_id === aff.id ? "…" : "Refetch"}
-                          </button>
-                        )}
-                      </div>
-                    )}
+                      )}
+                      {aff.pandadoc_id && (
+                        <button
+                          onClick={() => openRefetchPreview(aff)}
+                          disabled={previewState?.affiliate_id === aff.id}
+                          title={aff.hasBankAccount ? "Re-verify bank details against PandaDoc" : "Fetch bank details from PandaDoc"}
+                          className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {previewState?.affiliate_id === aff.id ? "…" : (aff.hasBankAccount ? "Re-verify" : "Refetch")}
+                        </button>
+                      )}
+                    </div>
                   </td>
                   <td className="td">
                     <div className="flex items-center gap-2 flex-wrap">
