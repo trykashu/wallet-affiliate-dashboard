@@ -11,7 +11,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail } from "@/lib/admin";
 import { getTransactionStatus } from "@/lib/mercury";
+import { patchRecords } from "@/lib/airtable";
 import type { Payout } from "@/types/database";
+
+const AIRTABLE_TRANSACTIONS_TABLE_ID = "tblyWtDBeiZAqDm8P";
+const COMMISSION_STATUS_FIELD = "Commission Status";
+const COMMISSION_STATUS_PAID_VALUE = "Paid";
 
 export async function GET(request: NextRequest) {
   // Auth: cron secret OR admin session
@@ -71,18 +76,61 @@ export async function GET(request: NextRequest) {
       // "pending" means still processing, no update needed
 
       if (newStatus) {
+        const nowIso = new Date().toISOString();
+
         await svc
           .from("payouts")
-          .update({ status: newStatus, updated_at: new Date().toISOString() })
+          .update({ status: newStatus, updated_at: nowIso })
           .eq("id", payout.id);
 
-        // When Mercury confirms success, mark associated earnings as 'paid'
+        let earningsMarkedPaid = 0;
+        let airtableUpdated = 0;
+        let airtableFailed = 0;
+
         if (newStatus === "completed") {
-          await svc
+          // Mark linked earnings as paid. Guard with status='approved' so we never
+          // double-flip or accidentally regress a 'pending'/'reversed' earning.
+          // Filter by payout_id (NOT affiliate_id) so we only touch earnings
+          // actually attached to this payout's batch.
+          const { data: paidRows, error: paidError } = await svc
             .from("earnings")
-            .update({ status: "paid", updated_at: new Date().toISOString() })
-            .eq("affiliate_id", payout.affiliate_id)
-            .eq("status", "approved");
+            .update({ status: "paid", updated_at: nowIso })
+            .eq("payout_id", payout.id)
+            .eq("status", "approved")
+            .select("id, transaction_ref");
+
+          if (paidError) {
+            console.error(`[cron/check-mercury-payouts] Mark-paid failed for ${payout.id}:`, paidError);
+          } else {
+            type PaidRow = { id: string; transaction_ref: string | null };
+            const rows = (paidRows ?? []) as PaidRow[];
+            earningsMarkedPaid = rows.length;
+
+            // Mirror Commission Status = Paid to Airtable Partner Transaction Log.
+            // Best-effort: failures are logged but don't block the DB update.
+            const baseId = process.env.AIRTABLE_LAUNCH_BASE;
+            const recordIds = rows.map((r) => r.transaction_ref).filter((r): r is string => !!r);
+            if (baseId && recordIds.length > 0) {
+              try {
+                const patch = await patchRecords(
+                  baseId,
+                  AIRTABLE_TRANSACTIONS_TABLE_ID,
+                  recordIds.map((id) => ({
+                    id,
+                    fields: { [COMMISSION_STATUS_FIELD]: COMMISSION_STATUS_PAID_VALUE },
+                  })),
+                );
+                airtableUpdated = patch.updated;
+                airtableFailed = patch.failed.length;
+                if (patch.failed.length > 0) {
+                  console.error(`[cron/check-mercury-payouts] Airtable PATCH partial failure for ${payout.id}:`, patch.failed.slice(0, 3));
+                }
+              } catch (e) {
+                console.error(`[cron/check-mercury-payouts] Airtable PATCH threw for ${payout.id}:`, e);
+                airtableFailed = recordIds.length;
+              }
+            }
+          }
         }
 
         // Notify affiliate
