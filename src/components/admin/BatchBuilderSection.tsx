@@ -17,6 +17,7 @@ export interface BatchBuilderAffiliate {
   business_name: string | null;
   is_payable: boolean;        // has at least one verified payout_account
   contract_signed: boolean;   // agreement_status in ('Completed','signed')
+  pandadoc_id: string | null;
 }
 
 interface Props {
@@ -31,6 +32,7 @@ interface AffiliateRow {
   business_name: string | null;
   is_payable: boolean;
   contract_signed: boolean;
+  pandadoc_id: string | null;
   count: number;
   total: number;
   earning_ids: string[];
@@ -44,6 +46,29 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+  const [refetchingId, setRefetchingId] = useState<string | null>(null);
+  const [refetchError, setRefetchError] = useState<string | null>(null);
+
+  async function handleRefetchBank(affiliateId: string) {
+    setRefetchingId(affiliateId);
+    setRefetchError(null);
+    try {
+      const res = await fetch("/api/admin/affiliates/refetch-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliate_id: affiliateId }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || !body.saved) {
+        throw new Error(body?.message ?? `Refetch failed (${res.status})`);
+      }
+      router.refresh();
+    } catch (e) {
+      setRefetchError(e instanceof Error ? e.message : "Refetch failed");
+    } finally {
+      setRefetchingId(null);
+    }
+  }
 
   const affMap = useMemo(() => {
     const m = new Map<string, BatchBuilderAffiliate>();
@@ -70,6 +95,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           business_name: aff?.business_name ?? null,
           is_payable: aff?.is_payable ?? false,
           contract_signed: aff?.contract_signed ?? false,
+          pandadoc_id: aff?.pandadoc_id ?? null,
           count: 1,
           total: Number(e.amount) || 0,
           earning_ids: [e.id],
@@ -188,6 +214,13 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
         </div>
       )}
 
+      {refetchError && (
+        <div className="card p-3 bg-red-50 border-red-200">
+          <p className="text-xs text-red-700">{refetchError}</p>
+          <button onClick={() => setRefetchError(null)} className="text-[10px] text-red-700 underline mt-1">Dismiss</button>
+        </div>
+      )}
+
       <div className="card overflow-hidden">
         {rows.length === 0 ? (
           <div className="p-6 text-center text-sm text-brand-400">
@@ -248,7 +281,19 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                         <span className="badge badge-red text-[10px]">Contract pending</span>
                       )}
                       {r.contract_signed && !r.is_payable && (
-                        <span className="badge badge-amber text-[10px]">No bank on file</span>
+                        <div className="flex items-center gap-2">
+                          <span className="badge badge-amber text-[10px]">No bank on file</span>
+                          {r.pandadoc_id && (
+                            <button
+                              onClick={() => handleRefetchBank(r.affiliate_id)}
+                              disabled={refetchingId === r.affiliate_id}
+                              title="Re-fetch bank details from PandaDoc"
+                              className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {refetchingId === r.affiliate_id ? "…" : "Refetch"}
+                            </button>
+                          )}
+                        </div>
                       )}
                       {eligible && (
                         <span className="badge badge-accent text-[10px]">Ready</span>

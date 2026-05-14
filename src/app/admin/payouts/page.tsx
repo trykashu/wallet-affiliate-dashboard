@@ -28,7 +28,7 @@ export default async function AdminPayoutsPage() {
   const [payoutsResult, earningsResult, affiliatesResult, settingsResult] = await Promise.all([
     db.from("payouts").select("*").order("created_at", { ascending: false }),
     db.from("earnings").select("affiliate_id, amount, status").eq("status", "approved"),
-    db.from("affiliates").select("id, agent_name, business_name, agreement_status"),
+    db.from("affiliates").select("id, agent_name, business_name, agreement_status, pandadoc_id"),
     db.from("payout_settings").select("*").limit(1).maybeSingle(),
   ]);
 
@@ -155,6 +155,7 @@ export default async function AdminPayoutsPage() {
       business_name: a.business_name ?? null,
       is_payable: payableAffiliateIds.has(a.id),
       contract_signed: a.agreement_status === "Completed" || a.agreement_status === "signed",
+      pandadoc_id: a.pandadoc_id ?? null,
     }));
 
   const monthSet = new Set<string>();
