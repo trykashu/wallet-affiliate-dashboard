@@ -72,6 +72,8 @@ export interface NavItem {
   icon: keyof typeof Icons;
   exact?: boolean;
   sectionLabel?: string;
+  /** Optional numeric badge shown to the right of the label (e.g. count of pending review batches). */
+  badge?: number;
 }
 
 interface AppSidebarProps {
@@ -170,7 +172,15 @@ export default function AppSidebar({
                   {Icons[item.icon]}
                 </span>
                 <span className="flex-1 text-[13px]">{item.label}</span>
-                {active && (
+                {typeof item.badge === "number" && item.badge > 0 && (
+                  <span
+                    className="text-[10px] font-bold tabular-nums px-1.5 py-0.5 rounded-full bg-amber-400/90 text-brand-900 leading-none min-w-[18px] text-center"
+                    title={`${item.badge} pending`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
+                {active && !item.badge && (
                   <span
                     className={`w-1.5 h-1.5 rounded-full ${brand ? "" : "bg-accent/60"}`}
                     style={brand ? { backgroundColor: "var(--wl-accent)", opacity: 0.6 } : undefined}
