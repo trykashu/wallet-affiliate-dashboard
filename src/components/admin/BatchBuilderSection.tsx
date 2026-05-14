@@ -334,7 +334,19 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                         </div>
                       )}
                       {eligible && (
-                        <span className="badge badge-accent text-[10px]">Ready</span>
+                        <div className="flex items-center gap-2">
+                          <span className="badge badge-accent text-[10px]">Ready</span>
+                          {r.pandadoc_id && (
+                            <button
+                              onClick={() => openRefetchPreview({ affiliate_id: r.affiliate_id, affiliate_name: r.affiliate_name, pandadoc_id: r.pandadoc_id })}
+                              disabled={previewState?.affiliate_id === r.affiliate_id}
+                              title="Re-verify bank details against PandaDoc"
+                              className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {previewState?.affiliate_id === r.affiliate_id ? "…" : "Re-verify"}
+                            </button>
+                          )}
+                        </div>
                       )}
                     </td>
                   </tr>
