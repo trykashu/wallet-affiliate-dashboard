@@ -11,6 +11,13 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isFinanceEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
+import { patchRecords } from "@/lib/airtable";
+
+// Airtable Partner Transaction Log table (same base/table used by the
+// transactions sync — see src/app/api/sync/transactions/route.ts).
+const AIRTABLE_TRANSACTIONS_TABLE_ID = "tblyWtDBeiZAqDm8P";
+const COMMISSION_STATUS_FIELD = "Commission Status";
+const COMMISSION_STATUS_PAID_VALUE = "Paid";
 
 const UpdateSchema = z.object({
   payout_id: z.string().uuid(),
@@ -50,6 +57,8 @@ export async function POST(request: NextRequest) {
 
   // If completed, notify affiliate and mark linked earnings as paid
   let earningsMarkedPaid = 0;
+  let airtableUpdated = 0;
+  const airtableErrors: Array<{ record_id: string; error: string }> = [];
   if (status === "completed") {
     const { data: payout } = await svc
       .from("payouts")
@@ -68,18 +77,54 @@ export async function POST(request: NextRequest) {
 
       // Mark linked earnings as paid. Guard with status='approved' so we never
       // double-flip or accidentally regress a 'pending'/'reversed' earning.
+      // Also return transaction_ref so we can mirror "Paid" into Airtable's
+      // Partner Transaction Log (best-effort).
       const nowIso = new Date().toISOString();
       const { data: paidRows, error: paidError } = await svc
         .from("earnings")
         .update({ status: "paid", updated_at: nowIso })
         .eq("payout_id", payout_id)
         .eq("status", "approved")
-        .select("id");
+        .select("id, transaction_ref");
       if (paidError) {
         console.error("[update-status] Mark-paid failed:", paidError);
         // Don't bail — the payout is already flipped to completed. Surface in audit.
       } else {
-        earningsMarkedPaid = (paidRows ?? []).length;
+        type PaidRow = { id: string; transaction_ref: string | null };
+        const rows = (paidRows ?? []) as PaidRow[];
+        earningsMarkedPaid = rows.length;
+
+        // Mirror "Paid" to Airtable Partner Transaction Log. Best-effort —
+        // failure is logged in the audit metadata but doesn't fail the request.
+        const baseId = process.env.AIRTABLE_LAUNCH_BASE;
+        const recordIds = rows
+          .map((r) => r.transaction_ref)
+          .filter((r): r is string => !!r);
+        if (baseId && recordIds.length > 0) {
+          try {
+            const patch = await patchRecords(
+              baseId,
+              AIRTABLE_TRANSACTIONS_TABLE_ID,
+              recordIds.map((id) => ({
+                id,
+                fields: { [COMMISSION_STATUS_FIELD]: COMMISSION_STATUS_PAID_VALUE },
+              })),
+            );
+            airtableUpdated = patch.updated;
+            airtableErrors.push(...patch.failed);
+            if (patch.failed.length > 0) {
+              console.error("[update-status] Airtable PATCH partial failure:", patch.failed.slice(0, 5));
+            }
+          } catch (e) {
+            console.error("[update-status] Airtable PATCH threw:", e);
+            airtableErrors.push({
+              record_id: "(setup)",
+              error: e instanceof Error ? e.message : String(e),
+            });
+          }
+        } else if (!baseId && recordIds.length > 0) {
+          console.warn("[update-status] AIRTABLE_LAUNCH_BASE not set; skipping Airtable mirror");
+        }
       }
     }
   }
@@ -94,6 +139,8 @@ export async function POST(request: NextRequest) {
     metadata: {
       new_status: status,
       earnings_marked_paid: earningsMarkedPaid,
+      airtable_updated: airtableUpdated,
+      airtable_failed: airtableErrors.length,
     },
   });
 
