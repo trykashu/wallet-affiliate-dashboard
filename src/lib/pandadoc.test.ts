@@ -216,3 +216,74 @@ describe("extractBankDetails — address extraction (2026-05-15)", () => {
     assert.equal(result.region, "CO"); // normalized to 2-letter code
   });
 });
+
+describe("extractBankDetails — field_id-based address extraction (2026-05-15)", () => {
+  // Helper to build a field with a specific field_id
+  function withId(field_id: string, value: string, opts: Partial<PandaDocField> = {}): PandaDocField {
+    return f(value, { ...opts, field_id });
+  }
+
+  it("extracts address from Text2 + Text2_1 (comma-state-zip)", () => {
+    const fields: PandaDocField[] = [
+      f("121000358", { title: "Routing Number" }),
+      f("000123456789", { title: "Account Number" }),
+      withId("Text1", "Jane Smith"),
+      withId("Text2", "1288 Polk St S"),
+      withId("Text2_1", "Shakopee, MN, 55379"),
+    ];
+    const result = extractBankDetails(fields);
+    assert.equal(result.address1, "1288 Polk St S");
+    assert.equal(result.city, "Shakopee");
+    assert.equal(result.region, "MN");
+    assert.equal(result.postal_code, "55379");
+  });
+
+  it("extracts address from Text2 + Text2_1 (full state name, no comma before zip)", () => {
+    const fields: PandaDocField[] = [
+      f("121000358", { title: "Routing Number" }),
+      f("000123456789", { title: "Account Number" }),
+      withId("Text2", "3977 NW 9th Ave"),
+      withId("Text2_1", "Deerfield Beach, Florida 33064"),
+    ];
+    const result = extractBankDetails(fields);
+    assert.equal(result.address1, "3977 NW 9th Ave");
+    assert.equal(result.city, "Deerfield Beach");
+    assert.equal(result.region, "FL"); // normalized from "Florida"
+    assert.equal(result.postal_code, "33064");
+  });
+
+  it("falls back to value-shape when no field_ids match", () => {
+    // Untitled fields with no Text2/Text2_1 — extractor scans by value pattern.
+    const fields: PandaDocField[] = [
+      f("121000358", { title: "Routing Number" }),
+      f("000123456789", { title: "Account Number" }),
+      f("999 Elm St"),
+      f("Boulder, CO 80301"),
+    ];
+    const result = extractBankDetails(fields);
+    assert.equal(result.address1, "999 Elm St");
+    assert.equal(result.city, "Boulder");
+    assert.equal(result.region, "CO");
+    assert.equal(result.postal_code, "80301");
+  });
+
+  it("picks the LATEST address-shaped pair when multiple appear", () => {
+    // Document has two addresses (business + personal). We want the latest one
+    // (closer to the bank section, which is the account-holder's address).
+    const fields: PandaDocField[] = [
+      f("Acme Corp HQ"),
+      f("123 Business Pkwy"),
+      f("Houston, TX 77001"),
+      f("121000358", { title: "Routing Number" }),
+      f("000123456789", { title: "Account Number" }),
+      f("Personal Holder"),
+      f("999 Home St"),
+      f("Boulder, CO 80301"),
+    ];
+    const result = extractBankDetails(fields);
+    assert.equal(result.address1, "999 Home St");
+    assert.equal(result.city, "Boulder");
+    assert.equal(result.region, "CO");
+    assert.equal(result.postal_code, "80301");
+  });
+});

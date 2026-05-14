@@ -161,6 +161,32 @@ function normalizeRegion(value: string | null): string | null {
 }
 
 /**
+ * Parses "City, ST 12345" / "City, State, 12345" / "City State 12345" variants
+ * into separate city / region / postal_code. Returns nulls when the pattern
+ * doesn't match.
+ */
+function parseCityStateZip(value: string): {
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+} {
+  if (!value) return { city: null, region: null, postal_code: null };
+  const v = value.trim();
+
+  // Try: "City, ST[, ] zip" or "City, State Name zip" — capture each piece
+  // greedily but stop the state at the trailing zip (5 or 9 digits).
+  const m = v.match(/^(.+?),\s*([A-Za-z][A-Za-z .]+?)[,\s]+(\d{5}(?:-\d{4})?)\s*$/);
+  if (m) {
+    return {
+      city: m[1].trim(),
+      region: normalizeRegion(m[2].trim()),
+      postal_code: m[3].trim(),
+    };
+  }
+  return { city: null, region: null, postal_code: null };
+}
+
+/**
  * Pattern-match bank detail fields from a PandaDoc document's fields array.
  *
  * PandaDoc fields are all named "Text" with different UUIDs. Positions shift
@@ -337,15 +363,66 @@ export function extractBankDetails(
     }
   }
 
-  // 7. ADDRESS — title-first; defaults country to "US".
-  const address1 = findByTitle(partnerFields, "address1", "address 1", "street address", "street", "address")?.value.trim() ?? null;
-  const address2 = findByTitle(partnerFields, "address2", "address 2", "apartment", "apt", "suite", "unit")?.value.trim() ?? null;
-  const city = findByTitle(partnerFields, "city")?.value.trim() ?? null;
-  const region = normalizeRegion(findByTitle(partnerFields, "state", "region", "province")?.value ?? null);
-  const postal_code = findByTitle(partnerFields, "zip", "postal code", "postal")?.value.trim() ?? null;
-  const country = findByTitle(partnerFields, "country")?.value.trim() ?? "US";
+  // 7. ADDRESS — three-tier extraction:
+  //    a) title-first (works for titled templates)
+  //    b) field_id Text2 + Text2_1 (works for our untitled template — stable IDs)
+  //    c) value-shape fallback (find latest "City, ST 12345" pattern, use prev as line 1)
+  let address1: string | null = null;
+  let address2: string | null = null;
+  let city: string | null = null;
+  let region: string | null = null;
+  let postal_code: string | null = null;
+  const country: string = findByTitle(partnerFields, "country")?.value.trim() ?? "US";
 
-  // Treat partial address as a warning.
+  // (a) Title-first
+  address1 = findByTitle(partnerFields, "address1", "address 1", "street address", "street", "address")?.value.trim() ?? null;
+  address2 = findByTitle(partnerFields, "address2", "address 2", "apartment", "apt", "suite", "unit")?.value.trim() ?? null;
+  city = findByTitle(partnerFields, "city")?.value.trim() ?? null;
+  region = normalizeRegion(findByTitle(partnerFields, "state", "region", "province")?.value ?? null);
+  postal_code = findByTitle(partnerFields, "zip", "postal code", "postal")?.value.trim() ?? null;
+
+  // (b) Field-ID fallback: Text2 + Text2_1 (our template's bank-section pair)
+  if (!address1 && !city) {
+    const text2 = partnerFields.find((f) => f.field_id === "Text2");
+    const text2_1 = partnerFields.find((f) => f.field_id === "Text2_1");
+    if (text2 && text2_1) {
+      const parsed = parseCityStateZip(text2_1.value);
+      if (parsed.city) {
+        address1 = text2.value.trim();
+        city = parsed.city;
+        region = parsed.region;
+        postal_code = parsed.postal_code;
+      }
+    }
+  }
+
+  // (c) Value-shape fallback: find the LAST partner field matching City+State+Zip.
+  //     The latest occurrence is closer to the bank/ACH section, which holds
+  //     the account-holder address (not a business address from page 1).
+  if (!address1 && !city) {
+    let latestIdx = -1;
+    let latestParsed: { city: string | null; region: string | null; postal_code: string | null } | null = null;
+    for (let i = 0; i < partnerFields.length; i++) {
+      const parsed = parseCityStateZip(partnerFields[i].value);
+      if (parsed.city && parsed.postal_code) {
+        latestIdx = i;
+        latestParsed = parsed;
+      }
+    }
+    if (latestParsed && latestIdx > 0) {
+      // Previous text field is treated as address1 (most templates put line 1 immediately before city/state/zip)
+      const prev = partnerFields[latestIdx - 1];
+      if (prev && /^[\d]/.test(prev.value.trim())) {
+        // Likely a street address (starts with a digit). Only adopt if reasonable.
+        address1 = prev.value.trim();
+      }
+      city = latestParsed.city;
+      region = latestParsed.region;
+      postal_code = latestParsed.postal_code;
+    }
+  }
+
+  // Partial-address warnings
   if (!address1) warnings.push("Address line 1 not found in PandaDoc");
   if (!city) warnings.push("City not found in PandaDoc");
   if (!region) warnings.push("State/region not found in PandaDoc");
