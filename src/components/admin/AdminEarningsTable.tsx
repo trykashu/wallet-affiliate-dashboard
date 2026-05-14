@@ -72,15 +72,6 @@ export default function AdminEarningsTable({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [approving, setApproving] = useState(false);
 
-  // Submit-for-review drawer state
-  const [showSubmitDrawer, setShowSubmitDrawer] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitPeriod, setSubmitPeriod] = useState<string>(
-    () => availableMonths[0] ?? new Date().toISOString().slice(0, 7)
-  );
-  const [submitNotes, setSubmitNotes] = useState<string>("");
-
   const filtered = useMemo(() => {
     let list = earnings;
     if (month !== "all") {
@@ -93,30 +84,7 @@ export default function AdminEarningsTable({
     return list.filter((e) => e.status === statusFilter);
   }, [earnings, month, statusFilter]);
 
-  // Earnings the user is allowed to tick: pending (for Approve) OR approved+unlinked+payable+signed (for Submit)
-  const eligibleForSelectionIds = useMemo(
-    () =>
-      filtered
-        .filter((e) => {
-          if (e.status === "pending") return isContractSigned(e.contract_status);
-          if (e.status === "approved") {
-            return (
-              !e.payout_id &&
-              e.affiliate_is_payable &&
-              isContractSigned(e.contract_status)
-            );
-          }
-          return false;
-        })
-        .map((e) => e.id),
-    [filtered]
-  );
-  const eligibleForSelectionSet = useMemo(
-    () => new Set(eligibleForSelectionIds),
-    [eligibleForSelectionIds]
-  );
-
-  // Subset for the Approve Selected button — pending only
+  // Pending + contract-signed earnings are the only selectable rows (for Approve Selected).
   const eligiblePendingIds = useMemo(
     () =>
       filtered
@@ -124,57 +92,22 @@ export default function AdminEarningsTable({
         .map((e) => e.id),
     [filtered]
   );
+  const eligiblePendingSet = useMemo(
+    () => new Set(eligiblePendingIds),
+    [eligiblePendingIds]
+  );
 
   const blockedPendingCount = useMemo(
     () => filtered.filter((e) => e.status === "pending" && !isContractSigned(e.contract_status)).length,
     [filtered]
   );
 
-  // Currently-selected approved earnings ready to submit
-  const selectedSubmittable = useMemo(
-    () =>
-      filtered.filter(
-        (e) =>
-          selected.has(e.id) &&
-          e.status === "approved" &&
-          !e.payout_id &&
-          e.affiliate_is_payable &&
-          isContractSigned(e.contract_status),
-      ),
-    [filtered, selected],
-  );
-
-  // Currently-selected pending earnings (for the Approve button count)
   const selectedPendingCount = useMemo(
     () =>
       filtered.filter(
         (e) => selected.has(e.id) && e.status === "pending" && isContractSigned(e.contract_status),
       ).length,
     [filtered, selected],
-  );
-
-  const submitPreview = useMemo(() => {
-    const byAffiliate = new Map<string, { affiliate_id: string; affiliate_name: string; count: number; total: number }>();
-    for (const e of selectedSubmittable) {
-      const existing = byAffiliate.get(e.affiliate_id);
-      if (existing) {
-        existing.count += 1;
-        existing.total += Number(e.amount) || 0;
-      } else {
-        byAffiliate.set(e.affiliate_id, {
-          affiliate_id: e.affiliate_id,
-          affiliate_name: e.affiliate_name,
-          count: 1,
-          total: Number(e.amount) || 0,
-        });
-      }
-    }
-    return Array.from(byAffiliate.values()).sort((a, b) => b.total - a.total);
-  }, [selectedSubmittable]);
-
-  const submitTotal = useMemo(
-    () => submitPreview.reduce((s, r) => s + r.total, 0),
-    [submitPreview],
   );
 
   const toggleSelect = useCallback((id: string) => {
@@ -187,15 +120,14 @@ export default function AdminEarningsTable({
   }, []);
 
   const toggleSelectAll = useCallback(() => {
-    if (selected.size === eligibleForSelectionIds.length && eligibleForSelectionIds.length > 0) {
+    if (selected.size === eligiblePendingIds.length && eligiblePendingIds.length > 0) {
       setSelected(new Set());
     } else {
-      setSelected(new Set(eligibleForSelectionIds));
+      setSelected(new Set(eligiblePendingIds));
     }
-  }, [eligibleForSelectionIds, selected.size]);
+  }, [eligiblePendingIds, selected.size]);
 
   const handleBulkApprove = useCallback(async () => {
-    // Only act on pending selections; ignore approved ones the user may also have ticked.
     const pendingIds = filtered
       .filter(
         (e) => selected.has(e.id) && e.status === "pending" && isContractSigned(e.contract_status),
@@ -220,41 +152,6 @@ export default function AdminEarningsTable({
       setApproving(false);
     }
   }, [filtered, selected, router]);
-
-  const openSubmitDrawer = useCallback(() => {
-    if (month !== "all") setSubmitPeriod(month);
-    setShowSubmitDrawer(true);
-    setSubmitError(null);
-  }, [month]);
-
-  const handleSubmitBatch = useCallback(async () => {
-    if (selectedSubmittable.length === 0) return;
-    setSubmitting(true);
-    setSubmitError(null);
-    try {
-      const res = await fetch("/api/admin/payouts/create-batch", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          earning_ids: selectedSubmittable.map((e) => e.id),
-          period: submitPeriod,
-          notes: submitNotes.trim() || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message ?? body?.error ?? `Submit failed (${res.status})`);
-      }
-      setShowSubmitDrawer(false);
-      setSubmitNotes("");
-      setSelected(new Set());
-      router.refresh();
-    } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Submit failed");
-    } finally {
-      setSubmitting(false);
-    }
-  }, [selectedSubmittable, submitPeriod, submitNotes, router]);
 
   const statusBadge = (status: EarningStatus) => {
     const cls =
@@ -328,17 +225,6 @@ export default function AdminEarningsTable({
               Approve Selected ({selectedPendingCount})
             </button>
           )}
-
-          <button
-            onClick={openSubmitDrawer}
-            disabled={selectedSubmittable.length === 0 || submitting}
-            className="flex items-center gap-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 9l9-6 9 6m-9-3v18m-6-3h12" />
-            </svg>
-            Submit for review ({selectedSubmittable.length})
-          </button>
         </div>
       </div>
 
@@ -347,11 +233,11 @@ export default function AdminEarningsTable({
         <table className="min-w-full">
           <thead>
             <tr className="border-b border-surface-200/60 bg-surface-50/60">
-              {eligibleForSelectionIds.length > 0 && (
+              {eligiblePendingIds.length > 0 && (
                 <th className="th w-10">
                   <input
                     type="checkbox"
-                    checked={selected.size === eligibleForSelectionIds.length && eligibleForSelectionIds.length > 0}
+                    checked={selected.size === eligiblePendingIds.length && eligiblePendingIds.length > 0}
                     onChange={toggleSelectAll}
                     className="rounded border-surface-200"
                   />
@@ -373,13 +259,13 @@ export default function AdminEarningsTable({
           <tbody className="divide-y divide-surface-200/60">
             {filtered.map((e) => {
               const blocked = e.status === "pending" && !isContractSigned(e.contract_status);
-              const isSelectable = eligibleForSelectionSet.has(e.id);
+              const isSelectable = eligiblePendingSet.has(e.id);
               return (
                 <tr
                   key={e.id}
                   className={`hover:bg-surface-100/40 transition-colors ${blocked ? "opacity-60" : ""}`}
                 >
-                  {eligibleForSelectionIds.length > 0 && (
+                  {eligiblePendingIds.length > 0 && (
                     <td className="td w-10">
                       {isSelectable ? (
                         <input
@@ -453,7 +339,7 @@ export default function AdminEarningsTable({
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={eligibleForSelectionIds.length > 0 ? 12 : 11} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={eligiblePendingIds.length > 0 ? 12 : 11} className="px-5 py-10 text-center text-sm text-brand-400">
                   No earnings match the current filter.
                 </td>
               </tr>
@@ -470,91 +356,6 @@ export default function AdminEarningsTable({
           earnings total
         </p>
       </div>
-
-      {/* Submit-for-review drawer */}
-      {showSubmitDrawer && (
-        <>
-          <div className="drawer-backdrop" onClick={() => !submitting && setShowSubmitDrawer(false)} />
-          <div className="drawer-panel">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Payout batch</p>
-                <h2 className="text-xl font-bold text-gray-900 mt-1">Submit for Finance review</h2>
-              </div>
-              <button
-                onClick={() => !submitting && setShowSubmitDrawer(false)}
-                className="text-sm text-brand-400 hover:text-gray-900"
-                aria-label="Close drawer"
-              >Close</button>
-            </div>
-
-            {submitError && (
-              <div className="card p-3 mb-4 bg-red-50 border-red-200">
-                <p className="text-xs text-red-700">{submitError}</p>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div>
-                <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Period</label>
-                <input
-                  type="month"
-                  value={submitPeriod}
-                  onChange={(e) => setSubmitPeriod(e.target.value)}
-                  disabled={submitting}
-                  className="mt-1 input-base w-full"
-                />
-              </div>
-              <div>
-                <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Notes (optional)</label>
-                <textarea
-                  value={submitNotes}
-                  onChange={(e) => setSubmitNotes(e.target.value.slice(0, 500))}
-                  disabled={submitting}
-                  rows={3}
-                  placeholder="Anything Finance should know about this batch…"
-                  className="mt-1 input-base w-full resize-none"
-                />
-                <p className="text-[10px] text-brand-400 mt-1 tabular-nums">{submitNotes.length}/500</p>
-              </div>
-
-              <div>
-                <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider mb-2">Preview by affiliate</p>
-                <div className="card divide-y divide-surface-200/60 overflow-hidden">
-                  {submitPreview.map((row) => (
-                    <div key={row.affiliate_id} className="px-4 py-2.5 flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{row.affiliate_name}</p>
-                        <p className="text-[10px] text-brand-400">{row.count} earning{row.count === 1 ? "" : "s"}</p>
-                      </div>
-                      <span className="text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(row.total)}</span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex items-center justify-between mt-3 px-1">
-                  <span className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Total</span>
-                  <span className="text-base font-bold text-gray-900 tabular-nums">{fmt.currency(submitTotal)}</span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-surface-200/60 flex items-center justify-end gap-2">
-                <button
-                  onClick={() => setShowSubmitDrawer(false)}
-                  disabled={submitting}
-                  className="text-xs font-semibold text-brand-400 hover:text-gray-900 px-3 py-2"
-                >Cancel</button>
-                <button
-                  onClick={handleSubmitBatch}
-                  disabled={submitting || selectedSubmittable.length === 0}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? "Submitting…" : "Send to Finance"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </>
-      )}
     </div>
   );
 }
