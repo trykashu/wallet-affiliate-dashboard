@@ -91,6 +91,15 @@ export async function POST(request: Request) {
     accountsByAffiliate.set(acc.affiliate_id, acc);
   }
 
+  // Affiliate emails — passed to Mercury so the recipient gets notified.
+  const { data: affEmails } = await svc
+    .from("affiliates")
+    .select("id, email")
+    .in("id", affiliateIds);
+  type AffEmailRow = { id: string; email: string | null };
+  const emailByAffiliate = new Map<string, string | null>();
+  for (const a of (affEmails as AffEmailRow[] | null) ?? []) emailByAffiliate.set(a.id, a.email);
+
   let executedCount = 0;
   let blockedCount = 0;
   const errors: string[] = [];
@@ -139,11 +148,29 @@ export async function POST(request: Request) {
     const period = payout.period || new Date().toISOString().slice(0, 7);
     const idempotencyKey = `payout_${payout.affiliate_id}_${period}_${payout.id}`;
 
+    // Refuse to execute when address is missing — Mercury was previously created
+    // with Kashu's address by default. Now we require the affiliate's address
+    // from their PandaDoc contract. If missing, the AM must Re-verify first.
+    if (!account.address1 || !account.city || !account.region || !account.postal_code) {
+      errors.push(`Payout ${payout.id}: payout_account is missing address — affiliate must Re-verify bank from PandaDoc first`);
+      continue;
+    }
+
+    const address = {
+      address1: account.address1,
+      address2: account.address2,
+      city: account.city,
+      region: account.region,
+      postalCode: account.postal_code,
+      country: account.country || "US",
+    };
+
     try {
       // Create Mercury recipient if we don't have one yet
       let recipientId = account.provider_id;
       if (!recipientId) {
-        recipientId = await getOrCreateRecipient(accountName, routingNumber, accountNumber);
+        const affiliateEmail = emailByAffiliate.get(payout.affiliate_id) ?? undefined;
+        recipientId = await getOrCreateRecipient(accountName, routingNumber, accountNumber, address, affiliateEmail);
         // Save the recipient ID for future payouts
         await svc
           .from("payout_accounts")

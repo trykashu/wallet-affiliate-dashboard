@@ -54,10 +54,20 @@ function getAccountId(): string {
  * Docs: https://docs.mercury.com/reference/createrecipient
  * Returns the recipient ID.
  */
+export interface RecipientAddress {
+  address1: string;
+  address2?: string | null;
+  city: string;
+  region: string;       // 2-letter state code (e.g. "WY")
+  postalCode: string;
+  country: string;      // 2-letter (e.g. "US")
+}
+
 export async function getOrCreateRecipient(
   name: string,
   routingNumber: string,
   accountNumber: string,
+  address: RecipientAddress,
   email?: string
 ): Promise<string> {
   const payload = {
@@ -68,16 +78,21 @@ export async function getOrCreateRecipient(
       routingNumber,
       electronicAccountType: "businessChecking",
       address: {
-        address1: "1603 Capitol Ave Ste 415",
-        city: "Cheyenne",
-        region: "WY",
-        postalCode: "82001",
-        country: "US",
+        address1: address.address1,
+        address2: address.address2 ?? undefined,
+        city: address.city,
+        region: address.region,
+        postalCode: address.postalCode,
+        country: address.country || "US",
       },
     },
   };
 
-  console.log("[mercury] Creating recipient:", JSON.stringify(payload));
+  // Redact account number in logs — the previous version logged it in full.
+  console.log("[mercury] Creating recipient:", JSON.stringify({
+    ...payload,
+    electronicRoutingInfo: { ...payload.electronicRoutingInfo, accountNumber: "<redacted>" },
+  }));
 
   const data = await mercuryFetch(`/recipients`, {
     method: "POST",
