@@ -169,3 +169,50 @@ describe("extractBankDetails — happy path", () => {
     );
   });
 });
+
+describe("extractBankDetails — address extraction (2026-05-15)", () => {
+  it("extracts address fields when titled", () => {
+    const fields: PandaDocField[] = [
+      f("Alex Rivera", { title: "Account Holder Name" }),
+      f("121000358", { title: "Routing Number" }),
+      f("000123456789", { title: "Account Number" }),
+      f("123 Main St", { title: "Address" }),
+      f("Apt 4", { title: "Apartment / Unit" }),
+      f("Boulder", { title: "City" }),
+      f("CO", { title: "State" }),
+      f("80301", { title: "Zip Code" }),
+    ];
+
+    const result = extractBankDetails(fields);
+    assert.equal(result.address1, "123 Main St");
+    assert.equal(result.address2, "Apt 4");
+    assert.equal(result.city, "Boulder");
+    assert.equal(result.region, "CO");
+    assert.equal(result.postal_code, "80301");
+    assert.equal(result.country, "US");
+  });
+
+  it("warns when address is missing", () => {
+    const fields: PandaDocField[] = [
+      f("Alex Rivera", { title: "Account Holder Name" }),
+      f("121000358", { title: "Routing Number" }),
+      f("000123456789", { title: "Account Number" }),
+    ];
+    const result = extractBankDetails(fields);
+    assert.equal(result.address1, null);
+    assert.ok(result.warnings.some((w) => w.toLowerCase().includes("address")));
+  });
+
+  it("accepts common state-abbreviation OR full-name variants", () => {
+    const fields: PandaDocField[] = [
+      f("123 Main St", { title: "Street" }),
+      f("Boulder", { title: "City" }),
+      f("Colorado", { title: "State" }),
+      f("80301", { title: "ZIP" }),
+      f("121000358", { title: "Routing Number" }),
+      f("000123456789", { title: "Account Number" }),
+    ];
+    const result = extractBankDetails(fields);
+    assert.equal(result.region, "CO"); // normalized to 2-letter code
+  });
+});

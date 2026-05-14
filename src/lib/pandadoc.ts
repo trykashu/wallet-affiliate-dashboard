@@ -36,6 +36,12 @@ export interface ExtractedBankDetails {
   routing_valid: boolean;
   account_valid: boolean;
   warnings: string[];
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+  country: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,6 +129,35 @@ function looksLikePersonName(value: string): boolean {
   if (looksLikeWidgetLabel(v)) return false;
   const alphaTokens = v.split(/[\s.]+/).filter((t) => /^[a-zA-Z'\-]+$/.test(t));
   return alphaTokens.length >= 2;
+}
+
+// 50 US states + DC, full name → 2-letter abbreviation.
+// Used to normalize PandaDoc state fields where users may type either form.
+const US_STATE_BY_NAME: Record<string, string> = {
+  alabama: "AL", alaska: "AK", arizona: "AZ", arkansas: "AR", california: "CA",
+  colorado: "CO", connecticut: "CT", delaware: "DE", "district of columbia": "DC",
+  florida: "FL", georgia: "GA", hawaii: "HI", idaho: "ID", illinois: "IL",
+  indiana: "IN", iowa: "IA", kansas: "KS", kentucky: "KY", louisiana: "LA",
+  maine: "ME", maryland: "MD", massachusetts: "MA", michigan: "MI", minnesota: "MN",
+  mississippi: "MS", missouri: "MO", montana: "MT", nebraska: "NE", nevada: "NV",
+  "new hampshire": "NH", "new jersey": "NJ", "new mexico": "NM", "new york": "NY",
+  "north carolina": "NC", "north dakota": "ND", ohio: "OH", oklahoma: "OK",
+  oregon: "OR", pennsylvania: "PA", "rhode island": "RI", "south carolina": "SC",
+  "south dakota": "SD", tennessee: "TN", texas: "TX", utah: "UT", vermont: "VT",
+  virginia: "VA", washington: "WA", "west virginia": "WV", wisconsin: "WI",
+  wyoming: "WY",
+};
+const US_STATE_CODES = new Set(Object.values(US_STATE_BY_NAME));
+
+function normalizeRegion(value: string | null): string | null {
+  if (!value) return null;
+  const v = value.trim();
+  if (!v) return null;
+  const upper = v.toUpperCase();
+  if (upper.length === 2 && US_STATE_CODES.has(upper)) return upper;
+  const code = US_STATE_BY_NAME[v.toLowerCase()];
+  if (code) return code;
+  return v; // leave as-is if we don't recognize (international, typo, etc.)
 }
 
 /**
@@ -302,6 +337,20 @@ export function extractBankDetails(
     }
   }
 
+  // 7. ADDRESS — title-first; defaults country to "US".
+  const address1 = findByTitle(partnerFields, "address1", "address 1", "street address", "street", "address")?.value.trim() ?? null;
+  const address2 = findByTitle(partnerFields, "address2", "address 2", "apartment", "apt", "suite", "unit")?.value.trim() ?? null;
+  const city = findByTitle(partnerFields, "city")?.value.trim() ?? null;
+  const region = normalizeRegion(findByTitle(partnerFields, "state", "region", "province")?.value ?? null);
+  const postal_code = findByTitle(partnerFields, "zip", "postal code", "postal")?.value.trim() ?? null;
+  const country = findByTitle(partnerFields, "country")?.value.trim() ?? "US";
+
+  // Treat partial address as a warning.
+  if (!address1) warnings.push("Address line 1 not found in PandaDoc");
+  if (!city) warnings.push("City not found in PandaDoc");
+  if (!region) warnings.push("State/region not found in PandaDoc");
+  if (!postal_code) warnings.push("Postal code not found in PandaDoc");
+
   return {
     email,
     account_holder_name: accountHolderName,
@@ -311,5 +360,11 @@ export function extractBankDetails(
     routing_valid: routingNumber !== null,
     account_valid: accountNumber !== null,
     warnings,
+    address1,
+    address2,
+    city,
+    region,
+    postal_code,
+    country,
   };
 }
