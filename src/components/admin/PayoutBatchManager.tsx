@@ -24,6 +24,8 @@ export default function PayoutBatchManager({
   const router = useRouter();
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [checkingMercury, setCheckingMercury] = useState(false);
+  const [statementId, setStatementId] = useState<string | null>(null);
+  const [statementError, setStatementError] = useState<string | null>(null);
 
   const processingPayouts = payouts.filter((p) => p.status === "processing");
 
@@ -43,6 +45,22 @@ export default function PayoutBatchManager({
       alert("Failed to update payout status. Please try again.");
     } finally {
       setUpdatingId(null);
+    }
+  }, [router]);
+
+  const handleGenerateStatement = useCallback(async (payoutId: string) => {
+    setStatementId(payoutId);
+    setStatementError(null);
+    try {
+      const res = await fetch(`/api/admin/payouts/${payoutId}/statement`, { method: "POST" });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error ?? `Generation failed (${res.status})`);
+      window.open(body.url, "_blank");
+      router.refresh();
+    } catch (e) {
+      setStatementError(e instanceof Error ? e.message : "Generation failed");
+    } finally {
+      setStatementId(null);
     }
   }, [router]);
 
@@ -73,6 +91,16 @@ export default function PayoutBatchManager({
 
   return (
     <div className="space-y-6">
+      {statementError && (
+        <div className="card p-3 bg-red-50 border-red-200">
+          <p className="text-xs text-red-700">{statementError}</p>
+          <button
+            onClick={() => setStatementError(null)}
+            className="text-[10px] text-red-700 underline mt-1"
+          >Dismiss</button>
+        </div>
+      )}
+
       {/* Payout batch tracking */}
       <div className="card overflow-hidden">
         <div className="px-5 py-4 border-b border-surface-200/60 flex flex-wrap items-center gap-3 justify-between">
@@ -114,6 +142,7 @@ export default function PayoutBatchManager({
                   <th className="th">Status</th>
                   <th className="th hidden md:table-cell">Reference</th>
                   <th className="th hidden md:table-cell">Created</th>
+                  <th className="th hidden lg:table-cell text-center">Statement</th>
                   <th className="th">Actions</th>
                 </tr>
               </thead>
@@ -137,6 +166,20 @@ export default function PayoutBatchManager({
                     </td>
                     <td className="td hidden md:table-cell">
                       <span className="text-xs text-brand-400">{fmt.date(p.created_at)}</span>
+                    </td>
+                    <td className="td hidden lg:table-cell text-center">
+                      {p.status === "completed" ? (
+                        <button
+                          onClick={() => handleGenerateStatement(p.id)}
+                          disabled={statementId === p.id}
+                          title="Render statement PDF and upload to Supabase + Airtable"
+                          className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {statementId === p.id ? "…" : "Generate"}
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-brand-400">—</span>
+                      )}
                     </td>
                     <td className="td">
                       <div className="flex items-center gap-1">
