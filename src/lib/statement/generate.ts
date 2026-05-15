@@ -14,6 +14,7 @@ import {
   formatPeriodLabel,
 } from "@/lib/statement/builders";
 import type { StatementData } from "@/lib/statement/types";
+import { markEarningsPaidForPayout } from "@/lib/payouts/mark-paid";
 
 export type StatementResult =
   | {
@@ -27,6 +28,9 @@ export type StatementResult =
       storage_path: string;
       airtable_record_id: string | null;
       airtable_error: string | null;
+      earnings_marked_paid: number;
+      airtable_txn_updated: number;
+      airtable_txn_failed: number;
     }
   | {
       ok: false;
@@ -311,6 +315,10 @@ export async function generateStatement(svc: any, payoutId: string): Promise<Sta
     airtableError = "Airtable env vars not configured";
   }
 
+  // 8. Flip linked earnings → 'paid' and mirror Commission Status in
+  // the Airtable Partner Transaction Log. Idempotent.
+  const markResult = await markEarningsPaidForPayout(svc, payoutId);
+
   return {
     ok: true,
     statement_number: data.statement_number,
@@ -322,5 +330,8 @@ export async function generateStatement(svc: any, payoutId: string): Promise<Sta
     storage_path: storagePath,
     airtable_record_id: airtableRecordId,
     airtable_error: airtableError,
+    earnings_marked_paid: markResult.earningsMarkedPaid,
+    airtable_txn_updated: markResult.airtableUpdated,
+    airtable_txn_failed: markResult.airtableErrors.length,
   };
 }
