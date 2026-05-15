@@ -169,7 +169,7 @@ export default function PayoutBatchManager({
                       <span className="text-xs text-brand-400">{fmt.date(p.created_at)}</span>
                     </td>
                     <td className="td hidden lg:table-cell text-center">
-                      {p.status === "completed" ? (
+                      {p.status === "completed" || p.status === "processing" ? (
                         <button
                           onClick={() => handleGenerateStatement(p.id)}
                           disabled={statementId === p.id}
