@@ -138,12 +138,13 @@ export async function POST(
     txnRefs.length > 0
       ? svc
           .from("transactions")
-          .select("airtable_record_id, transaction_date")
+          .select("airtable_record_id, transaction_date, amount")
           .in("airtable_record_id", txnRefs)
       : Promise.resolve({
           data: [] as Array<{
             airtable_record_id: string;
             transaction_date: string | null;
+            amount: number | null;
           }>,
         }),
   ]);
@@ -152,13 +153,17 @@ export async function POST(
   type TxnRow = {
     airtable_record_id: string;
     transaction_date: string | null;
+    amount: number | null;
   };
   const userMap = new Map<string, string>();
   for (const u of (usersResp.data ?? []) as UserRow[])
     userMap.set(u.id, u.full_name);
   const txnDateMap = new Map<string, string | null>();
-  for (const t of (txnsResp.data ?? []) as TxnRow[])
+  const txnAmountMap = new Map<string, number>();
+  for (const t of (txnsResp.data ?? []) as TxnRow[]) {
     txnDateMap.set(t.airtable_record_id, t.transaction_date);
+    txnAmountMap.set(t.airtable_record_id, Number(t.amount) || 0);
+  }
 
   // 4. Build StatementData
   const ratePct = commissionRatePct(
@@ -185,6 +190,9 @@ export async function POST(
       sortKey: dateRaw ?? "",
       date: dateLabel,
       client: userMap.get(e.referred_user_id) ?? "Unknown",
+      transaction_amount: e.transaction_ref
+        ? txnAmountMap.get(e.transaction_ref) ?? 0
+        : 0,
       fee_collected: Number(e.transaction_fee_amount) || 0,
       commission: Number(e.amount) || 0,
     };

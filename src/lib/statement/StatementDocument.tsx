@@ -93,10 +93,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   td: { fontSize: 10 },
-  colDate: { width: "20%" },
-  colClient: { width: "35%" },
-  colFee: { width: "22.5%", textAlign: "right" },
-  colCommission: { width: "22.5%", textAlign: "right", fontWeight: 700 },
+  colDate: { width: "15%" },
+  colClient: { width: "28%" },
+  colTxn: { width: "19%", textAlign: "right" },
+  colFee: { width: "19%", textAlign: "right" },
+  colCommission: { width: "19%", textAlign: "right", fontWeight: 700 },
   totalsBlock: { marginTop: 14, alignItems: "flex-end" },
   totalsRow: {
     flexDirection: "row",
@@ -222,6 +223,7 @@ export function StatementDocument({ data }: { data: StatementData }) {
           <View style={styles.tableHeader}>
             <Text style={[styles.th, styles.colDate]}>Date</Text>
             <Text style={[styles.th, styles.colClient]}>Client</Text>
+            <Text style={[styles.th, styles.colTxn]}>Transaction</Text>
             <Text style={[styles.th, styles.colFee]}>Fee Collected</Text>
             <Text style={[styles.th, styles.colCommission]}>
               Commission ({data.totals.commission_rate_pct}%)
@@ -231,6 +233,9 @@ export function StatementDocument({ data }: { data: StatementData }) {
             <View key={i} style={styles.tableRow} wrap={false}>
               <Text style={[styles.td, styles.colDate]}>{t.date}</Text>
               <Text style={[styles.td, styles.colClient]}>{t.client}</Text>
+              <Text style={[styles.td, styles.colTxn]}>
+                {fmtMoney(t.transaction_amount)}
+              </Text>
               <Text style={[styles.td, styles.colFee]}>
                 {fmtMoney(t.fee_collected)}
               </Text>

@@ -17,6 +17,7 @@ export interface StatementData {
   transactions: Array<{
     date: string;                // "Apr 12, 2026"
     client: string;
+    transaction_amount: number;
     fee_collected: number;
     commission: number;
   }>;
