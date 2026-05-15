@@ -14,7 +14,7 @@ export default async function PayoutsPage() {
   const ctx = await getAffiliateContext();
   if (!ctx) redirect("/login");
 
-  const { db, affiliateId, affiliate } = ctx;
+  const { db, affiliateId, affiliate, brand } = ctx;
 
   const [
     { data: earningsRaw },
@@ -71,6 +71,7 @@ export default async function PayoutsPage() {
         mercuryAccount={mercuryAccountDisplay}
         minPayoutAmount={minPayoutAmount}
         bankDetailsNeeded={!!affiliate.bank_details_needed}
+        brandSlug={brand?.slug ?? null}
       />
     </>
   );

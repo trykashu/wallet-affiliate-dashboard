@@ -25,7 +25,7 @@ function previousPeriod(): string {
 export default async function EarningsPage() {
   const ctx = await getAffiliateContext();
   if (!ctx) return null;
-  const { db, affiliate, affiliateId } = ctx;
+  const { db, affiliate, affiliateId, brand } = ctx;
 
   // ── Fetch all earnings with user name join ──────────────────
   const { data: earningsRaw } = await db
@@ -120,6 +120,7 @@ export default async function EarningsPage() {
           referredVolume={affiliate.referred_volume_total}
           customCommissionRate={affiliate.custom_commission_rate}
           customCommissionBasis={affiliate.custom_commission_basis}
+          brandSlug={brand?.slug ?? null}
         />
         <LeaderboardCard
           snapshot={mySnapshot}

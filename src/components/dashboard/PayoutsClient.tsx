@@ -1,11 +1,15 @@
 "use client";
 
 import { useMemo } from "react";
-import { fmt } from "@/lib/fmt";
 import PayoutSummary from "@/components/dashboard/PayoutSummary";
 import PayoutHistory from "@/components/dashboard/PayoutHistory";
 import BankAccountForm from "@/components/dashboard/BankAccountForm";
 import type { Earning, Payout, PayoutAccount } from "@/types/database";
+import {
+  getCadenceForBrand,
+  getCadenceLabel,
+  getNextPayoutDate,
+} from "@/lib/payout-schedule";
 
 interface MercuryAccountDisplay {
   account_name: string;
@@ -22,32 +26,7 @@ interface Props {
   mercuryAccount:    MercuryAccountDisplay | null;
   minPayoutAmount?:  number;
   bankDetailsNeeded: boolean;
-}
-
-function getNextPayoutInfo() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth(); // 0-indexed
-
-  let nextPayoutDate: Date;
-  let coveredMonth: Date;
-
-  if (now.getDate() < 15) {
-    // Before the 15th: next payout is the 15th of current month, covering previous month
-    nextPayoutDate = new Date(year, month, 15);
-    coveredMonth = new Date(year, month - 1, 1);
-  } else {
-    // On/after the 15th: next payout is the 15th of next month, covering current month
-    nextPayoutDate = new Date(year, month + 1, 15);
-    coveredMonth = new Date(year, month, 1);
-  }
-
-  const coveredLabel = coveredMonth.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-
-  return {
-    nextDate: fmt.date(nextPayoutDate.toISOString()),
-    periodCovered: coveredLabel,
-  };
+  brandSlug?:        string | null;
 }
 
 export default function PayoutsClient({
@@ -59,8 +38,13 @@ export default function PayoutsClient({
   mercuryAccount,
   minPayoutAmount = 25,
   bankDetailsNeeded,
+  brandSlug,
 }: Props) {
-  const { nextDate, periodCovered } = useMemo(() => getNextPayoutInfo(), []);
+  const cadence = useMemo(() => getCadenceForBrand(brandSlug), [brandSlug]);
+  const cadenceCopy = getCadenceLabel(cadence);
+  const next = useMemo(() => getNextPayoutDate(cadence), [cadence]);
+  const nextDate = next.label;
+  const periodCovered = next.periodLabel;
 
   return (
     <>
@@ -74,7 +58,7 @@ export default function PayoutsClient({
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-900">Payout Schedule</h3>
-            <p className="text-xs text-brand-400">Payouts are processed automatically on the 15th of each month.</p>
+            <p className="text-xs text-brand-400">{cadenceCopy}</p>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-4">

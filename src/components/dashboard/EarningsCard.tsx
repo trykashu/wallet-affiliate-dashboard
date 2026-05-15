@@ -1,6 +1,10 @@
 import { fmt } from "@/lib/fmt";
 import { TIER_THRESHOLDS } from "@/lib/tier";
 import type { AffiliateTier } from "@/types/database";
+import {
+  getCadenceForBrand,
+  getNextPayoutDate,
+} from "@/lib/payout-schedule";
 
 interface EarningsSummary {
   total:     number;
@@ -15,6 +19,7 @@ interface Props {
   referredVolume: number;
   customCommissionRate?:  number | null;
   customCommissionBasis?: 'tpv' | 'kashu_fee' | null;
+  brandSlug?: string | null;
 }
 
 const TIER_BADGE: Record<AffiliateTier, { label: string; class: string }> = {
@@ -23,40 +28,7 @@ const TIER_BADGE: Record<AffiliateTier, { label: string; class: string }> = {
   custom:   { label: "Custom",   class: "bg-purple-500/10 text-purple-700 border-purple-500/20" },
 };
 
-/** Next payout is the 15th of the following month. */
-function getNextPayoutDate(): { label: string; daysUntil: number; periodLabel: string } {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth(); // 0-indexed
-
-  // If we're before the 15th of this month, next payout is the 15th of this month
-  // covering the previous month's period.
-  // If we're on or after the 15th, next payout is the 15th of next month.
-  let payoutDate: Date;
-  let periodStart: Date;
-  let periodEnd: Date;
-
-  if (now.getDate() < 15) {
-    payoutDate = new Date(year, month, 15);
-    periodStart = new Date(year, month - 1, 1);
-    periodEnd = new Date(year, month, 0); // last day of previous month
-  } else {
-    payoutDate = new Date(year, month + 1, 15);
-    periodStart = new Date(year, month, 1);
-    periodEnd = new Date(year, month + 1, 0); // last day of current month
-  }
-
-  const diffMs = payoutDate.getTime() - now.getTime();
-  const daysUntil = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
-
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const label = `${monthNames[payoutDate.getMonth()]} ${payoutDate.getDate()}, ${payoutDate.getFullYear()}`;
-  const periodLabel = `${monthNames[periodStart.getMonth()]} ${periodStart.getDate()} – ${monthNames[periodEnd.getMonth()]} ${periodEnd.getDate()}`;
-
-  return { label, daysUntil, periodLabel };
-}
-
-export default function EarningsCard({ summary, tier, referredVolume, customCommissionRate, customCommissionBasis }: Props) {
+export default function EarningsCard({ summary, tier, referredVolume, customCommissionRate, customCommissionBasis, brandSlug }: Props) {
   const hasPending   = summary.pending > 0;
   const hasThisMonth = summary.thisMonth > 0;
   const paidPct      = summary.total > 0 ? Math.round((summary.paid / summary.total) * 100) : 0;
@@ -66,7 +38,7 @@ export default function EarningsCard({ summary, tier, referredVolume, customComm
   const volumePct    = Math.min(100, Math.round((referredVolume / volumeTarget) * 100));
   const isPlatinum   = tier === "platinum";
 
-  const payout = getNextPayoutDate();
+  const payout = getNextPayoutDate(getCadenceForBrand(brandSlug));
 
   return (
     <div className="card flex flex-col h-full overflow-hidden">

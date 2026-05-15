@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { fmt } from "@/lib/fmt";
 import type { Payout } from "@/types/database";
+import {
+  getCadenceForBrand,
+  getCadenceLabel,
+} from "@/lib/payout-schedule";
 
 interface Props {
   payouts: Payout[];
   affiliateName?: string;
+  brandSlug?: string | null;
 }
 
 const STATUS_CLASSES: Record<string, string> = {
@@ -16,8 +21,9 @@ const STATUS_CLASSES: Record<string, string> = {
   failed:     "text-red-600   bg-red-50       border-red-200",
 };
 
-export default function PayoutHistory({ payouts, affiliateName = "Affiliate" }: Props) {
+export default function PayoutHistory({ payouts, affiliateName = "Affiliate", brandSlug }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
+  const cadenceCopy = getCadenceLabel(getCadenceForBrand(brandSlug));
 
   return (
     <div className="card overflow-hidden">
@@ -28,7 +34,7 @@ export default function PayoutHistory({ payouts, affiliateName = "Affiliate" }: 
 
       {payouts.length === 0 ? (
         <div className="px-5 py-12 text-center">
-          <p className="text-sm text-brand-400">No payouts yet. Payouts are processed automatically on the 15th of each month.</p>
+          <p className="text-sm text-brand-400">No payouts yet. {cadenceCopy}</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
