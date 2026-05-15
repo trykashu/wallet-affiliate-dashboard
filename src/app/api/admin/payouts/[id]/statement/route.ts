@@ -58,7 +58,9 @@ export async function POST(
   const [affResp, acctResp, earningsResp] = await Promise.all([
     svc
       .from("affiliates")
-      .select("id, agent_name, tier, email, phone, custom_commission_rate")
+      .select(
+        "id, agent_name, tier, email, phone, custom_commission_rate, attribution_id",
+      )
       .eq("id", payout.affiliate_id)
       .maybeSingle(),
     svc
@@ -261,10 +263,16 @@ export async function POST(
   );
   const airtablePat = process.env.AIRTABLE_PAT?.replace(/\\n|"|\s/g, "");
 
+  const affiliateTableId = process.env.AIRTABLE_AFFILIATE_TABLE?.replace(
+    /\\n|"|\s/g,
+    "",
+  );
+
   if (airtableBaseId && statementsTableId && airtablePat) {
     try {
+      const attributionId = affiliate.attribution_id as string;
       const filter = encodeURIComponent(
-        `AND({Period}='${payout.period}', {AffiliateId}='${payout.affiliate_id}')`,
+        `AND({Period}='${payout.period}', {Attribution ID}='${attributionId}')`,
       );
       const listUrl = `https://api.airtable.com/v0/${airtableBaseId}/${statementsTableId}?filterByFormula=${filter}&maxRecords=1`;
       const listRes = await fetch(listUrl, {
@@ -277,8 +285,32 @@ export async function POST(
       };
       const existingId = listJson.records?.[0]?.id ?? null;
 
+      // Best-effort: resolve the Kashu Affiliates record ID for the link field
+      let affiliateRecordId: string | null = null;
+      if (affiliateTableId) {
+        try {
+          const affFilter = encodeURIComponent(
+            `{Attribution ID}='${attributionId}'`,
+          );
+          const affRes = await fetch(
+            `https://api.airtable.com/v0/${airtableBaseId}/${affiliateTableId}?filterByFormula=${affFilter}&maxRecords=1`,
+            {
+              headers: { Authorization: `Bearer ${airtablePat}` },
+              cache: "no-store",
+            },
+          );
+          if (affRes.ok) {
+            const j = (await affRes.json()) as { records?: Array<{ id: string }> };
+            affiliateRecordId = j.records?.[0]?.id ?? null;
+          }
+        } catch {
+          // ignore — link is best-effort
+        }
+      }
+
       const fields: Record<string, unknown> = {
-        AffiliateId: payout.affiliate_id,
+        Name: data.statement_number,
+        "Attribution ID": attributionId,
         Period: payout.period,
         "Generated At": new Date().toISOString(),
         PDF: [{ url: supabaseUrl, filename: `${data.statement_number}.pdf` }],
@@ -287,6 +319,9 @@ export async function POST(
         "Commission Due": totals.commission_due,
         "Statement Number": data.statement_number,
       };
+      if (affiliateRecordId) {
+        fields.Affiliate = [affiliateRecordId];
+      }
 
       let writeRes: Response;
       if (existingId) {
