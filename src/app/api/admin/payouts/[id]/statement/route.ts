@@ -248,7 +248,10 @@ export async function POST(
   const { data: publicUrlData } = svc.storage
     .from("affiliate-statements")
     .getPublicUrl(storagePath);
-  const supabaseUrl: string = publicUrlData.publicUrl;
+  const supabaseUrl: string = (publicUrlData.publicUrl as string).replace(
+    /\s/g,
+    "",
+  );
 
   // 7. Mirror to Airtable "Affiliate Statements" — best-effort
   let airtableRecordId: string | null = null;
