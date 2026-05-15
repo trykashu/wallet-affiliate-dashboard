@@ -55,7 +55,8 @@ export default function PayoutBatchManager({
       const res = await fetch(`/api/admin/payouts/${payoutId}/statement`, { method: "POST" });
       const body = await res.json();
       if (!res.ok) throw new Error(body?.error ?? `Generation failed (${res.status})`);
-      window.open(body.url, "_blank");
+      const cleanUrl = typeof body.url === "string" ? body.url.replace(/\s/g, "") : body.url;
+      window.open(cleanUrl, "_blank");
       router.refresh();
     } catch (e) {
       setStatementError(e instanceof Error ? e.message : "Generation failed");
