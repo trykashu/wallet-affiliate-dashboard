@@ -10,6 +10,7 @@
     "test": "npx tsx --test 'src/**/*.test.ts'"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.5.1",
     "@supabase/ssr": "^0.5.1",
     "@supabase/supabase-js": "^2.45.0",
     "next": "16.2.2",
