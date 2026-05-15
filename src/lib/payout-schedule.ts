@@ -16,7 +16,7 @@ const BIWEEKLY_ANCHOR = new Date(Date.UTC(2026, 0, 5));
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function getCadenceForBrand(brandSlug: string | null | undefined): PayoutCadence {
-  return brandSlug === "payovas" ? "biweekly_monday" : "monthly_15";
+  return brandSlug === "payova" ? "biweekly_monday" : "monthly_15";
 }
 
 export function getCadenceLabel(cadence: PayoutCadence): string {
