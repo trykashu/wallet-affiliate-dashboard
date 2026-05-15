@@ -11,6 +11,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isFinanceEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
 import { sendACHTransfer, getOrCreateRecipient } from "@/lib/mercury";
+import { generateStatement } from "@/lib/statement/generate";
 import type { Payout, PayoutAccount } from "@/types/database";
 
 export async function POST(request: Request) {
@@ -220,6 +221,35 @@ export async function POST(request: Request) {
         .eq("id", payout.id);
 
       executedCount++;
+
+      // Auto-generate statement PDF (best-effort; never blocks payout)
+      try {
+        const stmt = await generateStatement(svc, payout.id);
+        await svc.from("payout_audit_log").insert({
+          payout_id: payout.id,
+          affiliate_id: payout.affiliate_id,
+          action: stmt.ok ? "STATEMENT_GENERATED" : "STATEMENT_GENERATION_FAILED",
+          initiated_by: user.id,
+          response_payload: stmt.ok
+            ? {
+                statement_number: stmt.statement_number,
+                url: stmt.url,
+                airtable_record_id: stmt.airtable_record_id,
+                airtable_error: stmt.airtable_error,
+              }
+            : { error: stmt.error, reason: stmt.reason ?? null },
+        });
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error(`[execute-batch] statement generation crashed for ${payout.id}:`, msg);
+        await svc.from("payout_audit_log").insert({
+          payout_id: payout.id,
+          affiliate_id: payout.affiliate_id,
+          action: "STATEMENT_GENERATION_FAILED",
+          initiated_by: user.id,
+          error_message: msg,
+        });
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "unknown";
       console.error(`[admin/payouts/execute-batch] Mercury transfer failed for payout ${payout.id}:`, errorMessage);

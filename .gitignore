@@ -44,3 +44,11 @@ next-env.d.ts
 
 # Local-only unpacked affiliate content
 Affiliate Content Package/_unpacked/
+
+# Local PII / sensitive artifacts — never commit
+Affiliate Agreements/
+Affiliate Content Package/
+PandaDoc_documents_0.zip
+bank-details-upload.csv
+Kashu_Statement_Blank_Template final.pdf
+.claude/
