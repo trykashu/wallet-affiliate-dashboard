@@ -4,6 +4,7 @@ import type { FunnelStatusSlug, ReferredUser, FunnelEvent, FunnelStatus, StageDu
 import StatsRow from "@/components/dashboard/StatsRow";
 import ReferralLinkCard from "@/components/dashboard/ReferralLinkCard";
 import HolographicFunnel from "@/components/dashboard/HolographicFunnel";
+import TierProgressCard from "@/components/dashboard/TierProgressCard";
 
 export const dynamic = "force-dynamic";
 
@@ -130,6 +131,14 @@ export default async function DashboardPage() {
 
       {/* Stats row */}
       <StatsRow users={users} />
+
+      {/* Tier progress — Gold→Platinum bar, Custom agreement summary, or Platinum achieved */}
+      <TierProgressCard
+        tier={affiliate.tier}
+        referredVolume={totalVolume}
+        customCommissionRate={affiliate.custom_commission_rate}
+        customCommissionBasis={affiliate.custom_commission_basis}
+      />
 
       {/* Holographic Funnel */}
       <HolographicFunnel
