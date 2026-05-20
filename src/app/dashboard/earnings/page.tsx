@@ -112,8 +112,8 @@ export default async function EarningsPage() {
         </p>
       </div>
 
-      {/* Summary + Ranking side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+      {/* Summary + Ranking side by side (Ranking hidden for whitelabel partners) */}
+      <div className={`grid grid-cols-1 ${brand ? "" : "lg:grid-cols-2"} gap-5`}>
         <EarningsCard
           summary={earningsSummary}
           tier={affiliate.tier}
@@ -122,13 +122,15 @@ export default async function EarningsPage() {
           customCommissionBasis={affiliate.custom_commission_basis}
           brandSlug={brand?.slug ?? null}
         />
-        <LeaderboardCard
-          snapshot={mySnapshot}
-          tier={affiliate.tier}
-          referredVolume={affiliate.referred_volume_total}
-          totalAffiliates={totalAffiliates ?? 0}
-          prevRank={prevRank}
-        />
+        {!brand && (
+          <LeaderboardCard
+            snapshot={mySnapshot}
+            tier={affiliate.tier}
+            referredVolume={affiliate.referred_volume_total}
+            totalAffiliates={totalAffiliates ?? 0}
+            prevRank={prevRank}
+          />
+        )}
       </div>
 
       {/* Transaction ledger */}
