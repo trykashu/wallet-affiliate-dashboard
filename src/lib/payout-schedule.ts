@@ -7,21 +7,17 @@
  * projected next payout, the period it covers, and a human label.
  */
 
-export type PayoutCadence = "monthly_15" | "biweekly_monday";
+export type PayoutCadence = "monthly_15" | "weekly_monday";
 
-// Anchor Monday for the biweekly_monday cadence. Pick a known past Monday;
-// every other Monday from this date (+14n days) is a payout.
-//   Mon 2026-01-05  ← first Monday of 2026
-const BIWEEKLY_ANCHOR = new Date(Date.UTC(2026, 0, 5));
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function getCadenceForBrand(brandSlug: string | null | undefined): PayoutCadence {
-  return brandSlug === "payova" ? "biweekly_monday" : "monthly_15";
+  return brandSlug === "payova" ? "weekly_monday" : "monthly_15";
 }
 
 export function getCadenceLabel(cadence: PayoutCadence): string {
-  return cadence === "biweekly_monday"
-    ? "Payouts run every other Monday so transactions have time to clear."
+  return cadence === "weekly_monday"
+    ? "Payouts run every Monday for the prior Mon–Sun week, paid the following Monday so transactions have time to clear."
     : "Payouts are processed automatically on the 15th of each month.";
 }
 
@@ -47,8 +43,8 @@ function fmtMonthDay(d: Date): string {
 }
 
 export function getNextPayoutDate(cadence: PayoutCadence, now: Date = new Date()): NextPayout {
-  if (cadence === "biweekly_monday") {
-    return nextBiweeklyMonday(now);
+  if (cadence === "weekly_monday") {
+    return nextWeeklyMonday(now);
   }
   return nextMonthly15(now);
 }
@@ -83,26 +79,23 @@ function nextMonthly15(now: Date): NextPayout {
   };
 }
 
-function nextBiweeklyMonday(now: Date): NextPayout {
-  const today0 = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
-  const daysSinceAnchor = Math.floor((today0.getTime() - BIWEEKLY_ANCHOR.getTime()) / DAY_MS);
-  const cyclesPast = Math.floor(daysSinceAnchor / 14);
+function nextWeeklyMonday(now: Date): NextPayout {
+  // Find next Monday >= today. Monday = day-of-week 1 (Sun=0).
+  const dow = now.getDay();
+  const daysUntilMon = dow === 1 ? 0 : (8 - dow) % 7;
+  const payoutDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMon);
 
-  let payoutUTC = new Date(BIWEEKLY_ANCHOR.getTime() + cyclesPast * 14 * DAY_MS);
-  if (payoutUTC.getTime() < today0.getTime()) {
-    payoutUTC = new Date(payoutUTC.getTime() + 14 * DAY_MS);
-  }
-
-  // Local-date projection
-  const payoutDate = new Date(payoutUTC.getUTCFullYear(), payoutUTC.getUTCMonth(), payoutUTC.getUTCDate());
+  // Period covered = the Mon–Sun week ending 8 days before payoutDate.
+  // 5/25 payout → 5/11 (Mon) – 5/17 (Sun)
   const periodStart = new Date(payoutDate.getTime() - 14 * DAY_MS);
-  const periodEnd = new Date(payoutDate.getTime() - DAY_MS);
+  const periodEnd = new Date(payoutDate.getTime() - 8 * DAY_MS);
 
   const daysUntil = Math.max(0, Math.ceil((payoutDate.getTime() - now.getTime()) / DAY_MS));
 
-  // ISO-week period stamp for biweekly payouts
-  const isoWeek = isoWeekNumber(payoutDate);
-  const periodStamp = `${payoutDate.getFullYear()}-W${String(isoWeek).padStart(2, "0")}`;
+  // ISO-week period stamp keyed to the period start, not the payout date,
+  // so 5/11–5/17 = "2026-W20" regardless of when it's paid out.
+  const isoWeek = isoWeekNumber(periodStart);
+  const periodStamp = `${periodStart.getFullYear()}-W${String(isoWeek).padStart(2, "0")}`;
 
   return {
     label: fmtDate(payoutDate),
