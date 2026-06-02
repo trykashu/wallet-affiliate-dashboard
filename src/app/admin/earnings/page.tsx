@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
 import AdminEarningsTable      from "@/components/admin/AdminEarningsTable";
+import AuditPanel              from "@/components/admin/AuditPanel";
 import type { AdminEarning }   from "@/components/admin/AdminEarningsTable";
 import type { Earning, Affiliate, ReferredUser, Transaction } from "@/types/database";
 
@@ -120,6 +121,8 @@ export default async function AdminEarningsPage() {
           <p className="text-[10px] text-brand-400 mt-1.5">{allEarnings.filter((e) => e.status === "paid").length} earnings</p>
         </div>
       </div>
+
+      <AuditPanel />
 
       <AdminEarningsTable earnings={enriched} availableMonths={availableMonths} />
     </div>
