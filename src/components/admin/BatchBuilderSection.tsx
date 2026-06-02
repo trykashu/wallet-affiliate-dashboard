@@ -10,6 +10,9 @@ export interface BatchBuilderEarning {
   affiliate_id: string;
   amount: number;
   transaction_date: string | null; // YYYY-MM-DD or null
+  tier_at_earning: "gold" | "platinum" | "custom";
+  custom_commission_rate: number | null;        // e.g. 0.075 for 7.5%
+  custom_commission_basis: "tpv" | "kashu_fee" | null;
 }
 
 export interface BatchBuilderAffiliate {
@@ -39,6 +42,39 @@ interface AffiliateRow {
   count: number;
   total: number;
   earning_ids: string[];
+  /** Dominant tier across this affiliate's earnings in this month; "mixed" if not all the same. */
+  tier: "gold" | "platinum" | "custom" | "mixed";
+  /** Numeric rate as a fraction (e.g. 0.05 = 5%). Null if mixed. */
+  rate: number | null;
+  /** What the rate applies to. */
+  basis: "tpv" | "kashu_fee" | "mixed" | null;
+}
+
+function rateForEarning(e: BatchBuilderEarning): { rate: number; basis: "tpv" | "kashu_fee" } {
+  if (e.tier_at_earning === "platinum") return { rate: 0.10, basis: "kashu_fee" };
+  if (e.tier_at_earning === "gold")     return { rate: 0.05, basis: "kashu_fee" };
+  // custom
+  return {
+    rate: e.custom_commission_rate ?? 0,
+    basis: e.custom_commission_basis ?? "kashu_fee",
+  };
+}
+
+function rateLabel(rate: number | null, basis: "tpv" | "kashu_fee" | "mixed" | null): string {
+  if (rate === null || basis === null) return "—";
+  if (basis === "mixed") return "Mixed";
+  const pct = (rate * 100).toFixed(2).replace(/\.?0+$/, "");
+  return basis === "tpv" ? `${pct}% TPV` : `${pct}% fee`;
+}
+
+function tierBadgeClass(tier: AffiliateRow["tier"]): string {
+  if (tier === "platinum") return "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border-slate-300";
+  if (tier === "custom")   return "bg-purple-500/10 text-purple-700 border-purple-500/20";
+  if (tier === "mixed")    return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-amber-50 text-amber-700 border-amber-200"; // gold default
+}
+function tierLabel(tier: AffiliateRow["tier"]): string {
+  return tier.charAt(0).toUpperCase() + tier.slice(1);
 }
 
 export default function BatchBuilderSection({ earnings, affiliates, availableMonths }: Props) {
@@ -123,11 +159,22 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
       if (!e.transaction_date) continue;
       if (!e.transaction_date.startsWith(month)) continue;
       const aff = affMap.get(e.affiliate_id);
+      const { rate, basis } = rateForEarning(e);
       const existing = grouped.get(e.affiliate_id);
       if (existing) {
         existing.count += 1;
         existing.total += Number(e.amount) || 0;
         existing.earning_ids.push(e.id);
+        // Detect drift across earnings for the same affiliate
+        if (existing.tier !== "mixed" && existing.tier !== e.tier_at_earning) {
+          existing.tier = "mixed";
+          existing.rate = null;
+          existing.basis = "mixed";
+        } else if (existing.rate !== null && Math.abs(existing.rate - rate) > 1e-9) {
+          existing.rate = null;
+          existing.basis = "mixed";
+          existing.tier = "mixed";
+        }
       } else {
         grouped.set(e.affiliate_id, {
           affiliate_id: e.affiliate_id,
@@ -140,6 +187,9 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           count: 1,
           total: Number(e.amount) || 0,
           earning_ids: [e.id],
+          tier: e.tier_at_earning,
+          rate,
+          basis,
         });
       }
     }
@@ -262,6 +312,31 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
         </div>
       )}
 
+      {/* Running batch total — updates as AM selects/deselects */}
+      <div className="card p-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-br from-brand-50/40 to-surface-50/60 border border-brand-200/40">
+        <div className="flex items-center gap-4">
+          <div>
+            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Batch Total</p>
+            <p className="text-display-sm font-bold tabular-nums text-gray-900">{fmt.currency(submittableTotal)}</p>
+          </div>
+          <div className="h-10 w-px bg-surface-200/60" />
+          <div>
+            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Affiliates Selected</p>
+            <p className="text-stat font-bold tabular-nums text-gray-900">{submittableRows.length}</p>
+          </div>
+          <div className="h-10 w-px bg-surface-200/60" />
+          <div>
+            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Earnings In Batch</p>
+            <p className="text-stat font-bold tabular-nums text-gray-900">{submittableEarningIds.length}</p>
+          </div>
+        </div>
+        {submittableRows.length > 0 && (
+          <p className="text-[10px] text-brand-400">
+            Average per affiliate: <span className="font-semibold text-gray-900">{fmt.currency(submittableTotal / submittableRows.length)}</span>
+          </p>
+        )}
+      </div>
+
       <div className="card overflow-hidden">
         {rows.length === 0 ? (
           <div className="p-6 text-center text-sm text-brand-400">
@@ -281,6 +356,8 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                   />
                 </th>
                 <th className="th">Affiliate</th>
+                <th className="th">Tier</th>
+                <th className="th text-right">Rate</th>
                 <th className="th text-right">Earnings</th>
                 <th className="th text-right">Total</th>
                 <th className="th">Status</th>
@@ -315,6 +392,12 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                       <p className="text-sm font-semibold text-gray-900 truncate">{r.affiliate_name}</p>
                       {r.business_name && <p className="text-[10px] text-brand-400 truncate">{r.business_name}</p>}
                     </td>
+                    <td className="td">
+                      <span className={`inline-flex items-center text-[10px] font-semibold border rounded-full px-2 py-0.5 ${tierBadgeClass(r.tier)}`}>
+                        {tierLabel(r.tier)}
+                      </span>
+                    </td>
+                    <td className="td text-right text-xs tabular-nums text-gray-700">{rateLabel(r.rate, r.basis)}</td>
                     <td className="td text-right text-xs text-gray-700 tabular-nums">{fmt.count(r.count)}</td>
                     <td className="td text-right text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(r.total)}</td>
                     <td className="td">

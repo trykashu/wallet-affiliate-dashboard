@@ -36,11 +36,19 @@ export default async function AdminPayoutsPage() {
   // Approved earnings that aren't already in a batch — the universe the AM is choosing from.
   const { data: unbatchedRaw } = await db
     .from("earnings")
-    .select("id, affiliate_id, amount, transaction_ref")
+    .select("id, affiliate_id, amount, transaction_ref, tier_at_earning, custom_commission_rate, custom_commission_basis")
     .eq("status", "approved")
     .is("payout_id", null);
 
-  type UnbatchedRow = { id: string; affiliate_id: string; amount: number; transaction_ref: string | null };
+  type UnbatchedRow = {
+    id: string;
+    affiliate_id: string;
+    amount: number;
+    transaction_ref: string | null;
+    tier_at_earning: "gold" | "platinum" | "custom";
+    custom_commission_rate: number | null;
+    custom_commission_basis: "tpv" | "kashu_fee" | null;
+  };
   const unbatched = (unbatchedRaw as UnbatchedRow[] | null) ?? [];
 
   const txnRefs = unbatched.map((u) => u.transaction_ref).filter((r): r is string => !!r);
@@ -158,6 +166,9 @@ export default async function AdminPayoutsPage() {
     affiliate_id: u.affiliate_id,
     amount: Number(u.amount) || 0,
     transaction_date: u.transaction_ref ? (txnDateByRef.get(u.transaction_ref) ?? null) : null,
+    tier_at_earning: u.tier_at_earning,
+    custom_commission_rate: u.custom_commission_rate !== null ? Number(u.custom_commission_rate) : null,
+    custom_commission_basis: u.custom_commission_basis,
   }));
 
   const referencedAffiliateIds = new Set(builderEarnings.map((e) => e.affiliate_id));
