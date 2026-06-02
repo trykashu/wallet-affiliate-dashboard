@@ -6,6 +6,7 @@ import { getBankReviewReasons } from "@/lib/bank-quality";
 import { fmt }                 from "@/lib/fmt";
 import PayoutBatchManager      from "@/components/admin/PayoutBatchManager";
 import BankDetailsUpload       from "@/components/admin/BankDetailsUpload";
+import PdfBankUpload           from "@/components/admin/PdfBankUpload";
 import BatchReviewSection      from "@/components/admin/BatchReviewSection";
 import RequestedBatchesSection from "@/components/admin/RequestedBatchesSection";
 import BatchBuilderSection, { type BatchBuilderAffiliate, type BatchBuilderEarning } from "@/components/admin/BatchBuilderSection";
@@ -29,7 +30,7 @@ export default async function AdminPayoutsPage() {
   const [payoutsResult, earningsResult, affiliatesResult, settingsResult] = await Promise.all([
     db.from("payouts").select("*").order("created_at", { ascending: false }),
     db.from("earnings").select("affiliate_id, amount, status").eq("status", "approved"),
-    db.from("affiliates").select("id, agent_name, business_name, agreement_status, pandadoc_id"),
+    db.from("affiliates").select("id, agent_name, email, business_name, agreement_status, pandadoc_id"),
     db.from("payout_settings").select("*").limit(1).maybeSingle(),
   ]);
 
@@ -234,6 +235,15 @@ export default async function AdminPayoutsPage() {
       )}
 
       <BankDetailsUpload />
+
+      <PdfBankUpload
+        affiliates={affiliates.map((a) => ({
+          id: a.id,
+          agent_name: a.agent_name,
+          email: a.email,
+          business_name: a.business_name ?? null,
+        }))}
+      />
 
       <PayoutBatchManager payouts={payoutRows} />
     </div>
