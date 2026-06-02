@@ -8,8 +8,10 @@ import BankPreviewDrawer, { type BankPreview } from "@/components/admin/BankPrev
 export interface BatchBuilderEarning {
   id: string;
   affiliate_id: string;
-  amount: number;
-  transaction_date: string | null; // YYYY-MM-DD or null
+  amount: number;                       // commission owed for this earning
+  cash_collected: number;               // Kashu fee on the underlying txn
+  tpv: number;                          // underlying transaction Total Payment Volume
+  transaction_date: string | null;      // YYYY-MM-DD or null
   tier_at_earning: "gold" | "platinum" | "custom";
   custom_commission_rate: number | null;        // e.g. 0.075 for 7.5%
   custom_commission_basis: "tpv" | "kashu_fee" | null;
@@ -40,7 +42,9 @@ interface AffiliateRow {
   pandadoc_id: string | null;
   bank_review_reasons: string[];
   count: number;
-  total: number;
+  total: number;             // commission owed (sum of earning.amount)
+  cash_collected: number;    // sum of Kashu fees on underlying txns
+  tpv: number;               // sum of underlying TPV
   earning_ids: string[];
   /** Dominant tier across this affiliate's earnings in this month; "mixed" if not all the same. */
   tier: "gold" | "platinum" | "custom" | "mixed";
@@ -164,6 +168,8 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
       if (existing) {
         existing.count += 1;
         existing.total += Number(e.amount) || 0;
+        existing.cash_collected += Number(e.cash_collected) || 0;
+        existing.tpv += Number(e.tpv) || 0;
         existing.earning_ids.push(e.id);
         // Detect drift across earnings for the same affiliate
         if (existing.tier !== "mixed" && existing.tier !== e.tier_at_earning) {
@@ -186,6 +192,8 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           bank_review_reasons: aff?.bank_review_reasons ?? [],
           count: 1,
           total: Number(e.amount) || 0,
+          cash_collected: Number(e.cash_collected) || 0,
+          tpv: Number(e.tpv) || 0,
           earning_ids: [e.id],
           tier: e.tier_at_earning,
           rate,
@@ -208,6 +216,16 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
 
   const submittableTotal = useMemo(
     () => submittableRows.reduce((s, r) => s + r.total, 0),
+    [submittableRows]
+  );
+
+  const submittableTpv = useMemo(
+    () => submittableRows.reduce((s, r) => s + r.tpv, 0),
+    [submittableRows]
+  );
+
+  const submittableCashCollected = useMemo(
+    () => submittableRows.reduce((s, r) => s + r.cash_collected, 0),
     [submittableRows]
   );
 
@@ -312,29 +330,44 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
         </div>
       )}
 
-      {/* Running batch total — updates as AM selects/deselects */}
-      <div className="card p-4 flex flex-wrap items-center justify-between gap-3 bg-gradient-to-br from-brand-50/40 to-surface-50/60 border border-brand-200/40">
-        <div className="flex items-center gap-4">
+      {/* Running batch total — updates as AM selects/deselects. Shows the
+          full TPV → Kashu Fee → Commission chain so the calculation is
+          transparent at a glance. */}
+      <div className="card p-4 space-y-3 bg-gradient-to-br from-brand-50/40 to-surface-50/60 border border-brand-200/40">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div>
-            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Batch Total</p>
-            <p className="text-display-sm font-bold tabular-nums text-gray-900">{fmt.currency(submittableTotal)}</p>
+            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Volume Referred (TPV)</p>
+            <p className="text-stat font-bold tabular-nums text-gray-900">{fmt.currency(submittableTpv)}</p>
           </div>
-          <div className="h-10 w-px bg-surface-200/60" />
+          <div className="hidden md:flex items-center justify-center text-brand-400">→</div>
           <div>
-            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Affiliates Selected</p>
-            <p className="text-stat font-bold tabular-nums text-gray-900">{submittableRows.length}</p>
+            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Cash Collected (Kashu Fee)</p>
+            <p className="text-stat font-bold tabular-nums text-gray-900">{fmt.currency(submittableCashCollected)}</p>
           </div>
-          <div className="h-10 w-px bg-surface-200/60" />
+          <div className="hidden md:flex items-center justify-center text-brand-400">→</div>
           <div>
-            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Earnings In Batch</p>
-            <p className="text-stat font-bold tabular-nums text-gray-900">{submittableEarningIds.length}</p>
+            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Commission Owed</p>
+            <p className="text-display-sm font-bold tabular-nums text-accent">{fmt.currency(submittableTotal)}</p>
           </div>
         </div>
-        {submittableRows.length > 0 && (
-          <p className="text-[10px] text-brand-400">
-            Average per affiliate: <span className="font-semibold text-gray-900">{fmt.currency(submittableTotal / submittableRows.length)}</span>
-          </p>
-        )}
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-surface-200/60">
+          <div className="flex items-center gap-4 text-[10px] text-brand-400">
+            <span><span className="font-semibold text-gray-900 tabular-nums">{submittableRows.length}</span> affiliates</span>
+            <span>·</span>
+            <span><span className="font-semibold text-gray-900 tabular-nums">{submittableEarningIds.length}</span> earnings</span>
+            {submittableRows.length > 0 && (
+              <>
+                <span>·</span>
+                <span>Avg <span className="font-semibold text-gray-900">{fmt.currency(submittableTotal / submittableRows.length)}</span> per affiliate</span>
+              </>
+            )}
+          </div>
+          {submittableCashCollected > 0 && (
+            <p className="text-[10px] text-brand-400">
+              Effective rate: <span className="font-semibold text-gray-900 tabular-nums">{((submittableTotal / submittableCashCollected) * 100).toFixed(2)}% of fee</span>
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="card overflow-hidden">
@@ -358,8 +391,10 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                 <th className="th">Affiliate</th>
                 <th className="th">Tier</th>
                 <th className="th text-right">Rate</th>
-                <th className="th text-right">Earnings</th>
-                <th className="th text-right">Total</th>
+                <th className="th text-right hidden md:table-cell">Volume (TPV)</th>
+                <th className="th text-right hidden md:table-cell">Cash Collected</th>
+                <th className="th text-right hidden xl:table-cell">Earnings</th>
+                <th className="th text-right">Commission</th>
                 <th className="th">Status</th>
               </tr>
             </thead>
@@ -398,7 +433,9 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                       </span>
                     </td>
                     <td className="td text-right text-xs tabular-nums text-gray-700">{rateLabel(r.rate, r.basis)}</td>
-                    <td className="td text-right text-xs text-gray-700 tabular-nums">{fmt.count(r.count)}</td>
+                    <td className="td text-right text-xs text-gray-700 tabular-nums hidden md:table-cell">{fmt.currency(r.tpv)}</td>
+                    <td className="td text-right text-xs text-gray-700 tabular-nums hidden md:table-cell">{fmt.currency(r.cash_collected)}</td>
+                    <td className="td text-right text-xs text-gray-700 tabular-nums hidden xl:table-cell">{fmt.count(r.count)}</td>
                     <td className="td text-right text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(r.total)}</td>
                     <td className="td">
                       {!r.contract_signed && (

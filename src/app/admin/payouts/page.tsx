@@ -37,7 +37,7 @@ export default async function AdminPayoutsPage() {
   // Approved earnings that aren't already in a batch — the universe the AM is choosing from.
   const { data: unbatchedRaw } = await db
     .from("earnings")
-    .select("id, affiliate_id, amount, transaction_ref, tier_at_earning, custom_commission_rate, custom_commission_basis")
+    .select("id, affiliate_id, amount, transaction_fee_amount, transaction_ref, tier_at_earning, custom_commission_rate, custom_commission_basis")
     .eq("status", "approved")
     .is("payout_id", null);
 
@@ -45,6 +45,7 @@ export default async function AdminPayoutsPage() {
     id: string;
     affiliate_id: string;
     amount: number;
+    transaction_fee_amount: number;
     transaction_ref: string | null;
     tier_at_earning: "gold" | "platinum" | "custom";
     custom_commission_rate: number | null;
@@ -54,14 +55,16 @@ export default async function AdminPayoutsPage() {
 
   const txnRefs = unbatched.map((u) => u.transaction_ref).filter((r): r is string => !!r);
   const txnDateByRef = new Map<string, string | null>();
+  const txnAmountByRef = new Map<string, number>();
   if (txnRefs.length > 0) {
     const { data: txns } = await db
       .from("transactions")
-      .select("airtable_record_id, transaction_date")
+      .select("airtable_record_id, transaction_date, amount")
       .in("airtable_record_id", txnRefs);
-    type TxnRow = { airtable_record_id: string; transaction_date: string | null };
+    type TxnRow = { airtable_record_id: string; transaction_date: string | null; amount: number | null };
     for (const t of (txns as TxnRow[] | null) ?? []) {
       txnDateByRef.set(t.airtable_record_id, t.transaction_date);
+      txnAmountByRef.set(t.airtable_record_id, Number(t.amount) || 0);
     }
   }
 
@@ -166,6 +169,8 @@ export default async function AdminPayoutsPage() {
     id: u.id,
     affiliate_id: u.affiliate_id,
     amount: Number(u.amount) || 0,
+    cash_collected: Number(u.transaction_fee_amount) || 0,
+    tpv: u.transaction_ref ? (txnAmountByRef.get(u.transaction_ref) ?? 0) : 0,
     transaction_date: u.transaction_ref ? (txnDateByRef.get(u.transaction_ref) ?? null) : null,
     tier_at_earning: u.tier_at_earning,
     custom_commission_rate: u.custom_commission_rate !== null ? Number(u.custom_commission_rate) : null,
