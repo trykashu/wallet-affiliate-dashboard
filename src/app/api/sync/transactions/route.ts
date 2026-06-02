@@ -11,6 +11,7 @@ import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords } from "@/lib/airtable";
 import { calculateEarning, calculateKashuFee, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
+import { dedupAirtableTransactions, decideEarningAction } from "@/lib/sync/anneal-transactions";
 import type { AffiliateTier, FunnelStatusSlug } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,15 @@ export async function GET() {
 
   try {
     // Step 1: Fetch all records from Airtable User Transactions
-    const { records, apiCalls } = await fetchAllRecords(baseId, AIRTABLE_TABLE_ID);
+    const { records: rawRecords, apiCalls } = await fetchAllRecords(baseId, AIRTABLE_TABLE_ID);
+
+    // Step 1b: ANNEAL — collapse Airtable-side duplicates sharing the same
+    // wallet `Transaction ID` to a single canonical record (oldest wins).
+    // Loser airtable_record_ids will be reconciled later: their earnings get
+    // migrated to (or deleted in favor of) the canonical, and the loser local
+    // rows are hard-deleted.
+    const dedupResult = dedupAirtableTransactions(rawRecords);
+    const records = dedupResult.canonical;
 
     // Step 2: Pre-load all affiliates into lookup maps
     const db = createServiceClient();
@@ -325,11 +334,179 @@ export async function GET() {
       }
     }
 
+    // Step 5b: ANNEAL — earnings reconciliation for loser airtable_record_ids.
+    // For every loser ID, decide whether its earning(s) should be migrated to
+    // the canonical, deleted (duplicate of canonical), or flagged (paid).
+    const earningsMigrated: string[] = [];
+    const earningsDeleted: string[] = [];
+    const earningsWarnings: string[] = [];
+
+    if (dedupResult.loserToCanonical.size > 0) {
+      const loserIds = Array.from(dedupResult.loserToCanonical.keys());
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: orphanEarnings } = await (db as any)
+        .from("earnings")
+        .select("id, status, transaction_ref, amount, transaction_fee_amount")
+        .in("transaction_ref", loserIds);
+
+      for (const e of (orphanEarnings ?? []) as Array<{
+        id: string;
+        status: string;
+        transaction_ref: string;
+      }>) {
+        const canonicalRef = dedupResult.loserToCanonical.get(e.transaction_ref)!;
+        // Check if canonical already has an earning
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: existing } = await (db as any)
+          .from("earnings")
+          .select("id")
+          .eq("transaction_ref", canonicalRef)
+          .limit(1);
+        const canonicalHasEarning = (existing?.length ?? 0) > 0;
+
+        const decision = decideEarningAction(e, canonicalRef, canonicalHasEarning);
+        if (decision.action === "migrate") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (db as any)
+            .from("earnings")
+            .update({ transaction_ref: decision.to })
+            .eq("id", e.id);
+          earningsMigrated.push(e.id);
+        } else if (decision.action === "delete") {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (db as any).from("earnings").delete().eq("id", e.id);
+          earningsDeleted.push(e.id);
+        } else {
+          earningsWarnings.push(`${e.id}: ${decision.reason}`);
+        }
+      }
+    }
+
+    // Step 5c: ANNEAL — hard-delete local transactions for losers + any
+    // transaction whose airtable_record_id no longer exists upstream.
+    const allUpstreamIds = new Set([
+      ...records.map((r) => r.id),
+      // We do NOT include loser IDs — they're explicitly removed.
+    ]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: localTxns } = await (db as any)
+      .from("transactions")
+      .select("id, airtable_record_id");
+    const localById = new Map<string, string>();
+    for (const t of (localTxns ?? []) as Array<{ id: string; airtable_record_id: string }>) {
+      localById.set(t.airtable_record_id, t.id);
+    }
+    const toDeleteAirtableIds: string[] = [];
+    for (const [airtableId] of localById) {
+      if (!allUpstreamIds.has(airtableId)) toDeleteAirtableIds.push(airtableId);
+    }
+
+    let transactionsDeleted = 0;
+    let cascadedEarningsDeleted = 0;
+    // Track affiliate_ids of deleted transactions so we recompute their
+    // volume totals below — otherwise affiliates whose every transaction was
+    // pruned would keep stale referred_volume_total.
+    const affiliatesAffectedByDelete = new Set<string>();
+    if (toDeleteAirtableIds.length > 0) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: affectedRows } = await (db as any)
+        .from("transactions")
+        .select("affiliate_id")
+        .in("airtable_record_id", toDeleteAirtableIds);
+      for (const r of (affectedRows ?? []) as Array<{ affiliate_id: string }>) {
+        if (r.affiliate_id) affiliatesAffectedByDelete.add(r.affiliate_id);
+      }
+      // Cascade-delete pending/approved earnings that referenced any of these.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: cascade } = await (db as any)
+        .from("earnings")
+        .select("id, status, transaction_ref")
+        .in("transaction_ref", toDeleteAirtableIds);
+      const toDeleteEarningIds: string[] = [];
+      for (const e of (cascade ?? []) as Array<{ id: string; status: string; transaction_ref: string }>) {
+        if (e.status === "pending" || e.status === "approved") {
+          toDeleteEarningIds.push(e.id);
+        } else {
+          earningsWarnings.push(
+            `${e.id}: status=${e.status}; underlying transaction ${e.transaction_ref} deleted upstream — manual review`,
+          );
+        }
+      }
+      if (toDeleteEarningIds.length > 0) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (db as any).from("earnings").delete().in("id", toDeleteEarningIds);
+        cascadedEarningsDeleted = toDeleteEarningIds.length;
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: deleted } = await (db as any)
+        .from("transactions")
+        .delete()
+        .in("airtable_record_id", toDeleteAirtableIds)
+        .select("id");
+      transactionsDeleted = deleted?.length ?? 0;
+    }
+
+    // Step 5d: ANNEAL — re-derive earning amounts for pending/approved when
+    // the underlying transaction amount has drifted from what was originally
+    // recorded. (status='paid' / 'reversed' are immutable.)
+    let earningsRederived = 0;
+    if (rows.length > 0) {
+      const canonicalIds = rows.map((r) => r.airtable_record_id);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: existingEarnings } = await (db as any)
+        .from("earnings")
+        .select("id, transaction_ref, amount, transaction_fee_amount, tier_at_earning, custom_commission_rate, custom_commission_basis, status, affiliate_id")
+        .in("transaction_ref", canonicalIds)
+        .in("status", ["pending", "approved"]);
+
+      const rowByRef = new Map(rows.map((r) => [r.airtable_record_id, r]));
+      for (const e of (existingEarnings ?? []) as Array<{
+        id: string;
+        transaction_ref: string;
+        amount: number;
+        transaction_fee_amount: number;
+        tier_at_earning: AffiliateTier;
+        custom_commission_rate: number | null;
+        custom_commission_basis: 'tpv' | 'kashu_fee' | null;
+        status: string;
+        affiliate_id: string;
+      }>) {
+        const row = rowByRef.get(e.transaction_ref);
+        if (!row) continue;
+        if (row.amount <= 0 || row.self_referral) continue;
+
+        const expectedKashuFee = calculateKashuFee(row.amount);
+        const customCommission =
+          e.tier_at_earning === "custom" && e.custom_commission_rate !== null && e.custom_commission_basis
+            ? { rate: Number(e.custom_commission_rate), basis: e.custom_commission_basis }
+            : undefined;
+        const expectedAmount = calculateEarning(row.amount, e.tier_at_earning, "default", customCommission);
+
+        const amountDrift = Math.abs(Number(e.amount) - expectedAmount) > 0.005;
+        const feeDrift = Math.abs(Number(e.transaction_fee_amount) - expectedKashuFee) > 0.005;
+        if (amountDrift || feeDrift) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (db as any)
+            .from("earnings")
+            .update({ amount: expectedAmount, transaction_fee_amount: expectedKashuFee })
+            .eq("id", e.id);
+          earningsRederived++;
+        }
+      }
+    }
+
     // Step 6: Update affiliate volume totals from ALL Transfer In transactions
     let volumeUpdated = 0;
     let tierUpgrades = 0;
 
-    for (const affiliateId of affiliateTransferInTotals.keys()) {
+    // Union of: affiliates with new/updated upstream txns this cycle, AND
+    // affiliates whose transactions were pruned in the deletion pass.
+    const affiliatesToRecompute = new Set<string>([
+      ...affiliateTransferInTotals.keys(),
+      ...affiliatesAffectedByDelete,
+    ]);
+
+    for (const affiliateId of affiliatesToRecompute) {
       // Sum all Transfer In amounts from the transactions table for this affiliate
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data: txnData } = await (db as any)
@@ -487,7 +664,16 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      total_fetched: records.length,
+      total_fetched: rawRecords.length,
+      after_dedup: records.length,
+      duplicates_collapsed: dedupResult.duplicates.length,
+      duplicates: dedupResult.duplicates.length > 0 ? dedupResult.duplicates : undefined,
+      transactions_deleted: transactionsDeleted,
+      cascaded_earnings_deleted: cascadedEarningsDeleted,
+      earnings_migrated: earningsMigrated.length,
+      earnings_deleted: earningsDeleted.length,
+      earnings_rederived: earningsRederived,
+      earnings_warnings: earningsWarnings.length > 0 ? earningsWarnings : undefined,
       matched: rows.length,
       skipped_no_referrer: skippedNoReferrer,
       skipped_no_match: skippedNoMatch,
