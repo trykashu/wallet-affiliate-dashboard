@@ -75,6 +75,31 @@ export async function fetchDocumentFields(
   return (data.fields ?? []) as PandaDocField[];
 }
 
+/**
+ * Download the rendered PDF for a completed PandaDoc document.
+ * Used as a fallback when structured fields are missing or insufficient —
+ * the same extractor that powers the admin PDF-upload flow can then run on
+ * this buffer to extract bank details + address from the form-values block.
+ */
+export async function downloadDocumentPdf(documentId: string): Promise<Uint8Array> {
+  const apiKey = process.env.PANDADOC_API_KEY;
+  if (!apiKey) {
+    throw new Error("PANDADOC_API_KEY is not set");
+  }
+  const url = `https://api.pandadoc.com/public/v1/documents/${documentId}/download`;
+  const res = await fetch(url, {
+    headers: { Authorization: `API-Key ${apiKey}` },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `PandaDoc download error ${res.status}: ${text.slice(0, 200)}`,
+    );
+  }
+  const arr = await res.arrayBuffer();
+  return new Uint8Array(arr);
+}
+
 // ---------------------------------------------------------------------------
 // Extraction
 // ---------------------------------------------------------------------------

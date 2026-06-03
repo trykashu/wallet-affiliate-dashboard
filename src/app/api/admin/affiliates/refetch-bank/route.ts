@@ -1,10 +1,19 @@
 /**
  * POST /api/admin/affiliates/refetch-bank
  *
- * Admin-only. Re-fetches a signed PandaDoc document for an affiliate and upserts
- * the extracted bank details into payout_accounts. Returns { saved: boolean, ... }.
+ * Admin-only. Re-fetches a signed PandaDoc document for an affiliate and
+ * upserts the extracted bank details into payout_accounts.
  *
- * Body: { affiliate_id: string }
+ * Two extraction passes are tried, then merged per-field:
+ *   1) Structured PandaDoc form fields via /documents/{id}/details
+ *   2) Rendered-PDF text via /documents/{id}/download → unpdf → the same
+ *      extractor that powers the admin PDF-upload flow
+ *
+ * Pass 2 catches the case where the agreement was signed without
+ * structured form fields (free-text PDFs) — which was failing previously
+ * with "Bank fields could not be extracted from the PandaDoc".
+ *
+ * Returns { saved: boolean, ... }. Body: { affiliate_id: string, confirm?: boolean }
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,12 +22,33 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
-import { fetchDocumentFields, extractBankDetails } from "@/lib/pandadoc";
+import { fetchDocumentFields, downloadDocumentPdf, extractBankDetails } from "@/lib/pandadoc";
+import { extractTextFromPdf, extractBankFromText, type PdfExtractedBank } from "@/lib/pdf-bank-extract";
+
+export const runtime = "nodejs";
 
 const BodySchema = z.object({
   affiliate_id: z.string().uuid(),
   confirm: z.boolean().optional(),
 });
+
+interface MergedExtraction {
+  routing_number: string | null;
+  account_number: string | null;
+  routing_valid: boolean;
+  account_valid: boolean;
+  account_holder_name: string | null;
+  account_type: "checking" | "savings" | null;
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  region: string | null;
+  postal_code: string | null;
+  country: string;
+  warnings: string[];
+  /** Per-field source for debugging — "fields" or "pdf". */
+  source: { bank: "fields" | "pdf" | "none"; address: "fields" | "pdf" | "none" };
+}
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
@@ -41,7 +71,6 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any;
 
-  // Look up affiliate + pandadoc_id
   const { data: affiliate, error: affErr } = await svc
     .from("affiliates")
     .select("id, agent_name, email, pandadoc_id")
@@ -62,79 +91,140 @@ export async function POST(request: NextRequest) {
     }, { status: 422 });
   }
 
-  // Fetch fields from PandaDoc
-  let fields;
+  // PASS 1: structured fields. Errors here don't abort — we still try PDF.
+  let fieldsResult: Awaited<ReturnType<typeof extractBankDetails>> | null = null;
+  let fieldsError: string | null = null;
   try {
-    fields = await fetchDocumentFields(affiliate.pandadoc_id);
+    const fields = await fetchDocumentFields(affiliate.pandadoc_id);
+    fieldsResult = extractBankDetails(fields);
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
-    console.error("[refetch-bank] PandaDoc fetch failed:", msg);
-    return NextResponse.json({
-      saved: false,
-      reason: "pandadoc_fetch_failed",
-      message: msg.slice(0, 200),
-    }, { status: 502 });
+    fieldsError = e instanceof Error ? e.message : String(e);
+    console.warn("[refetch-bank] Structured-fields path failed:", fieldsError);
   }
 
-  const bankDetails = extractBankDetails(fields);
+  // PASS 2: PDF text extraction — run if structured fields didn't give us
+  // complete bank+address. Cheap relative to a manual hop.
+  const needsPdfFallback =
+    !fieldsResult ||
+    !fieldsResult.routing_valid ||
+    !fieldsResult.account_valid ||
+    !fieldsResult.address1 ||
+    !fieldsResult.city ||
+    !fieldsResult.region ||
+    !fieldsResult.postal_code;
 
-  // Always compute the preview payload from the extraction
-  const preview = {
-    account_holder_name: bankDetails.account_holder_name,
-    routing_number: bankDetails.routing_number,
-    account_number_last4: bankDetails.account_number
-      ? bankDetails.account_number.slice(-4)
-      : null,
-    account_type: bankDetails.account_type,
-    routing_valid: bankDetails.routing_valid,
-    account_valid: bankDetails.account_valid,
-    warnings: bankDetails.warnings,
-    address1: bankDetails.address1,
-    address2: bankDetails.address2,
-    city: bankDetails.city,
-    region: bankDetails.region,
-    postal_code: bankDetails.postal_code,
-    country: bankDetails.country,
+  let pdfResult: PdfExtractedBank | null = null;
+  let pdfError: string | null = null;
+  if (needsPdfFallback) {
+    try {
+      const buf = await downloadDocumentPdf(affiliate.pandadoc_id);
+      const text = await extractTextFromPdf(buf);
+      pdfResult = extractBankFromText(text);
+    } catch (e) {
+      pdfError = e instanceof Error ? e.message : String(e);
+      console.warn("[refetch-bank] PDF fallback failed:", pdfError);
+    }
+  }
+
+  // MERGE: prefer structured fields where valid; fall back to PDF per-field.
+  const merged: MergedExtraction = {
+    routing_number:
+      fieldsResult?.routing_valid && fieldsResult.routing_number
+        ? fieldsResult.routing_number
+        : pdfResult?.routing_valid && pdfResult.routing_number
+        ? pdfResult.routing_number
+        : null,
+    account_number:
+      fieldsResult?.account_valid && fieldsResult.account_number
+        ? fieldsResult.account_number
+        : pdfResult?.account_valid && pdfResult.account_number
+        ? pdfResult.account_number
+        : null,
+    routing_valid: (fieldsResult?.routing_valid ?? false) || (pdfResult?.routing_valid ?? false),
+    account_valid: (fieldsResult?.account_valid ?? false) || (pdfResult?.account_valid ?? false),
+    account_holder_name:
+      fieldsResult?.account_holder_name || pdfResult?.account_holder_name || null,
+    account_type:
+      fieldsResult?.account_type || pdfResult?.account_type || "checking",
+    address1: fieldsResult?.address1 || pdfResult?.address.address1 || null,
+    address2: fieldsResult?.address2 || pdfResult?.address.address2 || null,
+    city: fieldsResult?.city || pdfResult?.address.city || null,
+    region: fieldsResult?.region || pdfResult?.address.region || null,
+    postal_code: fieldsResult?.postal_code || pdfResult?.address.postal_code || null,
+    country: fieldsResult?.country || pdfResult?.address.country || "US",
+    warnings: [
+      ...(fieldsResult?.warnings ?? []),
+      ...(pdfResult?.warnings.map((w) => `(pdf fallback) ${w}`) ?? []),
+      ...(fieldsError ? [`structured fields failed: ${fieldsError}`] : []),
+      ...(pdfError ? [`pdf fallback failed: ${pdfError}`] : []),
+    ],
+    source: {
+      bank:
+        fieldsResult?.routing_valid && fieldsResult.account_valid
+          ? "fields"
+          : pdfResult?.routing_valid && pdfResult.account_valid
+          ? "pdf"
+          : "none",
+      address:
+        fieldsResult?.address1 && fieldsResult?.city && fieldsResult?.region && fieldsResult?.postal_code
+          ? "fields"
+          : pdfResult?.address.address1 && pdfResult?.address.city && pdfResult?.address.region && pdfResult?.address.postal_code
+          ? "pdf"
+          : "none",
+    },
   };
 
-  if (!bankDetails.routing_valid || !bankDetails.account_valid) {
+  const preview = {
+    account_holder_name: merged.account_holder_name,
+    routing_number: merged.routing_number,
+    account_number_last4: merged.account_number ? merged.account_number.slice(-4) : null,
+    account_type: merged.account_type,
+    routing_valid: merged.routing_valid,
+    account_valid: merged.account_valid,
+    warnings: merged.warnings,
+    address1: merged.address1,
+    address2: merged.address2,
+    city: merged.city,
+    region: merged.region,
+    postal_code: merged.postal_code,
+    country: merged.country,
+    source: merged.source,
+  };
+
+  if (!merged.routing_valid || !merged.account_valid) {
     return NextResponse.json({
       saved: false,
       reason: "invalid_bank_fields",
-      message: "Bank fields could not be extracted from the PandaDoc. They may be missing or malformed.",
+      message:
+        "Bank fields could not be extracted from either the structured PandaDoc fields or the rendered PDF. They may be missing or malformed.",
       preview,
     }, { status: 422 });
   }
 
   if (!confirm) {
-    // Preview mode: extracted valid but not saving yet.
-    return NextResponse.json({
-      saved: false,
-      preview,
-    });
+    return NextResponse.json({ saved: false, preview });
   }
 
-  // Upsert payout_accounts (same shape as the webhook)
-  const accountNumberLast4 = bankDetails.account_number!.slice(-4);
+  const accountNumberLast4 = merged.account_number!.slice(-4);
   const bankPayload = {
     affiliate_id: affiliate.id,
     provider: "mercury" as const,
-    account_name: bankDetails.account_holder_name ?? affiliate.agent_name,
-    routing_number: bankDetails.routing_number,
+    account_name: merged.account_holder_name ?? affiliate.agent_name,
+    routing_number: merged.routing_number,
     account_number_last4: accountNumberLast4,
     is_default: true,
     is_verified: true,
-    address1: bankDetails.address1,
-    address2: bankDetails.address2,
-    city: bankDetails.city,
-    region: bankDetails.region,
-    postal_code: bankDetails.postal_code,
-    country: bankDetails.country,
+    address1: merged.address1,
+    address2: merged.address2,
+    city: merged.city,
+    region: merged.region,
+    postal_code: merged.postal_code,
+    country: merged.country,
     metadata: {
-      full_account_number: bankDetails.account_number,
-      routing_number: bankDetails.routing_number,
-      account_type: bankDetails.account_type,
-      source: "pandadoc-refetch",
+      full_account_number: merged.account_number,
+      routing_number: merged.routing_number,
+      account_type: merged.account_type,
+      source: `pandadoc-refetch:${merged.source.bank}/${merged.source.address}`,
       refetched_by: user.email,
       refetched_at: new Date().toISOString(),
     },
@@ -168,7 +258,6 @@ export async function POST(request: NextRequest) {
     action = "created";
   }
 
-  // Clear bank_details_needed flag
   await svc
     .from("affiliates")
     .update({ bank_details_needed: false })
@@ -185,16 +274,13 @@ export async function POST(request: NextRequest) {
       pandadoc_id: affiliate.pandadoc_id,
       action,
       confirm: true,
-      account_holder_name: bankDetails.account_holder_name,
+      source: merged.source,
+      account_holder_name: merged.account_holder_name,
       account_number_last4: accountNumberLast4,
     },
   });
 
-  return NextResponse.json({
-    saved: true,
-    action,
-    preview,
-  });
+  return NextResponse.json({ saved: true, action, preview });
 }
 
 export async function GET() {
