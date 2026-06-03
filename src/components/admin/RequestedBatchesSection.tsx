@@ -15,6 +15,7 @@ export default function RequestedBatchesSection({ batches }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [reverifyingAffId, setReverifyingAffId] = useState<string | null>(null);
   const [reverifyMsg, setReverifyMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+  const [addressModal, setAddressModal] = useState<{ affiliate_id: string; affiliate_name: string } | null>(null);
 
   async function handleReverify(affiliateId: string, affiliateName: string) {
     if (!confirm(`Re-verify bank details for ${affiliateName} from PandaDoc?\n\nThis will fetch the latest signed agreement and overwrite the address on file.`)) return;
@@ -155,20 +156,32 @@ export default function RequestedBatchesSection({ batches }: Props) {
                       )}
                     </td>
                     <td className="td text-right">
-                      {p.pandadoc_id ? (
-                        <button
-                          onClick={() => handleReverify(p.affiliate_id, p.affiliate_name)}
-                          disabled={reverifyingAffId === p.affiliate_id}
-                          title="Re-fetch bank details + address from PandaDoc and save"
-                          className={`text-[10px] font-semibold underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed ${
-                            p.has_address ? "text-brand-600 hover:text-brand-700" : "text-amber-700 hover:text-amber-800"
-                          }`}
-                        >
-                          {reverifyingAffId === p.affiliate_id ? "Re-verifying…" : "Re-verify from PandaDoc"}
-                        </button>
-                      ) : (
-                        <span className="text-[10px] text-brand-400">No PandaDoc</span>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        {p.pandadoc_id && (
+                          <button
+                            onClick={() => handleReverify(p.affiliate_id, p.affiliate_name)}
+                            disabled={reverifyingAffId === p.affiliate_id}
+                            title="Re-fetch bank details + address from PandaDoc and save"
+                            className={`text-[10px] font-semibold underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed ${
+                              p.has_address ? "text-brand-600 hover:text-brand-700" : "text-amber-700 hover:text-amber-800"
+                            }`}
+                          >
+                            {reverifyingAffId === p.affiliate_id ? "Re-verifying…" : "Re-verify from PandaDoc"}
+                          </button>
+                        )}
+                        {!p.has_address && (
+                          <button
+                            onClick={() => setAddressModal({ affiliate_id: p.affiliate_id, affiliate_name: p.affiliate_name })}
+                            title="Manually enter address — use when PandaDoc Re-verify fails"
+                            className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted"
+                          >
+                            Enter address manually
+                          </button>
+                        )}
+                        {p.has_address && !p.pandadoc_id && (
+                          <span className="text-[10px] text-brand-400">No PandaDoc</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -178,6 +191,120 @@ export default function RequestedBatchesSection({ batches }: Props) {
           );
         })}
       </div>
+
+      {addressModal && (
+        <AddressModal
+          affiliateId={addressModal.affiliate_id}
+          affiliateName={addressModal.affiliate_name}
+          onClose={() => setAddressModal(null)}
+          onSaved={() => {
+            setAddressModal(null);
+            setReverifyMsg({ kind: "ok", text: `Address saved for ${addressModal.affiliate_name}. Try Execute again.` });
+            router.refresh();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+function AddressModal({
+  affiliateId,
+  affiliateName,
+  onClose,
+  onSaved,
+}: {
+  affiliateId: string;
+  affiliateName: string;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [address1, setAddress1] = useState("");
+  const [address2, setAddress2] = useState("");
+  const [city, setCity] = useState("");
+  const [region, setRegion] = useState("");
+  const [postalCode, setPostalCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const canSave =
+    address1.trim().length >= 2 &&
+    city.trim().length >= 2 &&
+    /^[A-Za-z]{2}$/.test(region.trim()) &&
+    /^\d{5}(-\d{4})?$/.test(postalCode.trim());
+
+  async function save() {
+    setBusy(true);
+    setErr(null);
+    try {
+      const res = await fetch(`/api/admin/affiliates/${affiliateId}/address`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address1: address1.trim(),
+          address2: address2.trim() || null,
+          city: city.trim(),
+          region: region.trim().toUpperCase(),
+          postal_code: postalCode.trim(),
+        }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(body?.error ?? `Save failed (${res.status})`);
+      onSaved();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="drawer-backdrop" onClick={() => !busy && onClose()} />
+      <div className="drawer-panel max-w-md">
+        <div className="mb-4">
+          <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Manual address</p>
+          <h2 className="text-lg font-bold text-gray-900 mt-1">Enter address for {affiliateName}</h2>
+          <p className="text-xs text-brand-400 mt-1">Required by Mercury to create the ACH recipient. Saved to the affiliate&apos;s default payout account.</p>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Address Line 1</label>
+            <input value={address1} onChange={(e) => setAddress1(e.target.value)} placeholder="304 S. Jones Blvd" className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1" />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Address Line 2 (optional)</label>
+            <input value={address2} onChange={(e) => setAddress2(e.target.value)} placeholder="Suite 100" className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1" />
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="col-span-2">
+              <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">City</label>
+              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Las Vegas" className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1" />
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">State</label>
+              <input value={region} onChange={(e) => setRegion(e.target.value.toUpperCase().slice(0, 2))} placeholder="NV" maxLength={2} className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1 uppercase tabular-nums" />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">ZIP Code</label>
+            <input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="89107" maxLength={10} className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1 tabular-nums" />
+          </div>
+        </div>
+        {err && (
+          <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700">{err}</div>
+        )}
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button onClick={onClose} disabled={busy} className="text-xs font-semibold text-brand-600 px-3 py-2">Cancel</button>
+          <button
+            onClick={save}
+            disabled={!canSave || busy}
+            className="btn-primary text-xs px-4 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {busy ? "Saving…" : "Save address"}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
