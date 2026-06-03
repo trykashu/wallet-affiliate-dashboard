@@ -187,6 +187,26 @@ function findAddressTails(text: string): AddressMatch[] {
   return out;
 }
 
+// Common US street suffixes — used to split "city" when no comma separates
+// street and city (e.g. "12658 Bay Ave Euless TX 76040").
+const STREET_SUFFIX_RX =
+  /\b(Ave|Avenue|Blvd|Boulevard|St|Street|Rd|Road|Dr|Drive|Cir|Circle|Pkwy|Parkway|Way|Ct|Court|Pl|Place|Sq|Square|Ln|Lane|Hwy|Highway|Ter|Terrace|Trail|Trl|Plaza|Plz|Cv|Cove|Loop|Run|Path|Crossing|Xing|Ridge|Rdg|Crest|Mall|Walk|Row|Bend|Bnd|Park)\b\.?/gi;
+
+/** Split a city candidate at the LAST street-suffix word. If the city
+ *  greedily captured "Bay Ave Euless", return { street: "Bay Ave", city: "Euless" }. */
+function splitCityOnStreetSuffix(cityText: string): { street: string | null; city: string } {
+  const matches = [...cityText.matchAll(STREET_SUFFIX_RX)];
+  if (matches.length === 0) return { street: null, city: cityText };
+  const last = matches[matches.length - 1];
+  const suffixEnd = last.index! + last[0].length;
+  const street = cityText.slice(0, suffixEnd).trim();
+  const city = cityText.slice(suffixEnd).replace(/^[,\s]+/, "").trim();
+  // Only accept the split if both halves are non-empty (otherwise the
+  // "city" was just "Ave" or similar — keep original)
+  if (!street || !city) return { street: null, city: cityText };
+  return { street, city };
+}
+
 /** Extract a street address (address1) from the chars immediately before a
  *  matched "city STATE ZIP" suffix. Anchor on the FIRST "street-number
  *  word" pattern (e.g. "304 S", "37200 paseo") — anything before that in
@@ -394,14 +414,38 @@ export function extractBankFromText(text: string): PdfExtractedBank {
   }
   if (tails.length > 0) {
     const tail = tails[tails.length - 1]; // closest to values block
-    const street = deriveStreet(partnerText, tail);
-    if (street) {
-      result.address.address1 = street;
-      result.address.city = tail.city;
-      result.address.region = tail.region;
-      result.address.postal_code = tail.postal_code;
-    } else {
-      warnings.push(`Found '${tail.city} ${tail.region} ${tail.postal_code}' but could not derive street`);
+
+    // Case A: city greedily captured a street name (e.g. "Bay Ave Euless").
+    // Split at the street-suffix word and use the street-num prefix + that
+    // street suffix as address1, city = whatever's after.
+    const split = splitCityOnStreetSuffix(tail.city);
+    if (split.street) {
+      // Reconstruct address1 by looking for a street number in the prefix
+      // PLUS the street tokens captured in the city. The street num may be
+      // outside the prefix slice, so search a wider window.
+      const wideStart = Math.max(0, tail.index - 100);
+      const wide = partnerText.slice(wideStart, tail.index) + " " + tail.city;
+      const streetNumRx = /\b(?:\d{3,6}|\d{1,2}-\d{3,5}|\d{3,6}-\d{3,5})\s+[A-Za-z][\w\s.,'#&-]*?\b(Ave|Avenue|Blvd|Boulevard|St|Street|Rd|Road|Dr|Drive|Cir|Circle|Pkwy|Parkway|Way|Ct|Court|Pl|Place|Sq|Square|Ln|Lane|Hwy|Highway|Ter|Terrace|Trail|Trl|Plaza|Plz|Cv|Cove|Loop|Run|Path|Crossing|Xing|Ridge|Rdg|Crest|Mall|Walk|Row|Bend|Bnd|Park)\b\.?/i;
+      const m = wide.match(streetNumRx);
+      if (m) {
+        result.address.address1 = m[0].trim();
+        result.address.city = split.city;
+        result.address.region = tail.region;
+        result.address.postal_code = tail.postal_code;
+      }
+    }
+
+    // Case B: city is clean — try standard street derivation from prefix
+    if (!result.address.address1) {
+      const street = deriveStreet(partnerText, tail);
+      if (street) {
+        result.address.address1 = street;
+        result.address.city = tail.city;
+        result.address.region = tail.region;
+        result.address.postal_code = tail.postal_code;
+      } else {
+        warnings.push(`Found '${tail.city} ${tail.region} ${tail.postal_code}' but could not derive street`);
+      }
     }
   } else {
     warnings.push("No US address tail (city STATE ZIP) found — address field appears empty or non-US");
