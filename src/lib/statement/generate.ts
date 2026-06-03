@@ -272,6 +272,10 @@ export async function generateStatement(svc: any, payoutId: string): Promise<Sta
         "Total Fees Collected": totals.total_fees,
         "Commission Due": totals.commission_due,
         "Statement Number": data.statement_number,
+        // Statements are generated post-wire (either auto on execute-batch
+        // success, or manually by an AM after the wire fires), so the
+        // commission is already paid by the time this row exists.
+        "Commission Status": "Paid",
       };
       if (affiliateRecordId) fields.Affiliate = [affiliateRecordId];
 
