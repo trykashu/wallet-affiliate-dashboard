@@ -202,9 +202,10 @@ function deriveStreet(text: string, tail: AddressMatch): string | null {
 
   // Anchor: first occurrence of <street-num> followed by a word character.
   // Require min 3 digits for plain numbers so dates like "04-10" don't match.
-  // Allow shorter numbers ONLY in the dashed form (e.g. "41-515") which is a
-  // recognisable Hawaiian-style apartment number.
-  const streetNumRx = /\b(?:\d{3,6}|\d{1,2}-\d{1,5}|\d{3,6}-\d{1,5})\s+[A-Za-z]/g;
+  // For dashed forms (Hawaiian "41-515", hyphenated address "1234-5678") the
+  // second half must be 3+ digits so two-digit-month dates like "04-24" are
+  // excluded.
+  const streetNumRx = /\b(?:\d{3,6}|\d{1,2}-\d{3,5}|\d{3,6}-\d{3,5})\s+[A-Za-z]/g;
   const streetMatch = streetNumRx.exec(prefix);
   if (!streetMatch) return null;
   let street = prefix.slice(streetMatch.index).trim().replace(/,\s*$/, "").trim();
