@@ -17,6 +17,14 @@ interface ExtractedPreview {
   account_type: "checking" | "savings" | null;
   routing_valid: boolean;
   account_valid: boolean;
+  address: {
+    address1: string | null;
+    address2: string | null;
+    city: string | null;
+    region: string | null;
+    postal_code: string | null;
+    country: string;
+  };
   warnings: string[];
   raw_text_excerpt: string;
 }
@@ -204,6 +212,15 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
             <PreviewField label="Account number" value={preview.extracted.account_number ? `••••${preview.extracted.account_number.slice(-4)}` : null} valid={preview.extracted.account_valid} />
             <PreviewField label="Account type" value={preview.extracted.account_type ?? "—"} />
             <PreviewField label="Email found in PDF" value={preview.extracted.email} />
+            <PreviewField
+              label="Address"
+              value={
+                preview.extracted.address.address1
+                  ? `${preview.extracted.address.address1}, ${preview.extracted.address.city ?? ""} ${preview.extracted.address.region ?? ""} ${preview.extracted.address.postal_code ?? ""}`.trim()
+                  : null
+              }
+              valid={!!(preview.extracted.address.address1 && preview.extracted.address.city && preview.extracted.address.region && preview.extracted.address.postal_code)}
+            />
           </div>
 
           {preview.extracted.warnings.length > 0 && (

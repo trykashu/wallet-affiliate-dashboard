@@ -107,3 +107,64 @@ test("phone with explicit formatting does not get picked as routing/account", ()
   assert.equal(r.routing_number, "121000358");
   assert.equal(r.account_number, "9876543210");
 });
+
+test("address: 'street city STATE ZIP' tail extracts all four fields", () => {
+  const text = makeFixture(
+    "Chess Capital LLC 304 S. Jones Blvd, Las Vegas NV 89107 Chess Capital " +
+    "joseph@chesscapitalgroup.com (949) 966-2097 Chess Capital LLC 121042882 7096759977 Joseph CEO 2026-04-15",
+  );
+  const r = extractBankFromText(text);
+  assert.equal(r.address.address1, "304 S. Jones Blvd");
+  assert.equal(r.address.city, "Las Vegas");
+  assert.equal(r.address.region, "NV");
+  assert.equal(r.address.postal_code, "89107");
+});
+
+test("address: lowercase state + no comma still extracts", () => {
+  const text = makeFixture(
+    "amrit singh 37200 paseo padre pkwy apt 130 fremont ca 94536 atm capital inc " +
+    "americantranz01@gmail.com 4088062234 atm capital inc 121000358 325206299714 amrit singh ceo 2026-04-12",
+  );
+  const r = extractBankFromText(text);
+  assert.equal(r.address.city, "Fremont");
+  assert.equal(r.address.region, "CA");
+  assert.equal(r.address.postal_code, "94536");
+  assert.ok(r.address.address1?.includes("paseo padre pkwy"));
+});
+
+test("address: ZIP+4 format (89107-1234) accepted, only 5 digits stored", () => {
+  const text = makeFixture(
+    "Acme Inc 123 Main St, Anytown NV 89107-1234 acme@x.com 5551234567 Acme 121000358 9876543210 Acme CEO 2026-04-01",
+  );
+  const r = extractBankFromText(text);
+  assert.equal(r.address.postal_code, "89107");
+  assert.equal(r.address.region, "NV");
+});
+
+test("address: rejects non-US state codes (e.g. ON for Ontario)", () => {
+  const text = makeFixture(
+    "Acme 123 Main St, Toronto ON M5V 2T6 acme@x.com 5551234567 Acme 121000358 9876543210 Acme CEO 2026-04-01",
+  );
+  const r = extractBankFromText(text);
+  assert.equal(r.address.region, null);
+  assert.equal(r.address.address1, null);
+});
+
+test("address: refuses to derive street when prefix has no digits (street-num missing)", () => {
+  // Holder name immediately precedes city → no street, refuse partial save
+  const text = makeFixture(
+    "Acme Holdings San Francisco CA 94105 acme@x.com 5551234567 Acme 121000358 9876543210 Acme CEO 2026-04-01",
+  );
+  const r = extractBankFromText(text);
+  // Without a digit in the prefix, we can't trust we got a street vs the holder name
+  assert.equal(r.address.address1, null);
+});
+
+test("address: 'No US address tail found' warning when address field is empty", () => {
+  const text = makeFixture(
+    "Holder holder@x.com 5551234567 Holder 121000358 9876543210 Holder CEO 2026-04-01",
+  );
+  const r = extractBankFromText(text);
+  assert.equal(r.address.address1, null);
+  assert.ok(r.warnings.some((w) => w.includes("No US address tail")));
+});

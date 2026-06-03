@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
         source: "pdf_upload",
       };
 
-  const accountData = {
+  const accountData: Record<string, unknown> = {
     affiliate_id: affiliate.id,
     provider: "mercury",
     provider_id: null,
@@ -162,6 +162,22 @@ export async function POST(request: NextRequest) {
     is_verified: true,
     metadata,
     updated_at: new Date().toISOString(),
+    // Address fields (from PDF extraction). Only write when complete so a
+    // partial address doesn't overwrite a previously-good one. Mercury
+    // requires all four to create a recipient.
+    ...(extracted.address.address1 &&
+        extracted.address.city &&
+        extracted.address.region &&
+        extracted.address.postal_code
+      ? {
+          address1: extracted.address.address1,
+          address2: extracted.address.address2,
+          city: extracted.address.city,
+          region: extracted.address.region,
+          postal_code: extracted.address.postal_code,
+          country: extracted.address.country,
+        }
+      : {}),
   };
 
   const { data: existing } = await db

@@ -61,6 +61,32 @@ const PHONE_BARE_RX = /(?<!\d)\d{10}(?!\d)|(?<!\d)1\d{10}(?!\d)/g;
 // can't use it. These three only appear inside the audit block proper.
 const AUDIT_TRAIL_RX = /(REF\.\s*NUMBER\b|DOCUMENT\s+COMPLETED\s+BY\s+ALL\s+PARTIES|Signed\s+with\s+PandaDoc\b)/i;
 
+const US_STATES = new Set([
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA",
+  "KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ",
+  "NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT",
+  "VA","WA","WV","WI","WY","DC",
+]);
+const STATE_NAME_TO_CODE: Record<string, string> = {
+  ALABAMA:"AL", ALASKA:"AK", ARIZONA:"AZ", ARKANSAS:"AR", CALIFORNIA:"CA",
+  COLORADO:"CO", CONNECTICUT:"CT", DELAWARE:"DE", FLORIDA:"FL", GEORGIA:"GA",
+  HAWAII:"HI", IDAHO:"ID", ILLINOIS:"IL", INDIANA:"IN", IOWA:"IA",
+  KANSAS:"KS", KENTUCKY:"KY", LOUISIANA:"LA", MAINE:"ME", MARYLAND:"MD",
+  MASSACHUSETTS:"MA", MICHIGAN:"MI", MINNESOTA:"MN", MISSISSIPPI:"MS", MISSOURI:"MO",
+  MONTANA:"MT", NEBRASKA:"NE", NEVADA:"NV", "NEW HAMPSHIRE":"NH", "NEW JERSEY":"NJ",
+  "NEW MEXICO":"NM", "NEW YORK":"NY", "NORTH CAROLINA":"NC", "NORTH DAKOTA":"ND",
+  OHIO:"OH", OKLAHOMA:"OK", OREGON:"OR", PENNSYLVANIA:"PA", "RHODE ISLAND":"RI",
+  "SOUTH CAROLINA":"SC", "SOUTH DAKOTA":"SD", TENNESSEE:"TN", TEXAS:"TX",
+  UTAH:"UT", VERMONT:"VT", VIRGINIA:"VA", WASHINGTON:"WA", "WEST VIRGINIA":"WV",
+  WISCONSIN:"WI", WYOMING:"WY", "DISTRICT OF COLUMBIA":"DC",
+};
+// Pattern A: city + 2-letter state + ZIP (most common; allows comma OR space between city/state)
+const STATE_ZIP_RX =
+  /,?\s+([A-Za-z][A-Za-z .'-]{1,40}?),?\s+([A-Za-z]{2})\s+(\d{5})(?:-\d{4})?\b/g;
+// Pattern B: city + full state name + ZIP (e.g. "Detroit, Michigan 48211")
+const FULL_STATE_ZIP_RX =
+  /,?\s+([A-Za-z][A-Za-z .'-]{1,40}?),?\s+(Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|District of Columbia)\s+(\d{5})(?:-\d{4})?\b/gi;
+
 export async function extractTextFromPdf(pdfBuffer: Uint8Array): Promise<string> {
   const doc = await getDocumentProxy(pdfBuffer);
   const { text } = await extractText(doc, { mergePages: true });
@@ -114,6 +140,78 @@ function tokensBefore(text: string, idx: number, maxBackChars = 200): string[] {
   const start = Math.max(0, idx - maxBackChars);
   const slice = text.slice(start, idx).trim();
   return slice.split(/\s+/).filter(Boolean);
+}
+
+interface AddressMatch {
+  index: number;          // start of the matched suffix in text
+  endIndex: number;       // end of the matched suffix
+  city: string;
+  region: string;
+  postal_code: string;
+}
+
+/** Find every "city STATE ZIP" suffix in the partner text. Returns valid US-state matches. */
+function findAddressTails(text: string): AddressMatch[] {
+  const out: AddressMatch[] = [];
+  // Pattern A — 2-letter state code
+  for (const m of text.matchAll(STATE_ZIP_RX)) {
+    const cityRaw = m[1].trim();
+    const stateRaw = m[2].toUpperCase();
+    if (!US_STATES.has(stateRaw)) continue;
+    if (cityRaw.length > 35) continue;
+    out.push({
+      index: m.index!,
+      endIndex: m.index! + m[0].length,
+      city: cityRaw.replace(/\b\w/g, (c) => c.toUpperCase()),
+      region: stateRaw,
+      postal_code: m[3],
+    });
+  }
+  // Pattern B — full state name (e.g. "Detroit, Michigan 48211")
+  for (const m of text.matchAll(FULL_STATE_ZIP_RX)) {
+    const cityRaw = m[1].trim();
+    const stateName = m[2].toUpperCase();
+    const code = STATE_NAME_TO_CODE[stateName];
+    if (!code) continue;
+    if (cityRaw.length > 35) continue;
+    out.push({
+      index: m.index!,
+      endIndex: m.index! + m[0].length,
+      city: cityRaw.replace(/\b\w/g, (c) => c.toUpperCase()),
+      region: code,
+      postal_code: m[3],
+    });
+  }
+  // Sort by position so the closest-to-tail match is the last entry
+  out.sort((a, b) => a.index - b.index);
+  return out;
+}
+
+/** Extract a street address (address1) from the chars immediately before a
+ *  matched "city STATE ZIP" suffix. Anchor on the FIRST "street-number
+ *  word" pattern (e.g. "304 S", "37200 paseo") — anything before that in
+ *  the prefix is template noise or holder name. */
+function deriveStreet(text: string, tail: AddressMatch): string | null {
+  const start = Math.max(0, tail.index - 100);
+  let prefix = text.slice(start, tail.index);
+  // Strip prior-field noise (email/phone) if any
+  const lastEmail = [...prefix.matchAll(/\S+@\S+/g)].pop();
+  if (lastEmail) prefix = prefix.slice(lastEmail.index! + lastEmail[0].length);
+  const lastPhone = [...prefix.matchAll(/(?<!\d)\d{10}(?!\d)/g)].pop();
+  if (lastPhone) prefix = prefix.slice(lastPhone.index! + lastPhone[0].length);
+
+  // Anchor: first occurrence of <street-num> followed by a word character.
+  // Require min 3 digits for plain numbers so dates like "04-10" don't match.
+  // Allow shorter numbers ONLY in the dashed form (e.g. "41-515") which is a
+  // recognisable Hawaiian-style apartment number.
+  const streetNumRx = /\b(?:\d{3,6}|\d{1,2}-\d{1,5}|\d{3,6}-\d{1,5})\s+[A-Za-z]/g;
+  const streetMatch = streetNumRx.exec(prefix);
+  if (!streetMatch) return null;
+  let street = prefix.slice(streetMatch.index).trim().replace(/,\s*$/, "").trim();
+  if (!street) return null;
+  // Cap to a sane length
+  if (street.length > 80) street = street.slice(0, 80).trim();
+  return street;
 }
 
 export function extractBankFromText(text: string): PdfExtractedBank {
@@ -273,6 +371,40 @@ export function extractBankFromText(text: string): PdfExtractedBank {
   if (/\bchecking\b/i.test(partnerText)) result.account_type = "checking";
   else if (/\bsavings\b/i.test(partnerText)) result.account_type = "savings";
   else result.account_type = "checking"; // default — Kashu uses ACH only
+
+  // 6b. ADDRESS — scope search to the VALUES BLOCK only. The PandaDoc
+  //     template contains Kashu's own address ("1603 Capitol Ave Ste 415,
+  //     Cheyenne, WY 82001") and signing/business addresses; if we don't
+  //     scope, those leak through as the partner's address.
+  //     The values block starts right after the LAST "Date: ___" placeholder
+  //     in the template — that's the Schedule B signature/date line.
+  const dateAnchorRx = /Date:\s*_+/gi;
+  const dateMatches = [...partnerText.matchAll(dateAnchorRx)];
+  const valuesBlockStart =
+    dateMatches.length > 0 ? dateMatches[dateMatches.length - 1].index! + dateMatches[dateMatches.length - 1][0].length : 0;
+  const valuesText = partnerText.slice(valuesBlockStart);
+
+  const tails = findAddressTails(valuesText);
+  // Shift indices back to partnerText-space for consistency (deriveStreet
+  // expects to look back through the full partnerText)
+  for (const t of tails) {
+    t.index += valuesBlockStart;
+    t.endIndex += valuesBlockStart;
+  }
+  if (tails.length > 0) {
+    const tail = tails[tails.length - 1]; // closest to values block
+    const street = deriveStreet(partnerText, tail);
+    if (street) {
+      result.address.address1 = street;
+      result.address.city = tail.city;
+      result.address.region = tail.region;
+      result.address.postal_code = tail.postal_code;
+    } else {
+      warnings.push(`Found '${tail.city} ${tail.region} ${tail.postal_code}' but could not derive street`);
+    }
+  } else {
+    warnings.push("No US address tail (city STATE ZIP) found — address field appears empty or non-US");
+  }
 
   // 7. ACCOUNT HOLDER NAME — for the PandaDoc values-block layout, the
   //    holder name appears immediately before the routing number. Take the
