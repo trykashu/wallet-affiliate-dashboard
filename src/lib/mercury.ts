@@ -63,6 +63,55 @@ export interface RecipientAddress {
   country: string;      // 2-letter (e.g. "US")
 }
 
+/**
+ * List existing Mercury recipients and find one matching (routing, accountNumber).
+ * Used as a safety net in front of recipient creation so that duplicate
+ * POSTs (e.g. after a DB-save failure, manual cache clear, or pre-existing
+ * recipient that predates our cache) don't create duplicate recipients.
+ *
+ * Falls back to (routing, last4, name) match if Mercury masks the full
+ * accountNumber in list responses.
+ *
+ * Returns the recipient ID if a match is found, else null.
+ */
+export async function findExistingRecipient(
+  routingNumber: string,
+  accountNumber: string,
+  name: string,
+): Promise<string | null> {
+  try {
+    const data = await mercuryFetch(`/recipients?limit=500`);
+    interface RecipientRow {
+      id: string;
+      name?: string;
+      electronicRoutingInfo?: {
+        routingNumber?: string;
+        accountNumber?: string;
+      };
+    }
+    const recipients = (data?.recipients ?? []) as RecipientRow[];
+    const last4 = accountNumber.slice(-4);
+    for (const r of recipients) {
+      const e = r.electronicRoutingInfo;
+      if (!e || e.routingNumber !== routingNumber) continue;
+      const acct = e.accountNumber ?? "";
+      const acctLast4 = acct.slice(-4);
+      if (acct && acct === accountNumber) {
+        return r.id; // exact account-number match
+      }
+      if (acctLast4 === last4 && (r.name ?? "").trim().toLowerCase() === name.trim().toLowerCase()) {
+        return r.id; // routing + last4 + name fallback
+      }
+    }
+    return null;
+  } catch (e) {
+    // Lookup failure should NOT block creation — log and let caller fall
+    // through to POST. Mercury would just have an unused list call.
+    console.warn("[mercury] findExistingRecipient lookup failed:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 export async function getOrCreateRecipient(
   name: string,
   routingNumber: string,
@@ -70,6 +119,14 @@ export async function getOrCreateRecipient(
   address: RecipientAddress,
   email?: string
 ): Promise<string> {
+  // Defensive lookup first — if Mercury already has a recipient with this
+  // (routing, account) pair, reuse it instead of creating a duplicate.
+  const existing = await findExistingRecipient(routingNumber, accountNumber, name);
+  if (existing) {
+    console.log("[mercury] Reusing existing recipient:", existing);
+    return existing;
+  }
+
   const payload = {
     name,
     emails: email ? [email] : ["payouts@kashupay.com"],
