@@ -13,6 +13,31 @@ export default function RequestedBatchesSection({ batches }: Props) {
   const router = useRouter();
   const [busyBatchId, setBusyBatchId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [reverifyingAffId, setReverifyingAffId] = useState<string | null>(null);
+  const [reverifyMsg, setReverifyMsg] = useState<{ kind: "ok" | "err"; text: string } | null>(null);
+
+  async function handleReverify(affiliateId: string, affiliateName: string) {
+    if (!confirm(`Re-verify bank details for ${affiliateName} from PandaDoc?\n\nThis will fetch the latest signed agreement and overwrite the address on file.`)) return;
+    setReverifyingAffId(affiliateId);
+    setReverifyMsg(null);
+    try {
+      const res = await fetch("/api/admin/affiliates/refetch-bank", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ affiliate_id: affiliateId, confirm: true }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body.saved === false) {
+        throw new Error(body?.message ?? body?.error ?? `Re-verify failed (${res.status})`);
+      }
+      setReverifyMsg({ kind: "ok", text: `Re-verified ${affiliateName} — address pulled from PandaDoc. Try Execute again.` });
+      router.refresh();
+    } catch (e) {
+      setReverifyMsg({ kind: "err", text: `${affiliateName}: ${e instanceof Error ? e.message : "Re-verify failed"}` });
+    } finally {
+      setReverifyingAffId(null);
+    }
+  }
 
   async function handleExecute(batch: BatchSummary) {
     if (!confirm(
@@ -74,25 +99,84 @@ export default function RequestedBatchesSection({ batches }: Props) {
         </div>
       )}
 
+      {reverifyMsg && (
+        <div className={`card p-3 ${reverifyMsg.kind === "ok" ? "bg-accent/10 border-accent/30" : "bg-red-50 border-red-200"}`}>
+          <p className={`text-xs ${reverifyMsg.kind === "ok" ? "text-accent" : "text-red-700"}`}>{reverifyMsg.text}</p>
+          <button onClick={() => setReverifyMsg(null)} className="text-[10px] underline mt-1 text-gray-600">Dismiss</button>
+        </div>
+      )}
+
       <div className="space-y-3">
-        {batches.map((b) => (
-          <div key={b.batch_id} className="card p-4 flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-gray-900">Period {b.period}</p>
-              <p className="text-[10px] text-brand-400 mt-0.5">
-                {b.payout_count} payout{b.payout_count === 1 ? "" : "s"}
-              </p>
+        {batches.map((b) => {
+          const missingCount = b.payouts.filter((p) => !p.has_address).length;
+          return (
+          <div key={b.batch_id} className="card overflow-hidden">
+            <div className="p-4 flex items-center justify-between gap-3 border-b border-surface-200/60">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-gray-900">Period {b.period}</p>
+                <p className="text-[10px] text-brand-400 mt-0.5">
+                  {b.payout_count} payout{b.payout_count === 1 ? "" : "s"}
+                  {missingCount > 0 && (
+                    <span className="ml-2 text-amber-700 font-semibold">· {missingCount} missing address</span>
+                  )}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span className="text-base font-bold text-gray-900 tabular-nums">{fmt.currency(b.total_amount)}</span>
+                <button
+                  onClick={() => handleExecute(b)}
+                  disabled={busyBatchId === b.batch_id}
+                  className="text-xs font-semibold text-white bg-accent hover:bg-accent/90 rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >{busyBatchId === b.batch_id ? "Executing…" : "Execute via Mercury"}</button>
+              </div>
             </div>
-            <div className="flex items-center gap-3 flex-shrink-0">
-              <span className="text-base font-bold text-gray-900 tabular-nums">{fmt.currency(b.total_amount)}</span>
-              <button
-                onClick={() => handleExecute(b)}
-                disabled={busyBatchId === b.batch_id}
-                className="text-xs font-semibold text-white bg-accent hover:bg-accent/90 rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >{busyBatchId === b.batch_id ? "Executing…" : "Execute via Mercury"}</button>
-            </div>
+
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-surface-50/60 text-brand-400 uppercase tracking-wider text-[10px]">
+                  <th className="th text-left">Affiliate</th>
+                  <th className="th text-right">Amount</th>
+                  <th className="th text-left">Address</th>
+                  <th className="th text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-surface-200/60">
+                {b.payouts.map((p) => (
+                  <tr key={p.id} className="hover:bg-surface-100/40">
+                    <td className="td">
+                      <span className="text-sm text-gray-900">{p.affiliate_name}</span>
+                    </td>
+                    <td className="td text-right tabular-nums">{fmt.currency(p.amount)}</td>
+                    <td className="td">
+                      {p.has_address ? (
+                        <span className="text-[10px] text-accent">✓ Complete</span>
+                      ) : (
+                        <span className="text-[10px] text-amber-700 font-semibold">✗ Missing</span>
+                      )}
+                    </td>
+                    <td className="td text-right">
+                      {p.pandadoc_id ? (
+                        <button
+                          onClick={() => handleReverify(p.affiliate_id, p.affiliate_name)}
+                          disabled={reverifyingAffId === p.affiliate_id}
+                          title="Re-fetch bank details + address from PandaDoc and save"
+                          className={`text-[10px] font-semibold underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed ${
+                            p.has_address ? "text-brand-600 hover:text-brand-700" : "text-amber-700 hover:text-amber-800"
+                          }`}
+                        >
+                          {reverifyingAffId === p.affiliate_id ? "Re-verifying…" : "Re-verify from PandaDoc"}
+                        </button>
+                      ) : (
+                        <span className="text-[10px] text-brand-400">No PandaDoc</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

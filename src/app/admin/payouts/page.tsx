@@ -73,12 +73,16 @@ export default async function AdminPayoutsPage() {
 
   const { data: verifiedAccountsRaw } = await db
     .from("payout_accounts")
-    .select("affiliate_id, account_name, metadata")
+    .select("affiliate_id, account_name, metadata, address1, city, region, postal_code")
     .eq("is_verified", true);
   type VerifiedAccountRow = {
     affiliate_id: string;
     account_name: string | null;
     metadata: { full_account_number?: string } | null;
+    address1: string | null;
+    city: string | null;
+    region: string | null;
+    postal_code: string | null;
   };
   const verifiedAccounts = (verifiedAccountsRaw as VerifiedAccountRow[] | null) ?? [];
   const payableAffiliateIds = new Set<string>(verifiedAccounts.map((a) => a.affiliate_id));
@@ -135,6 +139,18 @@ export default async function AdminPayoutsPage() {
     if (balance >= minPayout) payableAffiliateCount += 1;
   }
 
+  // Per-affiliate maps used to annotate batch payouts for the Re-verify UI:
+  // pandadoc_id (do we have a doc to re-fetch from) + has_address (does the
+  // payout_account already have a complete US address for Mercury).
+  const pandadocByAffiliate = new Map<string, string | null>();
+  for (const a of affiliates) pandadocByAffiliate.set(a.id, a.pandadoc_id ?? null);
+  const hasAddressByAffiliate = new Map<string, boolean>();
+  for (const acct of verifiedAccounts) {
+    const complete = !!(acct.address1 && acct.city && acct.region && acct.postal_code);
+    // If an affiliate has multiple accounts, count as complete if ANY has address
+    hasAddressByAffiliate.set(acct.affiliate_id, complete || (hasAddressByAffiliate.get(acct.affiliate_id) ?? false));
+  }
+
   // Group payouts by batch_id for the review + execute UIs
   function groupByBatch(rows: Payout[]): BatchSummary[] {
     const byBatch = new Map<string, BatchSummary>();
@@ -142,6 +158,8 @@ export default async function AdminPayoutsPage() {
       if (!p.batch_id) continue;
       const existing = byBatch.get(p.batch_id);
       const affName = affiliateMap.get(p.affiliate_id) ?? "Unknown";
+      const pandadocId = pandadocByAffiliate.get(p.affiliate_id) ?? null;
+      const hasAddress = hasAddressByAffiliate.get(p.affiliate_id) ?? false;
       if (existing) {
         existing.payout_count += 1;
         existing.total_amount += Number(p.amount) || 0;
@@ -150,6 +168,8 @@ export default async function AdminPayoutsPage() {
           affiliate_id: p.affiliate_id,
           affiliate_name: affName,
           amount: p.amount,
+          pandadoc_id: pandadocId,
+          has_address: hasAddress,
         });
       } else {
         byBatch.set(p.batch_id, {
@@ -165,6 +185,8 @@ export default async function AdminPayoutsPage() {
             affiliate_id: p.affiliate_id,
             affiliate_name: affName,
             amount: p.amount,
+            pandadoc_id: pandadocId,
+            has_address: hasAddress,
           }],
         });
       }

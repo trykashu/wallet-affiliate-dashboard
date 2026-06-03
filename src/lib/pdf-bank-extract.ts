@@ -27,6 +27,15 @@ import {
   cleanAccountNumber,
 } from "@/lib/bank-validation";
 
+export interface PdfExtractedAddress {
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  region: string | null;       // 2-letter state code
+  postal_code: string | null;
+  country: string;             // always "US"
+}
+
 export interface PdfExtractedBank {
   email: string | null;
   account_holder_name: string | null;
@@ -35,6 +44,7 @@ export interface PdfExtractedBank {
   account_type: "checking" | "savings" | null;
   routing_valid: boolean;
   account_valid: boolean;
+  address: PdfExtractedAddress;
   warnings: string[];
   raw_text_excerpt: string; // first 500 chars for debugging
 }
@@ -116,6 +126,7 @@ export function extractBankFromText(text: string): PdfExtractedBank {
     account_type: null,
     routing_valid: false,
     account_valid: false,
+    address: { address1: null, address2: null, city: null, region: null, postal_code: null, country: "US" },
     warnings,
     raw_text_excerpt: text.slice(0, 500),
   };

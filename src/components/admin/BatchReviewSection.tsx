@@ -17,6 +17,8 @@ export interface BatchSummary {
     affiliate_id: string;
     affiliate_name: string;
     amount: number;
+    pandadoc_id: string | null;
+    has_address: boolean;
   }>;
 }
 
