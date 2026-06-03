@@ -416,22 +416,26 @@ export function extractBankFromText(text: string): PdfExtractedBank {
     const tail = tails[tails.length - 1]; // closest to values block
 
     // Case A: city greedily captured a street name (e.g. "Bay Ave Euless").
-    // Split at the street-suffix word and use the street-num prefix + that
-    // street suffix as address1, city = whatever's after.
+    // Split at the street-suffix word, then anchor on the FIRST WORD of the
+    // captured street ("Tuscany", "Bay") and look backward for the number
+    // immediately preceding it. This works for short street numbers ("47")
+    // that the standard 3+ digit regex would reject — the street-name word
+    // adjacency disambiguates them from date fragments.
     const split = splitCityOnStreetSuffix(tail.city);
     if (split.street) {
-      // Reconstruct address1 by looking for a street number in the prefix
-      // PLUS the street tokens captured in the city. The street num may be
-      // outside the prefix slice, so search a wider window.
-      const wideStart = Math.max(0, tail.index - 100);
-      const wide = partnerText.slice(wideStart, tail.index) + " " + tail.city;
-      const streetNumRx = /\b(?:\d{3,6}|\d{1,2}-\d{3,5}|\d{3,6}-\d{3,5})\s+[A-Za-z][\w\s.,'#&-]*?\b(Ave|Avenue|Blvd|Boulevard|St|Street|Rd|Road|Dr|Drive|Cir|Circle|Pkwy|Parkway|Way|Ct|Court|Pl|Place|Sq|Square|Ln|Lane|Hwy|Highway|Ter|Terrace|Trail|Trl|Plaza|Plz|Cv|Cove|Loop|Run|Path|Crossing|Xing|Ridge|Rdg|Crest|Mall|Walk|Row|Bend|Bnd|Park)\b\.?/i;
-      const m = wide.match(streetNumRx);
-      if (m) {
-        result.address.address1 = m[0].trim();
-        result.address.city = split.city;
-        result.address.region = tail.region;
-        result.address.postal_code = tail.postal_code;
+      const firstStreetWord = split.street.split(/\s+/)[0];
+      if (firstStreetWord) {
+        const wideStart = Math.max(0, tail.index - 100);
+        const wide = partnerText.slice(wideStart, tail.index) + " " + tail.city;
+        const escaped = firstStreetWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const anchorRx = new RegExp(`\\b(\\d{1,6}(?:-\\d{1,5})?)\\s+${escaped}\\b`, "i");
+        const m = wide.match(anchorRx);
+        if (m) {
+          result.address.address1 = `${m[1]} ${split.street}`;
+          result.address.city = split.city;
+          result.address.region = tail.region;
+          result.address.postal_code = tail.postal_code;
+        }
       }
     }
 

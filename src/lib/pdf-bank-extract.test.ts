@@ -168,3 +168,15 @@ test("address: 'No US address tail found' warning when address field is empty", 
   assert.equal(r.address.address1, null);
   assert.ok(r.warnings.some((w) => w.includes("No US address tail")));
 });
+
+test("address: 2-digit street number (e.g. '47 Tuscany Dr') extracts when followed by street suffix", () => {
+  // Real case: James Phillips IV — '47 Tuscany dr Laplace la 70068' (no commas)
+  const text = makeFixture(
+    "James Phillips IV 47 Tuscany dr Laplace la 70068 jp@x.com 5551234567 James Phillips IV 065400137 686381879 James CEO 2026-04-09",
+  );
+  const r = extractBankFromText(text);
+  assert.equal(r.address.address1, "47 Tuscany Dr");
+  assert.equal(r.address.city, "Laplace");
+  assert.equal(r.address.region, "LA");
+  assert.equal(r.address.postal_code, "70068");
+});
