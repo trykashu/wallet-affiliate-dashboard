@@ -30,7 +30,10 @@ export default async function AdminPayoutsPage() {
   const [payoutsResult, earningsResult, affiliatesResult, settingsResult] = await Promise.all([
     db.from("payouts").select("*").order("created_at", { ascending: false }),
     db.from("earnings").select("affiliate_id, amount, status").eq("status", "approved"),
-    db.from("affiliates").select("id, agent_name, email, business_name, agreement_status, pandadoc_id"),
+    // Exclude whitelabel-branded affiliates (Payova / Travis Marker) from
+    // the standard payout flow — they need a custom solution. Travis's own
+    // dashboard fetches via getAffiliateContext and is unaffected.
+    db.from("affiliates").select("id, agent_name, email, business_name, agreement_status, pandadoc_id").is("whitelabel_brand_id", null),
     db.from("payout_settings").select("*").limit(1).maybeSingle(),
   ]);
 
@@ -89,10 +92,20 @@ export default async function AdminPayoutsPage() {
     }
   }
 
-  const allPayouts:     Payout[]   = payoutsResult.data   ?? [];
-  const approvedEarnings: Earning[] = earningsResult.data  ?? [];
-  const affiliates:      Affiliate[] = affiliatesResult.data ?? [];
+  const allPayoutsRaw:        Payout[]   = payoutsResult.data   ?? [];
+  const approvedEarningsRaw:  Earning[]  = earningsResult.data  ?? [];
+  const affiliates:           Affiliate[] = affiliatesResult.data ?? [];
   const settings: PayoutSettings | null = settingsResult.data ?? null;
+
+  // Whitelabel guard: drop earnings + payouts + unbatched rows that belong
+  // to whitelabel-branded affiliates (already filtered out of `affiliates`
+  // by the .is("whitelabel_brand_id", null) on the query). This prevents
+  // them from showing up in the batch builder, stat cards, and pending
+  // batches — closing the door on accidental wires through the std flow.
+  const nonWhitelabelIds = new Set(affiliates.map((a) => a.id));
+  const allPayouts        = allPayoutsRaw.filter((p) => nonWhitelabelIds.has(p.affiliate_id));
+  const approvedEarnings  = approvedEarningsRaw.filter((e) => nonWhitelabelIds.has(e.affiliate_id));
+  const unbatchedFiltered = unbatched.filter((u) => nonWhitelabelIds.has(u.affiliate_id));
 
   const minPayout = settings?.min_payout_amount ?? 25;
 
@@ -165,7 +178,7 @@ export default async function AdminPayoutsPage() {
   const requestedBatches = groupByBatch(allPayouts.filter((p) => p.status === "requested" && p.batch_id));
 
   // Batch builder data
-  const builderEarnings: BatchBuilderEarning[] = unbatched.map((u) => ({
+  const builderEarnings: BatchBuilderEarning[] = unbatchedFiltered.map((u) => ({
     id: u.id,
     affiliate_id: u.affiliate_id,
     amount: Number(u.amount) || 0,

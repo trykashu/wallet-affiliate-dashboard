@@ -22,14 +22,20 @@ export default async function AdminEarningsPage() {
 
   const [earningsResult, affiliatesResult, usersResult, payoutAccountsResult] = await Promise.all([
     db.from("earnings").select("*").order("created_at", { ascending: false }),
-    db.from("affiliates").select("id, agent_name, agreement_status"),
+    // Exclude whitelabel-branded affiliates (Payova / Travis Marker) — they
+    // require a custom payout flow and must not appear in the standard
+    // earnings/payouts review queue. Travis's own dashboard fetches via
+    // getAffiliateContext (user-scoped) and is unaffected.
+    db.from("affiliates").select("id, agent_name, agreement_status").is("whitelabel_brand_id", null),
     db.from("referred_users").select("id, full_name"),
     db.from("payout_accounts").select("affiliate_id, is_default, is_verified").eq("is_verified", true),
   ]);
 
-  const allEarnings:  Earning[]      = earningsResult.data   ?? [];
-  const affiliates:   Affiliate[]    = affiliatesResult.data ?? [];
-  const referredUsers: ReferredUser[] = usersResult.data     ?? [];
+  const allEarningsRaw: Earning[]      = earningsResult.data   ?? [];
+  const affiliates:     Affiliate[]    = affiliatesResult.data ?? [];
+  const referredUsers:  ReferredUser[] = usersResult.data     ?? [];
+  const nonWhitelabelIds = new Set(affiliates.map((a) => a.id));
+  const allEarnings = allEarningsRaw.filter((e) => nonWhitelabelIds.has(e.affiliate_id));
 
   type AcctRow = { affiliate_id: string; is_default: boolean; is_verified: boolean };
   const payableAffiliateIds = new Set<string>(
