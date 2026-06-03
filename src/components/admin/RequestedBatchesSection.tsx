@@ -28,7 +28,21 @@ export default function RequestedBatchesSection({ batches }: Props) {
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
-        throw new Error(body?.message ?? body?.error ?? `Execute failed (${res.status})`);
+        const detail = body?.detail ? ` — ${body.detail}` : "";
+        const msg = `${body?.message ?? body?.error ?? `Execute failed (${res.status})`}${detail}`;
+        // Force-visible: scroll to top + alert backstop so a missed banner
+        // can't masquerade as "nothing happened".
+        if (typeof window !== "undefined") {
+          window.scrollTo({ top: 0, behavior: "smooth" });
+          alert(`Mercury execute failed:\n\n${msg}`);
+        }
+        throw new Error(msg);
+      }
+      const body = await res.json().catch(() => ({}));
+      if (body?.errors && Array.isArray(body.errors) && body.errors.length > 0) {
+        const summary = `Executed ${body.executed_count ?? 0}, ${body.errors.length} failed:\n• ${body.errors.slice(0, 5).join("\n• ")}`;
+        if (typeof window !== "undefined") alert(summary);
+        setError(summary);
       }
       router.refresh();
     } catch (e) {
@@ -46,8 +60,17 @@ export default function RequestedBatchesSection({ batches }: Props) {
       </div>
 
       {error && (
-        <div className="card p-3 bg-red-50 border-red-200">
-          <p className="text-xs text-red-700">{error}</p>
+        <div className="card p-4 bg-red-50 border-red-300 border-2">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-red-700">Mercury execute failed</p>
+              <p className="text-xs text-red-700 mt-1 whitespace-pre-wrap">{error}</p>
+              <button onClick={() => setError(null)} className="text-[10px] text-red-700 underline mt-2">Dismiss</button>
+            </div>
+          </div>
         </div>
       )}
 

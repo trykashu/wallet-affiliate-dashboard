@@ -19,7 +19,34 @@ export async function POST(request: Request) {
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user || !isFinanceEmail(user.email)) {
-    return NextResponse.json({ error: "Finance access required" }, { status: 403 });
+    // Audit the block so a "I pressed Execute and nothing happened" case
+    // shows up later. Best-effort write — never crashes the 403.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const svc = createServiceClient() as any;
+      await svc.from("payout_audit_log").insert({
+        action: "BLOCKED_NOT_FINANCE",
+        initiated_by: user?.id ?? null,
+        error_message: `${user?.email ?? "<unauthenticated>"} attempted execute-batch without finance role`,
+      });
+      await logSecurityEvent({
+        userId: user?.id,
+        userEmail: user?.email,
+        action: "admin.payout_execute_blocked",
+        resourceType: "payouts",
+        metadata: { reason: "not_finance_email" },
+      });
+    } catch {
+      // swallow — auth refusal must still return 403
+    }
+    return NextResponse.json(
+      {
+        error: "Finance access required",
+        detail:
+          "Your account isn't in the FINANCE_EMAILS allowlist. Ask an admin to add your email to that env var and redeploy.",
+      },
+      { status: 403 },
+    );
   }
 
   // Optional batch_id scope
