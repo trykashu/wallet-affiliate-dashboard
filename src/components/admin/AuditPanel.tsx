@@ -42,7 +42,7 @@ interface AuditResponse {
   months: MonthAudit[];
 }
 interface AnnealSummary { create: number; correct: number; skip_paid_drifts: number; skip_orphans: number; }
-interface AnnealApplyResult { created: number; corrected: number; failed: Array<{ id: string; reason: string }>; skipped: { paidDrifts: number; orphans: number }; }
+interface AnnealApplyResult { created: number; corrected: number; already_existed: number; failed: Array<{ id: string; reason: string }>; skipped: { paidDrifts: number; orphans: number }; }
 
 export default function AuditPanel() {
   const [loading, setLoading] = useState(false);
@@ -57,6 +57,10 @@ export default function AuditPanel() {
   const runAudit = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setAnnealPhase("idle");
+    setAnnealResult(null);
+    setAnnealPreview(null);
+    setAnnealError(null);
     try {
       const res = await fetch("/api/admin/audit-ptl", { cache: "no-store" });
       const body = await res.json();
@@ -205,6 +209,9 @@ export default function AuditPanel() {
             <div className="p-3 bg-accent/10 border border-accent/30 rounded-xl">
               <p className="text-xs text-gray-900">
                 ✓ Created {annealResult.created} · corrected {annealResult.corrected}
+                {annealResult.already_existed > 0 && (
+                  <span className="text-brand-400"> · {annealResult.already_existed} already existed</span>
+                )}
                 {annealResult.failed.length > 0 && (
                   <span className="text-red-600"> · {annealResult.failed.length} failed</span>
                 )}

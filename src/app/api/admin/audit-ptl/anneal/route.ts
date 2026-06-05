@@ -57,12 +57,14 @@ export async function POST(req: Request) {
 
     // Apply: create missing rows (sequential — dupe-guarded inside helper).
     const created: string[] = [];
+    let alreadyExisted = 0;
     const failed: Array<{ id: string; reason: string }> = [];
     for (const row of plan.toCreate) {
       try {
         const r = await createPtlRowFromUt(row.ut_id, { affiliateBase, launchBase, pat });
         created.push(r.ptl_id);
       } catch (e) {
+        if (e instanceof AnnealError && e.status === 409) { alreadyExisted++; continue; }
         failed.push({ id: row.ut_id, reason: e instanceof Error ? e.message : "create failed" });
       }
     }
@@ -80,6 +82,7 @@ export async function POST(req: Request) {
       result: {
         created: created.length,
         corrected: patch.updated,
+        already_existed: alreadyExisted,
         failed,
         skipped: { paidDrifts: plan.skipped.paidDrifts.length, orphans: plan.skipped.orphans.length },
       },
