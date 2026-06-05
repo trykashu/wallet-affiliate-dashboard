@@ -30,6 +30,7 @@ export interface DriftRow {
   ptl_amount: number;
   ut_amount: number;
   delta: number;
+  commission_status: string;
 }
 export interface MissingRow {
   ut_id: string;
@@ -133,6 +134,7 @@ export function auditPtlVsUt(
         ptl_amount: amt,
         ut_amount: uAmt,
         delta: uAmt - amt,
+        commission_status: String(p.fields["Commission Status"] ?? "").trim(),
       });
     }
   }
@@ -163,4 +165,30 @@ export function auditPtlVsUt(
   }
 
   return Array.from(months.values()).sort((a, b) => b.month.localeCompare(a.month));
+}
+
+export interface AnnealPlan {
+  toCreate: MissingRow[];                 // missing PTL rows to create from UT
+  toCorrect: DriftRow[];                  // unpaid drifts to set Amount = UT amount
+  skipped: { paidDrifts: DriftRow[]; orphans: OrphanRow[] };
+}
+
+/** A drift is safe to auto-correct only when its commission is still unpaid. */
+const UNPAID_STATUSES = new Set(["", "owed"]);
+export function isUnpaidStatus(status: string): boolean {
+  return UNPAID_STATUSES.has((status ?? "").trim().toLowerCase());
+}
+
+/** Partition audit results into create / correct / skipped per the anneal rules. */
+export function buildAnnealPlan(months: MonthAudit[]): AnnealPlan {
+  const plan: AnnealPlan = { toCreate: [], toCorrect: [], skipped: { paidDrifts: [], orphans: [] } };
+  for (const m of months) {
+    plan.toCreate.push(...m.missing);
+    plan.skipped.orphans.push(...m.orphans);
+    for (const d of m.drifts) {
+      if (isUnpaidStatus(d.commission_status)) plan.toCorrect.push(d);
+      else plan.skipped.paidDrifts.push(d);
+    }
+  }
+  return plan;
 }
