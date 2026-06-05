@@ -31,7 +31,13 @@ export default async function AdminOverviewPage() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(10),
-    db.from("transactions").select("transaction_type, self_referral, transaction_date, amount"),
+    db.from("transactions")
+      .select("transaction_type, self_referral, transaction_date, amount")
+      .gte("transaction_date", (() => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - 13);
+        return d.toISOString().slice(0, 10);
+      })()),
   ]);
 
   const affiliates:  Affiliate[]    = affiliatesResult.data  ?? [];
