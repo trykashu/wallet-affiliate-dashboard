@@ -1,3 +1,4 @@
+/** POST { ut_record_id } — create a Partner Transaction Log row from a User Transactions row (admin only). Delegates to createPtlRowFromUt. */
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";

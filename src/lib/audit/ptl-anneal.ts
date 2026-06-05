@@ -73,8 +73,11 @@ export async function createPtlRowFromUt(
   const txnId = String(ut.fields["Transaction ID"] ?? "").trim();
   if (!txnId) throw new AnnealError("UT row has no Transaction ID", 422);
 
-  const dupeFilter = encodeURIComponent(`{Transaction ID}='${txnId}'`);
+  const esc = (v: string) => v.replace(/'/g, "\\'");
+
+  const dupeFilter = encodeURIComponent(`{Transaction ID}='${esc(txnId)}'`);
   const dupeRes = await fetch(`${AT}/${affiliateBase}/${PTL_TABLE}?filterByFormula=${dupeFilter}&maxRecords=1`, { headers: auth, cache: "no-store" });
+  if (!dupeRes.ok) throw new AnnealError(`PTL dupe-check ${dupeRes.status}`, 502);
   const dupeJ = (await dupeRes.json()) as { records?: Array<{ id: string }> };
   if (dupeJ.records && dupeJ.records.length > 0) {
     throw new AnnealError(`PTL row already exists for TxnID ${txnId}: ${dupeJ.records[0].id}`, 409);
@@ -82,8 +85,9 @@ export async function createPtlRowFromUt(
 
   const referrer = (ut.fields["Referrer"] as string[] | undefined)?.[0]?.trim();
   if (!referrer) throw new AnnealError("UT row has no Referrer", 422);
-  const affFilter = encodeURIComponent(`{Attribution ID}='${referrer}'`);
+  const affFilter = encodeURIComponent(`{Attribution ID}='${esc(referrer)}'`);
   const affRes = await fetch(`${AT}/${affiliateBase}/${AFFILIATES_TABLE}?filterByFormula=${affFilter}&maxRecords=1`, { headers: auth, cache: "no-store" });
+  if (!affRes.ok) throw new AnnealError(`Affiliates fetch ${affRes.status}`, 502);
   const affJ = (await affRes.json()) as { records?: Array<{ id: string }> };
   const affiliateRecordId = affJ.records?.[0]?.id;
   if (!affiliateRecordId) throw new AnnealError(`No Kashu Affiliates row for referrer ${referrer}`, 404);
