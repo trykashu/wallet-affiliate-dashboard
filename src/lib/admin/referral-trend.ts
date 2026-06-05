@@ -97,3 +97,40 @@ export function buildReferralTrend(
 
   return { monthly, weekly };
 }
+
+export interface SegmentedReferralTrend {
+  main: ReferralTrend;
+  payova: ReferralTrend;
+}
+
+/**
+ * Partition users + transactions by affiliate_id into Payova vs non-Payova,
+ * then aggregate each segment with buildReferralTrend. A row whose affiliate_id
+ * is null/undefined or not in payovaAffiliateIds counts as non-Payova ("main").
+ */
+export function buildSegmentedReferralTrend(
+  users: Array<{ created_at: string; affiliate_id: string | null }>,
+  transactions: Array<{
+    affiliate_id: string | null;
+    transaction_type: string;
+    self_referral: boolean;
+    transaction_date: string | null;
+    amount: number;
+  }>,
+  payovaAffiliateIds: Set<string>,
+  now: Date,
+): SegmentedReferralTrend {
+  const isPayova = (id: string | null): boolean => id != null && payovaAffiliateIds.has(id);
+  return {
+    main: buildReferralTrend(
+      users.filter((u) => !isPayova(u.affiliate_id)),
+      transactions.filter((t) => !isPayova(t.affiliate_id)),
+      now,
+    ),
+    payova: buildReferralTrend(
+      users.filter((u) => isPayova(u.affiliate_id)),
+      transactions.filter((t) => isPayova(t.affiliate_id)),
+      now,
+    ),
+  };
+}
