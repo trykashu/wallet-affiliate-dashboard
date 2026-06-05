@@ -277,6 +277,36 @@ git push origin main
   4. Same Kashu brand design system as MRP (shared brand-600, accent, typography)
   5. 13 DB tables (streamlined from MRP's 19+)
 
+### [2026-06-05] — "Account Being Set Up" debugging (affiliate ↔ auth linkage)
+- **Symptom:** Affiliate logs in but is stranded on the "Account Being Set Up" screen
+  ([dashboard/layout.tsx](src/app/dashboard/layout.tsx) `AccountPending`).
+- **What it actually means:** The user IS authenticated (layout redirects unauth'd users to
+  `/login`), but their `auth.users.id` matches **no** `affiliates` row via RLS
+  `get_my_affiliate_id()`. So it's always a **linkage** problem, never an auth problem.
+- **Linkage mechanism:** the `link_affiliate_on_signup` AFTER INSERT trigger on `auth.users`
+  stamps `affiliates.user_id` by matching email. Originally case-sensitive (fixed in mig 022
+  → `lower()`), then whitespace-sensitive (fixed in mig 023 → `lower(trim())` + backfill +
+  `link_affiliate_by_email` RPC). `/api/auth/post-login` now calls that RPC as a login-time
+  self-heal when no affiliate is linked.
+- **Diagnostic that nails it every time** — FULL OUTER JOIN auth.users ↔ affiliates on
+  `lower(trim(email))`, filtered by name/email. Reveals which of 3 scenarios:
+  1. affiliate row present, `user_id` NULL → whitespace/case drift → backfill/trigger fixes it.
+  2. **two auth accounts** (one orphan with no affiliate row) → user is logging in with the
+     WRONG email. This was the Tocarrius Norris case: real account under
+     `tocariusnorris@rocketmail.com` (linked fine), but he kept logging in with his business
+     email `norrissolutionsgroup@outlook.com` (orphan, no affiliate row). Fix = have him log in
+     with the linked email (magic link works w/o password) + delete the orphan auth user.
+  3. no affiliate row at all → never provisioned from Airtable.
+- **CRITICAL constraint for "switch an affiliate's email" requests:** `/api/sync/affiliates`
+  upserts on `attribution_id` and **rewrites `email` from Airtable's "Agent Email" on every
+  sync** (it does NOT touch `user_id`). So changing an affiliate email only in the DB gets
+  reverted on next sync — you must change "Agent Email" in Airtable too.
+- **Gap closed this session:** the login page used to let anyone mint an orphan `auth.users`
+  row by entering an unknown email (exactly how the duplicate account happened). Magic-link
+  login now passes `shouldCreateUser: false` ([LoginForm.tsx](src/components/auth/LoginForm.tsx))
+  — affiliates always already have an auth account from the admin invite flow, so the login
+  page never needs to create one.
+
 ---
 
 ## 7. Feature Roadmap Status

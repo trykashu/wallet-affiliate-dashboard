@@ -62,11 +62,31 @@ export default function LoginForm({ initialError }: LoginFormProps) {
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: callbackUrl },
+      options: {
+        emailRedirectTo: callbackUrl,
+        // Never mint a brand-new auth user from the login page. Affiliates are
+        // onboarded via admin invite (inviteUserByEmail), which already creates
+        // their auth account — so by login time a real user always exists.
+        // Leaving the default (true) let anyone create an orphan auth.users row
+        // by typing an unknown/wrong email, stranding them on "Account Being Set
+        // Up" (see CLAUDE.md Self-Annealing Log, 2026-06-05).
+        shouldCreateUser: false,
+      },
     });
 
-    if (error) { setStatus("error"); setErrorMsg(error.message); }
-    else        { setStatus("sent"); }
+    if (error) {
+      setStatus("error");
+      // Supabase returns "Signups not allowed for otp" when the email has no
+      // existing account. Surface a guiding message instead of the raw text so
+      // a confused affiliate knows to use their invited email / contact support.
+      setErrorMsg(
+        /signups? not allowed|user not found/i.test(error.message)
+          ? "We couldn't find an account for that email. Make sure you're using the email your invitation was sent to, or contact support."
+          : error.message
+      );
+    } else {
+      setStatus("sent");
+    }
   }
 
   function switchMode(next: Mode) {
