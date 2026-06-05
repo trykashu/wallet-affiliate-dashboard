@@ -7,6 +7,10 @@ import type { ReferralBucket } from "@/lib/admin/referral-trend";
 interface Props {
   monthly: ReferralBucket[];
   weekly: ReferralBucket[];
+  title?: string;
+  barColor?: string;
+  lineColor?: string;
+  gradientId?: string;
 }
 
 function smoothPath(points: { x: number; y: number }[]) {
@@ -29,7 +33,14 @@ function niceTicks(max: number, steps = 4): number[] {
   return ticks;
 }
 
-export default function ReferralTrendChart({ monthly, weekly }: Props) {
+export default function ReferralTrendChart({
+  monthly,
+  weekly,
+  title = "Users Referred & Referred Volume",
+  barColor = "#0C5147",
+  lineColor = "#00DE8F",
+  gradientId = "referralVolumeGrad",
+}: Props) {
   const [granularity, setGranularity] = useState<"monthly" | "weekly">("monthly");
   const data = granularity === "monthly" ? monthly : weekly;
 
@@ -67,7 +78,7 @@ export default function ReferralTrendChart({ monthly, weekly }: Props) {
     <div className="card p-4 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Users Referred &amp; Referred Volume</h3>
+          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
           <p className="text-xs text-brand-400 mt-0.5">
             New referred users and Transfer-In volume per {granularity === "monthly" ? "month" : "week"}
           </p>
@@ -86,18 +97,18 @@ export default function ReferralTrendChart({ monthly, weekly }: Props) {
       {/* Legend */}
       <div className="flex items-center gap-4 mb-2">
         <span className="flex items-center gap-1.5 text-[11px] text-brand-400">
-          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: "#0C5147" }} /> Users referred
+          <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: barColor }} /> Users referred
         </span>
         <span className="flex items-center gap-1.5 text-[11px] text-brand-400">
-          <span className="inline-block w-4 h-0.5 rounded-full" style={{ background: "#00DE8F" }} /> Referred volume
+          <span className="inline-block w-4 h-0.5 rounded-full" style={{ background: lineColor }} /> Referred volume
         </span>
       </div>
 
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
         <defs>
-          <linearGradient id="referralVolumeGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#00DE8F" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#00DE8F" stopOpacity="0" />
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={lineColor} stopOpacity="0.18" />
+            <stop offset="100%" stopColor={lineColor} stopOpacity="0" />
           </linearGradient>
         </defs>
 
@@ -127,14 +138,14 @@ export default function ReferralTrendChart({ monthly, weekly }: Props) {
           const barHeight = (b.users / usersMax) * innerH;
           const x = padL + i * slotW + (slotW - barW) / 2;
           const y = padY + innerH - barHeight;
-          return <rect key={`bar-${b.key}`} x={x} y={y} width={barW} height={Math.max(barHeight, 0)} fill="#0C5147" rx="3" />;
+          return <rect key={`bar-${b.key}`} x={x} y={y} width={barW} height={Math.max(barHeight, 0)} fill={barColor} rx="3" />;
         })}
 
         {/* Volume area + line */}
-        <path d={areaPath} fill="url(#referralVolumeGrad)" />
-        <path d={linePath} fill="none" stroke="#00DE8F" strokeWidth="2" strokeLinecap="round" />
+        <path d={areaPath} fill={`url(#${gradientId})`} />
+        <path d={linePath} fill="none" stroke={lineColor} strokeWidth="2" strokeLinecap="round" />
         {linePoints.map((pt, i) => (
-          <circle key={`dot-${data[i].key}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke="#00DE8F" strokeWidth="1.5" />
+          <circle key={`dot-${data[i].key}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke={lineColor} strokeWidth="1.5" />
         ))}
 
         {/* X labels */}
