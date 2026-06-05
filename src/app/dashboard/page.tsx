@@ -43,17 +43,13 @@ export default async function DashboardPage() {
   // ── 4. Compute stage durations from funnel events ───────────
   const stageDurations = computeStageDurations(funnelEvents);
 
-  // ── 5. Total Transfer In volume ──────────────────────────────
-  const { data: volumeRows } = await db
-    .from("transactions")
-    .select("amount")
-    .eq("affiliate_id", affiliateId)
-    .eq("transaction_type", "Transfer In")
-    .eq("self_referral", false);
-  const totalVolume = (volumeRows ?? []).reduce(
-    (acc: number, r: { amount: number }) => acc + (r.amount ?? 0),
-    0
-  );
+  // ── 5. Total referred volume ─────────────────────────────────
+  // Source of truth is affiliate.referred_volume_total, which the sync keeps
+  // as (Transfer-In sum + legacy_volume_adjustment). Reading the column here —
+  // rather than re-summing transactions — keeps the hero stat and tier progress
+  // consistent with the earnings/profile pages and the Platinum tier gating,
+  // and ensures any manual legacy volume credit is reflected.
+  const totalVolume = affiliate.referred_volume_total ?? 0;
 
   const now = new Date();
   // ── 7. Referral link ────────────────────────────────────────
