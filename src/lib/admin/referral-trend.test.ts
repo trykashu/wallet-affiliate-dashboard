@@ -119,10 +119,15 @@ test("segmented: main + payova reconcile to an unsegmented trend", () => {
     { affiliate_id: "affX", transaction_type: "Transfer In", self_referral: false, transaction_date: "2026-05-10T12:00:00", amount: 250 },
   ];
   const { main, payova } = buildSegmentedReferralTrend(users, txns, new Set(["affP"]), NOW);
+  // UserRow/TxnRow are structural subsets — the extra affiliate_id field is ignored here.
   const whole = buildReferralTrend(users, txns, NOW);
   for (let i = 0; i < whole.monthly.length; i++) {
     assert.equal(main.monthly[i].users + payova.monthly[i].users, whole.monthly[i].users);
     assert.equal(main.monthly[i].volume + payova.monthly[i].volume, whole.monthly[i].volume);
+  }
+  for (let i = 0; i < whole.weekly.length; i++) {
+    assert.equal(main.weekly[i].users + payova.weekly[i].users, whole.weekly[i].users);
+    assert.equal(main.weekly[i].volume + payova.weekly[i].volume, whole.weekly[i].volume);
   }
 });
 
