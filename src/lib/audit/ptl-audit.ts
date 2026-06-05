@@ -173,7 +173,14 @@ export interface AnnealPlan {
   skipped: { paidDrifts: DriftRow[]; orphans: OrphanRow[] };
 }
 
-/** A drift is safe to auto-correct only when its commission is still unpaid. */
+/**
+ * Conservative-skip policy: only "" (missing/blank) and "Owed" are treated as
+ * unpaid and therefore auto-correctable. ANY OTHER status — including future
+ * statuses like "Pending" or "Processing" — is treated as NOT auto-correctable
+ * and will be skipped+reported rather than silently amended. This prevents
+ * accidental mutation of commissions that are already in-flight or settled.
+ */
+// Kept private — callers use isUnpaidStatus()
 const UNPAID_STATUSES = new Set(["", "owed"]);
 export function isUnpaidStatus(status: string): boolean {
   return UNPAID_STATUSES.has((status ?? "").trim().toLowerCase());

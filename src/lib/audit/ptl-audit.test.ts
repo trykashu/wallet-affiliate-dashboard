@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildAnnealPlan, type MonthAudit } from "./ptl-audit";
+import { buildAnnealPlan, isUnpaidStatus, type MonthAudit } from "./ptl-audit";
 
 function month(over: Partial<MonthAudit> = {}): MonthAudit {
   return {
@@ -8,6 +8,25 @@ function month(over: Partial<MonthAudit> = {}): MonthAudit {
     orphans: [], drifts: [], missing: [], ...over,
   };
 }
+
+test("isUnpaidStatus: handles casing, whitespace, and missing", () => {
+  assert.equal(isUnpaidStatus(""), true);
+  assert.equal(isUnpaidStatus("Owed"), true);
+  assert.equal(isUnpaidStatus("  OWED  "), true);
+  assert.equal(isUnpaidStatus("Paid"), false);
+  assert.equal(isUnpaidStatus("  Paid  "), false);
+  assert.equal(isUnpaidStatus("Processing"), false);
+  assert.equal(isUnpaidStatus(null as unknown as string), true);
+  assert.equal(isUnpaidStatus(undefined as unknown as string), true);
+});
+
+test("buildAnnealPlan: empty input", () => {
+  const plan = buildAnnealPlan([]);
+  assert.deepEqual(plan.toCreate, []);
+  assert.deepEqual(plan.toCorrect, []);
+  assert.deepEqual(plan.skipped.orphans, []);
+  assert.deepEqual(plan.skipped.paidDrifts, []);
+});
 
 test("buildAnnealPlan: missing -> toCreate, orphans -> skipped", () => {
   const plan = buildAnnealPlan([
@@ -43,7 +62,8 @@ test("buildAnnealPlan: paid drift/orphan never in action sets", () => {
       drifts: [{ ptl_id: "p3", transaction_id: "T3", ptl_amount: 70, ut_amount: 100, delta: 30, commission_status: "Paid" }],
     }),
   ]);
-  const actionIds = [...plan.toCreate.map(() => ""), ...plan.toCorrect.map((d) => d.ptl_id)];
-  assert.ok(!actionIds.includes("p3"));
-  assert.ok(!actionIds.includes("o1"));
+  assert.equal(plan.toCreate.length, 0);
+  assert.equal(plan.toCorrect.length, 0);
+  assert.equal(plan.skipped.orphans.length, 1);
+  assert.equal(plan.skipped.paidDrifts.length, 1);
 });
