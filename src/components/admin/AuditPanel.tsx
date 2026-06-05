@@ -16,6 +16,7 @@ interface DriftRow {
   ptl_amount: number;
   ut_amount: number;
   delta: number;
+  commission_status: string;
 }
 interface MissingRow {
   ut_id: string;
@@ -40,12 +41,18 @@ interface AuditResponse {
   totals: { orphans: number; drifts: number; missing: number };
   months: MonthAudit[];
 }
+interface AnnealSummary { create: number; correct: number; skip_paid_drifts: number; skip_orphans: number; }
+interface AnnealApplyResult { created: number; corrected: number; failed: Array<{ id: string; reason: string }>; skipped: { paidDrifts: number; orphans: number }; }
 
 export default function AuditPanel() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AuditResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState<Record<string, "loading" | "done" | string>>({});
+  const [annealPhase, setAnnealPhase] = useState<"idle" | "previewing" | "preview" | "applying" | "done">("idle");
+  const [annealPreview, setAnnealPreview] = useState<AnnealSummary | null>(null);
+  const [annealResult, setAnnealResult] = useState<AnnealApplyResult | null>(null);
+  const [annealError, setAnnealError] = useState<string | null>(null);
 
   const runAudit = useCallback(async () => {
     setLoading(true);
@@ -78,6 +85,51 @@ export default function AuditPanel() {
     }
   }, []);
 
+  const previewAnneal = useCallback(async () => {
+    setAnnealPhase("previewing");
+    setAnnealError(null);
+    setAnnealResult(null);
+    try {
+      const res = await fetch("/api/admin/audit-ptl/anneal", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun: true }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error ?? `Preview failed (${res.status})`);
+      setAnnealPreview(body.summary as AnnealSummary);
+      setAnnealPhase("preview");
+    } catch (e) {
+      setAnnealError(e instanceof Error ? e.message : "Preview failed");
+      setAnnealPhase("idle");
+    }
+  }, []);
+
+  const applyAnneal = useCallback(async () => {
+    setAnnealPhase("applying");
+    setAnnealError(null);
+    try {
+      const res = await fetch("/api/admin/audit-ptl/anneal", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dryRun: false }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body?.error ?? `Anneal failed (${res.status})`);
+      setAnnealResult(body.result as AnnealApplyResult);
+      setAnnealPhase("done");
+      await runAudit();           // re-audit to show the now-clean state
+    } catch (e) {
+      setAnnealError(e instanceof Error ? e.message : "Anneal failed");
+      setAnnealPhase("preview");
+    }
+  }, [runAudit]);
+
+  const actionable = result
+    ? result.totals.missing + result.months.reduce((n, m) => n + m.drifts.filter((d) => {
+        const s = (d.commission_status ?? "").trim().toLowerCase();
+        return s === "" || s === "owed";
+      }).length, 0)
+    : 0;
+
   return (
     <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -109,6 +161,63 @@ export default function AuditPanel() {
             <SummaryCard label="Amount drifts" value={result.totals.drifts} color="amber" />
             <SummaryCard label="Missing from PTL" value={result.totals.missing} color="amber" />
           </div>
+
+          {annealError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-xs text-red-700">{annealError}</p>
+            </div>
+          )}
+
+          {actionable > 0 && annealPhase !== "done" && (
+            <div className="flex flex-wrap items-center gap-3 p-3 bg-surface-50/60 border border-surface-200/60 rounded-xl">
+              {annealPhase === "preview" && annealPreview ? (
+                <>
+                  <p className="text-xs text-gray-900 flex-1">
+                    Will <strong>create {annealPreview.create}</strong> PTL row{annealPreview.create === 1 ? "" : "s"} and{" "}
+                    <strong>correct {annealPreview.correct}</strong> unpaid drift{annealPreview.correct === 1 ? "" : "s"}.{" "}
+                    <span className="text-brand-400">
+                      Skipping {annealPreview.skip_paid_drifts} paid drift{annealPreview.skip_paid_drifts === 1 ? "" : "s"} + {annealPreview.skip_orphans} orphan{annealPreview.skip_orphans === 1 ? "" : "s"}.
+                    </span>
+                  </p>
+                  <button onClick={applyAnneal} disabled={annealPhase !== "preview"} className="btn-primary text-xs">
+                    Confirm &amp; anneal
+                  </button>
+                  <button onClick={() => setAnnealPhase("idle")} className="text-xs text-brand-400 hover:text-gray-700">
+                    Cancel
+                  </button>
+                </>
+              ) : annealPhase === "applying" ? (
+                <p className="text-xs text-brand-400">Annealing…</p>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-900 flex-1">
+                    {actionable} discrepanc{actionable === 1 ? "y" : "ies"} can be auto-fixed from User Transactions.
+                  </p>
+                  <button onClick={previewAnneal} disabled={annealPhase === "previewing"} className="btn-primary text-xs">
+                    {annealPhase === "previewing" ? "Checking…" : "Anneal the fixes"}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
+
+          {annealResult && annealPhase === "done" && (
+            <div className="p-3 bg-accent/10 border border-accent/30 rounded-xl">
+              <p className="text-xs text-gray-900">
+                ✓ Created {annealResult.created} · corrected {annealResult.corrected}
+                {annealResult.failed.length > 0 && (
+                  <span className="text-red-600"> · {annealResult.failed.length} failed</span>
+                )}
+                <span className="text-brand-400"> · skipped {annealResult.skipped.paidDrifts} paid + {annealResult.skipped.orphans} orphans</span>
+              </p>
+              {annealResult.failed.length > 0 && (
+                <ul className="mt-1 text-[10px] text-red-600 list-disc pl-4">
+                  {annealResult.failed.map((f) => <li key={f.id}>{f.id}: {f.reason}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+
           <p className="text-[10px] text-brand-400">
             Generated {new Date(result.generated_at).toLocaleString()}
           </p>
