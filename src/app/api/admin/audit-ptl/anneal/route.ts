@@ -32,6 +32,8 @@ export async function POST(req: Request) {
   if (!affiliateBase || !launchBase || !pat) {
     return NextResponse.json({ error: "Airtable not configured" }, { status: 500 });
   }
+  // Note: fetchAllRecords/patchRecords read AIRTABLE_PAT from process.env directly;
+  // `pat` here is the sanitized value passed into createPtlRowFromUt via deps.
 
   try {
     // Always re-derive the plan from fresh data.
@@ -67,13 +69,14 @@ export async function POST(req: Request) {
 
     // Apply: correct unpaid drifts (PATCH Amount = UT amount; batched by helper).
     const corrections = plan.toCorrect.map((d) => ({ id: d.ptl_id, fields: { Amount: d.ut_amount } }));
-    const patch = await patchRecords(affiliateBase, PTL_TABLE, corrections);
+    const patch = corrections.length > 0
+      ? await patchRecords(affiliateBase, PTL_TABLE, corrections)
+      : { updated: 0, failed: [] as Array<{ record_id: string; error: string }>, apiCalls: 0 };
     for (const f of patch.failed) failed.push({ id: f.record_id, reason: f.error });
 
     return NextResponse.json({
       ok: true,
       dryRun: false,
-      summary,
       result: {
         created: created.length,
         corrected: patch.updated,
