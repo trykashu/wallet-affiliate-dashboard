@@ -25,23 +25,23 @@ interface TxnRow {
 }
 
 function monthKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 function shortMonth(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short" });
+  return d.toLocaleDateString("en-US", { month: "short", timeZone: "UTC" });
 }
 function dateKey(d: Date): string {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 function weekLabel(d: Date): string {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 }
-/** Monday-start of the week containing `d` (local time, time stripped). */
+/** Monday-start (UTC midnight) of the week containing `d`. */
 function weekStart(d: Date): Date {
-  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const day = x.getDay();                  // 0=Sun .. 6=Sat
-  const diff = (day === 0 ? -6 : 1) - day; // shift back to Monday
-  x.setDate(x.getDate() + diff);
+  const x = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const day = x.getUTCDay();                // 0=Sun .. 6=Sat
+  const diff = (day === 0 ? -6 : 1) - day;  // shift back to Monday
+  x.setUTCDate(x.getUTCDate() + diff);
   return x;
 }
 
@@ -54,7 +54,7 @@ export function buildReferralTrend(
   const monthly: ReferralBucket[] = [];
   const monthIdx = new Map<string, number>();
   for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     const key = monthKey(d);
     monthIdx.set(key, monthly.length);
     monthly.push({ key, label: shortMonth(d), users: 0, volume: 0 });
@@ -65,7 +65,7 @@ export function buildReferralTrend(
   const thisMonday = weekStart(now);
   for (let i = 11; i >= 0; i--) {
     const d = new Date(thisMonday);
-    d.setDate(thisMonday.getDate() - i * 7);
+    d.setUTCDate(thisMonday.getUTCDate() - i * 7);
     const key = dateKey(d);
     weekIdx.set(key, weekly.length);
     weekly.push({ key, label: weekLabel(d), users: 0, volume: 0 });
@@ -87,7 +87,8 @@ export function buildReferralTrend(
     if (!t.transaction_date) continue;
     const d = new Date(t.transaction_date);
     if (Number.isNaN(d.getTime())) continue;
-    const amt = Number(t.amount) || 0;
+    const n = Number(t.amount);
+    const amt = Number.isNaN(n) ? 0 : n;
     const mi = monthIdx.get(monthKey(d));
     if (mi !== undefined) monthly[mi].volume += amt;
     const wi = weekIdx.get(dateKey(weekStart(d)));

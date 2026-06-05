@@ -3,9 +3,10 @@ import assert from "node:assert/strict";
 import { buildReferralTrend } from "./referral-trend";
 
 // Fixed "now" = Mon Jun 15 2026, local noon — deterministic buckets.
+// Fixtures use T12:00:00 (no "Z") strings, which resolve to the same UTC calendar day
+// for any offset within ±12h, so UTC bucketing keeps all assertions stable.
 const NOW = new Date(2026, 5, 15, 12, 0, 0);
 
-// Local-time (no "Z") ISO strings so tests don't shift across timezones.
 const tx = (over: Partial<{ transaction_type: string; self_referral: boolean; transaction_date: string | null; amount: number }>) => ({
   transaction_type: "Transfer In", self_referral: false, transaction_date: "2026-06-10T12:00:00", amount: 100, ...over,
 });
@@ -70,4 +71,14 @@ test("empty input: all buckets present and zero", () => {
   assert.equal(weekly.length, 12);
   assert.ok(monthly.every((b) => b.users === 0 && b.volume === 0));
   assert.ok(weekly.every((b) => b.users === 0 && b.volume === 0));
+});
+
+test("weekly: a Sunday created_at lands in the preceding Monday's bucket", () => {
+  const { weekly } = buildReferralTrend(
+    [{ created_at: "2026-06-14T12:00:00" }],  // Sunday — previous week
+    [],
+    NOW,
+  );
+  assert.equal(weekly[10].users, 1);   // week of Jun 8
+  assert.equal(weekly[11].users, 0);   // week of Jun 15 untouched
 });
