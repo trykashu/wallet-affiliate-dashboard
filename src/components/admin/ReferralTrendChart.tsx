@@ -10,6 +10,7 @@ interface Props {
   title?: string;
   barColor?: string;
   lineColor?: string;
+  /** SVG gradient id — must be page-unique when multiple instances render. @default "referralVolumeGrad" */
   gradientId?: string;
 }
 
