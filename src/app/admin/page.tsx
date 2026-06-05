@@ -5,7 +5,7 @@ import { isAdminEmail }        from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
 import AffiliateGrowthChart    from "@/components/admin/AffiliateGrowthChart";
 import ReferralTrendChart      from "@/components/admin/ReferralTrendChart";
-import { buildReferralTrend }  from "@/lib/admin/referral-trend";
+import { buildSegmentedReferralTrend } from "@/lib/admin/referral-trend";
 import SyncButtons             from "@/components/admin/SyncButtons";
 import OverviewStatsRow        from "@/components/admin/OverviewStatsRow";
 import type { StatRow }        from "@/components/admin/StatDrillDrawer";
@@ -32,7 +32,7 @@ export default async function AdminOverviewPage() {
       .order("created_at", { ascending: false })
       .limit(10),
     db.from("transactions")
-      .select("transaction_type, self_referral, transaction_date, amount")
+      .select("affiliate_id, transaction_type, self_referral, transaction_date, amount")
       .gte("transaction_date", (() => {
         const d = new Date();
         d.setMonth(d.getMonth() - 13);
@@ -44,10 +44,13 @@ export default async function AdminOverviewPage() {
   const users:       ReferredUser[] = usersResult.data       ?? [];
   const allEarnings: Earning[]      = earningsResult.data    ?? [];
   const webhooks:    WebhookEvent[] = webhookResult.data     ?? [];
-  const transactions: Pick<Transaction, "transaction_type" | "self_referral" | "transaction_date" | "amount">[] =
+  const transactions: Pick<Transaction, "affiliate_id" | "transaction_type" | "self_referral" | "transaction_date" | "amount">[] =
     txnsResult.data ?? [];
 
-  const referralTrend = buildReferralTrend(users, transactions, new Date());
+  const payovaIds = new Set(
+    affiliates.filter((a) => a.whitelabel_brand_id != null).map((a) => a.id),
+  );
+  const referralTrend = buildSegmentedReferralTrend(users, transactions, payovaIds, new Date());
 
   // -- Affiliate breakdown --
   // Charts and headline counts use only affiliates whose agreement is signed.
@@ -162,7 +165,15 @@ export default async function AdminOverviewPage() {
     <>
       {/* Trend charts — limited to affiliates with a Completed agreement */}
       <AffiliateGrowthChart affiliates={completedAffiliates} />
-      <ReferralTrendChart monthly={referralTrend.monthly} weekly={referralTrend.weekly} />
+      <ReferralTrendChart monthly={referralTrend.main.monthly} weekly={referralTrend.main.weekly} />
+      <ReferralTrendChart
+        monthly={referralTrend.payova.monthly}
+        weekly={referralTrend.payova.weekly}
+        title="Payova — Users Referred & Referred Volume"
+        barColor="#7C3AED"
+        lineColor="#8B5CF6"
+        gradientId="payovaVolumeGrad"
+      />
 
       {/* Stat cards */}
       <OverviewStatsRow
