@@ -48,11 +48,10 @@ export default function ReferralTrendChart({ monthly, weekly }: Props) {
   const linePoints = useMemo(
     () =>
       data.map((b, i) => ({
-        x: centerX(i),
+        x: padL + i * slotW + slotW / 2,
         y: padY + innerH - (b.volume / volumeMax) * innerH,
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [data, volumeMax, innerH, slotW],
+    [data, volumeMax, innerH, padL, padY, slotW],
   );
 
   const linePath = smoothPath(linePoints);
@@ -74,6 +73,7 @@ export default function ReferralTrendChart({ monthly, weekly }: Props) {
           </p>
         </div>
         <select
+          aria-label="Time period"
           value={granularity}
           onChange={(e) => setGranularity(e.target.value as "monthly" | "weekly")}
           className="border border-gray-200 rounded-xl text-sm text-gray-900 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"
@@ -134,7 +134,7 @@ export default function ReferralTrendChart({ monthly, weekly }: Props) {
         <path d={areaPath} fill="url(#referralVolumeGrad)" />
         <path d={linePath} fill="none" stroke="#00DE8F" strokeWidth="2" strokeLinecap="round" />
         {linePoints.map((pt, i) => (
-          <circle key={`dot-${i}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke="#00DE8F" strokeWidth="1.5" />
+          <circle key={`dot-${data[i].key}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke="#00DE8F" strokeWidth="1.5" />
         ))}
 
         {/* X labels */}
