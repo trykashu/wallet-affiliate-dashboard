@@ -58,11 +58,28 @@ export async function GET(request: NextRequest) {
   }
 
   // Affiliate flow
-  const { data: affiliate } = await db
+  let { data: affiliate } = await db
     .from("affiliates")
     .select("has_password")
     .eq("user_id", user.id)
     .single();
+
+  // Self-heal: if no affiliate is linked to this auth user, the
+  // on_auth_user_created trigger never matched (email whitespace/casing
+  // drift between auth.users and the imported affiliate row). Re-link here
+  // via link_affiliate_by_email, which does the exact same trimmed,
+  // case-insensitive match as the trigger and only touches rows whose
+  // user_id is still NULL — so the user isn't stranded on "Account Being
+  // Set Up".
+  if (!affiliate && user.email) {
+    const { data: linkedRows } = await db.rpc("link_affiliate_by_email", {
+      p_user_id: user.id,
+      p_email: user.email,
+    });
+    if (Array.isArray(linkedRows) && linkedRows.length > 0) {
+      affiliate = linkedRows[0];
+    }
+  }
 
   if (affiliate) {
     // Track last login
