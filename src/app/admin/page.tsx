@@ -4,11 +4,12 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
 import { fmt }                 from "@/lib/fmt";
 import AffiliateGrowthChart    from "@/components/admin/AffiliateGrowthChart";
-import UserConversionChart     from "@/components/admin/UserConversionChart";
+import ReferralTrendChart      from "@/components/admin/ReferralTrendChart";
+import { buildReferralTrend }  from "@/lib/admin/referral-trend";
 import SyncButtons             from "@/components/admin/SyncButtons";
 import OverviewStatsRow        from "@/components/admin/OverviewStatsRow";
 import type { StatRow }        from "@/components/admin/StatDrillDrawer";
-import type { Affiliate, ReferredUser, Earning, WebhookEvent } from "@/types/database";
+import type { Affiliate, ReferredUser, Earning, WebhookEvent, Transaction } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export default async function AdminOverviewPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
-  const [affiliatesResult, usersResult, earningsResult, webhookResult] = await Promise.all([
+  const [affiliatesResult, usersResult, earningsResult, webhookResult, txnsResult] = await Promise.all([
     db.from("affiliates").select("*").order("created_at", { ascending: false }),
     db.from("referred_users").select("*").order("created_at", { ascending: false }),
     db.from("earnings").select("*"),
@@ -30,12 +31,17 @@ export default async function AdminOverviewPage() {
       .select("*")
       .order("created_at", { ascending: false })
       .limit(10),
+    db.from("transactions").select("transaction_type, self_referral, transaction_date, amount"),
   ]);
 
   const affiliates:  Affiliate[]    = affiliatesResult.data  ?? [];
   const users:       ReferredUser[] = usersResult.data       ?? [];
   const allEarnings: Earning[]      = earningsResult.data    ?? [];
   const webhooks:    WebhookEvent[] = webhookResult.data     ?? [];
+  const transactions: Pick<Transaction, "transaction_type" | "self_referral" | "transaction_date" | "amount">[] =
+    txnsResult.data ?? [];
+
+  const referralTrend = buildReferralTrend(users, transactions, new Date());
 
   // -- Affiliate breakdown --
   // Charts and headline counts use only affiliates whose agreement is signed.
@@ -150,7 +156,7 @@ export default async function AdminOverviewPage() {
     <>
       {/* Trend charts — limited to affiliates with a Completed agreement */}
       <AffiliateGrowthChart affiliates={completedAffiliates} />
-      <UserConversionChart users={users} />
+      <ReferralTrendChart monthly={referralTrend.monthly} weekly={referralTrend.weekly} />
 
       {/* Stat cards */}
       <OverviewStatsRow
