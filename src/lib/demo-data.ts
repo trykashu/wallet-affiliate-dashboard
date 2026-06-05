@@ -32,6 +32,7 @@ export const DEMO_AFFILIATE: Affiliate = {
   tier_override:         false,
   status:                "active",
   referred_volume_total: 320_000,
+  legacy_volume_adjustment: 0,
   attribution_id:        "DEMO-AXR-2026",
   has_password:          true,
   agreement_status:      "signed",

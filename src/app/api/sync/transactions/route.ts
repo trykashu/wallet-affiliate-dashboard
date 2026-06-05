@@ -61,7 +61,7 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: affiliates } = await (db as any)
       .from("affiliates")
-      .select("id, attribution_id, business_name, agent_name, email, tier, tier_override, referred_volume_total, custom_commission_rate, custom_commission_basis");
+      .select("id, attribution_id, business_name, agent_name, email, tier, tier_override, referred_volume_total, legacy_volume_adjustment, custom_commission_rate, custom_commission_basis");
 
     const affiliateById = new Map<string, {
       id: string;
@@ -69,6 +69,7 @@ export async function GET() {
       tier: AffiliateTier;
       tier_override: boolean;
       referred_volume_total: number;
+      legacy_volume_adjustment: number;
       custom_commission_rate: number | null;
       custom_commission_basis: 'tpv' | 'kashu_fee' | null;
     }>();
@@ -83,6 +84,7 @@ export async function GET() {
         tier: a.tier,
         tier_override: a.tier_override,
         referred_volume_total: Number(a.referred_volume_total) || 0,
+        legacy_volume_adjustment: Number(a.legacy_volume_adjustment) || 0,
         custom_commission_rate: a.custom_commission_rate !== null && a.custom_commission_rate !== undefined ? Number(a.custom_commission_rate) : null,
         custom_commission_basis: a.custom_commission_basis ?? null,
       });
@@ -516,10 +518,15 @@ export async function GET() {
         .eq("transaction_type", "Transfer In")
         .eq("self_referral", false);
 
-      const totalVolume = (txnData || []).reduce(
+      const transactionVolume = (txnData || []).reduce(
         (sum: number, t: { amount: number }) => sum + Number(t.amount),
         0,
       );
+
+      // Fold in the durable manual legacy adjustment so it survives the
+      // recompute and counts toward the Platinum threshold.
+      const legacyAdjustment = affiliateById.get(affiliateId)?.legacy_volume_adjustment ?? 0;
+      const totalVolume = transactionVolume + legacyAdjustment;
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error } = await (db as any)

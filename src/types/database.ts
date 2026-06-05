@@ -52,6 +52,10 @@ export interface Affiliate {
   tier_override: boolean;
   status: AffiliateStatus;
   referred_volume_total: number;
+  /** Manual volume credit (e.g. legacy-business referrals not tied to a tracked
+   *  transaction). Added to the synced Transfer-In total to form
+   *  referred_volume_total. Set by admin, never by sync. */
+  legacy_volume_adjustment: number;
   attribution_id: string;
   has_password: boolean;
   agreement_status: string | null;
