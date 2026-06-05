@@ -17,7 +17,9 @@ export function buildPtlFieldsFromUt(
   const fields: Record<string, unknown> = {
     "Transaction ID": txnId,
     "Amount": Number(ut.fields["Amount"]) || 0,
+    // Exact string Airtable stores — note the space before % (matches upstream automation).
     "Funnel %": "8.5 %",
+    // Airtable returns linked-record values as string[]; the attribution ID is always [0].
     "Referrer": referrer,
     "Commission Status": "Owed",
     "Transaction Type": (ut.fields["Transaction Type"] as string | undefined) ?? "Transfer In",
@@ -25,8 +27,9 @@ export function buildPtlFieldsFromUt(
     "Partner Match": [affiliateRecordId],
     "User Email": emailArr?.[0] ?? null,
   };
-  if (last4Raw !== undefined && last4Raw !== null && last4Raw !== "") {
-    fields["Last 4 of Card"] = Number(last4Raw);
+  const last4Num = Number(last4Raw);
+  if (last4Raw !== undefined && last4Raw !== null && last4Raw !== "" && !Number.isNaN(last4Num)) {
+    fields["Last 4 of Card"] = last4Num;
   }
   if (ut.fields["Card Issuer"]) fields["Card Issuer"] = ut.fields["Card Issuer"];
 

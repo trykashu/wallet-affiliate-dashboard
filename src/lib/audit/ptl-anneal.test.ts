@@ -41,4 +41,14 @@ test("buildPtlFieldsFromUt: strips empty/null optionals", () => {
   assert.equal("Card Issuer" in f, false);
   assert.equal("User Email" in f, false);
   assert.equal(f["Transaction Type"], "Transfer In"); // default
+  // No "Date Txn Started" in fields → "Transaction Date" should be stripped
+  assert.equal("Transaction Date" in f, false);
+});
+
+test("buildPtlFieldsFromUt: drops non-numeric Last 4 (NaN guard)", () => {
+  const f = buildPtlFieldsFromUt(
+    { id: "u2", createdTime: "", fields: { "Transaction ID": "T3", "Amount": 10, "Referrer": ["R3"], "Last 4": "XXXX" } },
+    "recAff3",
+  );
+  assert.equal("Last 4 of Card" in f, false);
 });
