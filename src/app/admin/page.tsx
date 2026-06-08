@@ -278,8 +278,8 @@ export default async function AdminOverviewPage() {
         monthly={referralTrend.payova.monthly}
         weekly={referralTrend.payova.weekly}
         title="Payova — Users Referred & Referred Volume"
-        barColor="#7C3AED"
-        lineColor="#8B5CF6"
+        barColor="#16A34A"
+        lineColor="#00DE8F"
         gradientId="payovaVolumeGrad"
       />
       <AffiliateGrowthChart affiliates={completedAffiliates} />
