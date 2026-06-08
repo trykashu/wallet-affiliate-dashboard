@@ -39,8 +39,8 @@ export default function TopAffiliatesTable({ rows }: { rows: TopAffiliateRow[] }
   );
 
   return (
-    <div className="ad-card overflow-hidden">
-      <div className="px-5 py-4 flex items-center justify-between gap-4" style={{ borderBottom: "1px solid var(--ad-border)" }}>
+    <div className="ad-card overflow-hidden flex flex-col h-full">
+      <div className="px-5 py-4 flex items-center justify-between gap-4 flex-shrink-0" style={{ borderBottom: "1px solid var(--ad-border)" }}>
         <div>
           <h3 className="text-sm font-semibold ad-text-1">Top Affiliates</h3>
           <p className="text-[11px] ad-text-3 mt-0.5">Ranked by {sort === "volume" ? "referred volume" : "commission"}</p>
@@ -69,9 +69,9 @@ export default function TopAffiliatesTable({ rows }: { rows: TopAffiliateRow[] }
           <p className="text-sm ad-text-3">No affiliate activity recorded yet.</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="flex-1 min-h-0 overflow-auto">
           <table className="min-w-full">
-            <thead>
+            <thead className="sticky top-0 z-10" style={{ backgroundColor: "var(--ad-surface)" }}>
               <tr>
                 <th className="ad-th w-10 text-right">#</th>
                 <th className="ad-th">Affiliate</th>

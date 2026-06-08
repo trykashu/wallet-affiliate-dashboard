@@ -276,11 +276,21 @@ export default async function AdminOverviewPage() {
         topByEarnings={topByEarnings}
       />
 
-      {/* System volume trend + top affiliates — side by side */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start">
+      {/* System volume trend + top affiliates — side by side.
+          Top affiliates aligns its height to the trend chart and scrolls. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <EarningsTrendChart tpv={tpvTrend} cash={cashTrend} />
-        <TopAffiliatesTable rows={topAffiliateRows} />
+        <div className="relative min-h-0">
+          {/* lg:absolute lets the chart define the row height; the table fills
+              it and scrolls instead of growing the row. */}
+          <div className="lg:absolute lg:inset-0">
+            <TopAffiliatesTable rows={topAffiliateRows} />
+          </div>
+        </div>
       </div>
+
+      {/* Data sync controls — directly under the pair, compact to stay in view */}
+      <SyncButtons />
 
       {/* System funnel + payouts summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
@@ -312,9 +322,6 @@ export default async function AdminOverviewPage() {
         notCreatedVolume={notCreatedVolume}
         total={affiliates.length}
       />
-
-      {/* Data sync controls */}
-      <SyncButtons />
 
       {/* Recent webhook events */}
       <div className="ad-card overflow-hidden">
