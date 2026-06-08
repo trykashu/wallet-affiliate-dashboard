@@ -71,6 +71,7 @@ export default async function AdminLayout({
   return (
     <div
       data-admin-theme
+      data-brand={brandScope}
       className={`${GeistSans.variable} ${GeistMono.variable} flex min-h-screen relative`}
       style={{
         // Map the self-hosted Geist variables onto the admin font tokens so

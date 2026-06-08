@@ -357,6 +357,15 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Payova brand scope — swap the one accent to Payova purple. Everything
+   (buttons, selected rows, badges, chart lines, toggles) flows from these. */
+[data-admin-theme][data-brand="payova"] {
+  --ad-accent:        #8B5CF6; /* Payova violet */
+  --ad-accent-strong: #A78BFA;
+  --ad-accent-soft:   rgba(139, 92, 246, 0.14);
+  --ad-accent-border: rgba(139, 92, 246, 0.40);
+}
+
 [data-admin-theme] ::selection {
   background-color: var(--ad-accent-soft);
   color: var(--ad-text);
