@@ -341,10 +341,10 @@
   --ad-text:          #F4F5F7; /* primary */
   --ad-text-2:        #9CA2AE; /* secondary — used heavily for hierarchy */
   --ad-text-3:        #626975; /* tertiary / muted */
-  --ad-accent:        #5B6EF0; /* the ONE accent — indigo */
-  --ad-accent-strong: #6E7FF3;
-  --ad-accent-soft:   rgba(91, 110, 240, 0.12);
-  --ad-accent-border: rgba(91, 110, 240, 0.38);
+  --ad-accent:        #00DE8F; /* the ONE accent — Kashu brand green */
+  --ad-accent-strong: #34E8A6;
+  --ad-accent-soft:   rgba(0, 222, 143, 0.12);
+  --ad-accent-border: rgba(0, 222, 143, 0.38);
   --ad-pos:           #34D399; /* positive */
   --ad-neg:           #F2706E; /* negative */
   --ad-radius:        14px;
@@ -406,7 +406,7 @@
 /* ── Buttons ───────────────────────────────────────────────────── */
 [data-admin-theme] .ad-btn-primary {
   background-color: var(--ad-accent);
-  color: #fff;
+  color: #0B0E13; /* dark text — legible on the bright green accent */
   font-weight: 600;
   font-size: 13px;
   padding: 0.5rem 1.1rem;

@@ -385,7 +385,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                     type="checkbox"
                     checked={allSelected}
                     onChange={toggleAll}
-                    className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
+                    className="rounded border-[var(--ad-border)] accent-[#00DE8F]"
                     aria-label="Select all"
                   />
                 </th>
@@ -411,7 +411,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleAffiliate(r.affiliate_id)}
-                          className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
+                          className="rounded border-[var(--ad-border)] accent-[#00DE8F]"
                           aria-label={`Select ${r.affiliate_name}`}
                         />
                       ) : (

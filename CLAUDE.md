@@ -319,9 +319,11 @@ git push origin main
   `.ad-th/.ad-td/.ad-row(-selected)`, `.ad-btn-primary/.ad-btn-ghost`, `.ad-act(-pos/-neg/-amber)`,
   `.ad-badge(-pos/-neg/-amber/-neutral/-accent)`, `.ad-input/.ad-select`, `.ad-nav-*`,
   `.ad-modal`, `.ad-cents`, `.mask-money`, and scoped `.drawer-backdrop/.drawer-panel`.
-- **The ONE accent rule:** indigo `#5B6EF0` (`--ad-accent`) is reserved for the primary action
-  and the selected/highlighted row only — never decorative. Status uses pos/neg/amber/neutral.
-  Funnel stage colors stay the green gradient by design.
+- **The ONE accent rule:** the accent (`--ad-accent`, Kashu brand green `#00DE8F` — was indigo
+  `#5B6EF0`, swapped 2026-06-08 per request) is reserved for the primary action and the
+  selected/highlighted row only — never decorative. `.ad-btn-primary` uses dark text (`#0B0E13`)
+  for legibility on the bright green. Status uses pos/neg/amber/neutral; funnel stage colors stay
+  the green gradient by design. (Recolor = the `--ad-accent*` tokens in globals.css only.)
 - **Craft details:** [`Money`](src/components/admin/Money.tsx) renders large dollars + superscript
   cents and carries `data-sensitive`. [`BalanceVisibilityToggle`](src/components/admin/BalanceVisibilityToggle.tsx)
   toggles a `mask-money` class on the shell to blur every `data-sensitive` figure (CSS-only, works

@@ -239,7 +239,7 @@ export default function AdminEarningsTable({
                     type="checkbox"
                     checked={selected.size === eligiblePendingIds.length && eligiblePendingIds.length > 0}
                     onChange={toggleSelectAll}
-                    className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
+                    className="rounded border-[var(--ad-border)] accent-[#00DE8F]"
                   />
                 </th>
               )}
@@ -272,7 +272,7 @@ export default function AdminEarningsTable({
                           type="checkbox"
                           checked={selected.has(e.id)}
                           onChange={() => toggleSelect(e.id)}
-                          className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
+                          className="rounded border-[var(--ad-border)] accent-[#00DE8F]"
                         />
                       ) : e.status === "pending" ? (
                         <span title="Contract not signed — cannot approve" className="inline-flex w-4 h-4 items-center justify-center ad-text-3">

@@ -104,7 +104,7 @@ export default function AdminSettingsForm({
               id="auto-approve"
               checked={autoApprove}
               onChange={(e) => setAutoApprove(e.target.checked)}
-              className="mt-0.5 rounded border-[var(--ad-border)] accent-[#5B6EF0]"
+              className="mt-0.5 rounded border-[var(--ad-border)] accent-[#00DE8F]"
             />
             <div>
               <label htmlFor="auto-approve" className="text-xs ad-text-2 font-medium cursor-pointer">

@@ -38,7 +38,7 @@ export default function ReferralTrendChart({
   monthly,
   weekly,
   title = "Users Referred & Referred Volume",
-  barColor = "#5B6EF0",
+  barColor = "#626975",
   lineColor = "#34D399",
   gradientId = "referralVolumeGrad",
 }: Props) {
