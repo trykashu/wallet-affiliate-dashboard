@@ -2,6 +2,7 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
+import { getBrandScope, inScope } from "@/lib/admin/brand-scope";
 import AdminUserTable          from "@/components/admin/AdminUserTable";
 import type { AdminUser }      from "@/components/admin/AdminUserTable";
 import type { ReferredUser, Affiliate } from "@/types/database";
@@ -15,6 +16,8 @@ export default async function AdminUsersPage() {
   if (!user) redirect("/login");
   if (!isAdminEmail(user.email)) redirect("/dashboard");
 
+  const scope = await getBrandScope();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
@@ -23,11 +26,13 @@ export default async function AdminUsersPage() {
       .select("id, full_name, email, affiliate_id, status_slug, first_transaction_amount, created_at")
       .order("created_at", { ascending: false }),
     db.from("affiliates")
-      .select("id, agent_name"),
+      .select("id, agent_name, whitelabel_brand_id"),
   ]);
 
-  const referredUsers: ReferredUser[] = usersResult.data ?? [];
-  const affiliates: Affiliate[]       = affiliatesResult.data ?? [];
+  // Scope to the active brand (Kashu vs Payova) via the affiliate.
+  const affiliates: Affiliate[] = (affiliatesResult.data ?? []).filter((a: Affiliate) => inScope(a.whitelabel_brand_id, scope));
+  const scopedIds = new Set(affiliates.map((a) => a.id));
+  const referredUsers: ReferredUser[] = (usersResult.data ?? []).filter((u: ReferredUser) => scopedIds.has(u.affiliate_id));
 
   // Build affiliate name lookup
   const affiliateMap = new Map<string, string>();

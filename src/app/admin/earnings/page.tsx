@@ -2,6 +2,7 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
+import { getBrandScope, inScope } from "@/lib/admin/brand-scope";
 import Money                   from "@/components/admin/Money";
 import AdminEarningsTable      from "@/components/admin/AdminEarningsTable";
 import AuditPanel              from "@/components/admin/AuditPanel";
@@ -17,25 +18,26 @@ export default async function AdminEarningsPage() {
   if (!user) redirect("/login");
   if (!isAdminEmail(user.email)) redirect("/dashboard");
 
+  const scope = await getBrandScope();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
   const [earningsResult, affiliatesResult, usersResult, payoutAccountsResult] = await Promise.all([
     db.from("earnings").select("*").order("created_at", { ascending: false }),
-    // Exclude whitelabel-branded affiliates (Payova / Travis Marker) — they
-    // require a custom payout flow and must not appear in the standard
-    // earnings/payouts review queue. Travis's own dashboard fetches via
-    // getAffiliateContext (user-scoped) and is unaffected.
-    db.from("affiliates").select("id, agent_name, agreement_status").is("whitelabel_brand_id", null),
+    // Brand-scoped: Kashu vs Payova (whitelabel) affiliates are shown separately
+    // per the header toggle. (Payouts page stays Kashu-only regardless — see its
+    // own query — so Payova still never enters the standard payout/wire flow.)
+    db.from("affiliates").select("id, agent_name, agreement_status, whitelabel_brand_id"),
     db.from("referred_users").select("id, full_name"),
     db.from("payout_accounts").select("affiliate_id, is_default, is_verified").eq("is_verified", true),
   ]);
 
   const allEarningsRaw: Earning[]      = earningsResult.data   ?? [];
-  const affiliates:     Affiliate[]    = affiliatesResult.data ?? [];
+  const affiliates:     Affiliate[]    = (affiliatesResult.data ?? []).filter((a: Affiliate) => inScope(a.whitelabel_brand_id, scope));
   const referredUsers:  ReferredUser[] = usersResult.data     ?? [];
-  const nonWhitelabelIds = new Set(affiliates.map((a) => a.id));
-  const allEarnings = allEarningsRaw.filter((e) => nonWhitelabelIds.has(e.affiliate_id));
+  const scopedIds = new Set(affiliates.map((a) => a.id));
+  const allEarnings = allEarningsRaw.filter((e) => scopedIds.has(e.affiliate_id));
 
   type AcctRow = { affiliate_id: string; is_default: boolean; is_verified: boolean };
   const payableAffiliateIds = new Set<string>(

@@ -2,6 +2,7 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
+import { getBrandScope, inScope } from "@/lib/admin/brand-scope";
 import HolographicFunnel       from "@/components/admin/AdminHolographicFunnel";
 import DropOffAnalysis         from "@/components/admin/AdminDropOffAnalysis";
 import type { ReferredUser, FunnelEvent, FunnelStatus, StageDuration } from "@/types/database";
@@ -15,17 +16,27 @@ export default async function AdminFunnelPage() {
   if (!user) redirect("/login");
   if (!isAdminEmail(user.email)) redirect("/dashboard");
 
+  const scope = await getBrandScope();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
-  const [usersResult, eventsResult, statusesResult] = await Promise.all([
+  const [usersResult, eventsResult, statusesResult, affiliatesResult] = await Promise.all([
     db.from("referred_users").select("*"),
     db.from("funnel_events").select("*"),
     db.from("funnel_statuses").select("*").order("sort_order", { ascending: true }),
+    db.from("affiliates").select("id, whitelabel_brand_id"),
   ]);
 
-  const allUsers:      ReferredUser[] = usersResult.data    ?? [];
-  const allEvents:     FunnelEvent[]  = eventsResult.data   ?? [];
+  // Scope to the active brand (Kashu vs Payova) via the affiliate, then keep
+  // only events belonging to in-scope users.
+  type AffRow = { id: string; whitelabel_brand_id: string | null };
+  const scopedAffIds = new Set(
+    ((affiliatesResult.data ?? []) as AffRow[]).filter((a) => inScope(a.whitelabel_brand_id, scope)).map((a) => a.id),
+  );
+  const allUsers:      ReferredUser[] = (usersResult.data ?? []).filter((u: ReferredUser) => scopedAffIds.has(u.affiliate_id));
+  const scopedUserIds = new Set(allUsers.map((u) => u.id));
+  const allEvents:     FunnelEvent[]  = (eventsResult.data ?? []).filter((e: FunnelEvent) => scopedUserIds.has(e.referred_user_id));
   const funnelStatuses: FunnelStatus[] = statusesResult.data ?? [];
 
   // Compute average stage durations from funnel_events

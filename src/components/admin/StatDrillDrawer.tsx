@@ -1,6 +1,7 @@
 "use client";
 
 import { fmt } from "@/lib/fmt";
+import DrillTrendChart from "./DrillTrendChart";
 
 export type StatKey = "affiliates" | "users" | "volume" | "earnings";
 
@@ -20,10 +21,16 @@ interface Props {
   headlineValue: string;
   emptyHint: string;
   formatValue: (n: number) => string;
+  /** Heading above the list (e.g. "Top contributors" vs "Recently added"). */
+  listLabel?: string;
+  /** Optional additions-by-month trend rendered above the list. */
+  trend?: { label: string; value: number }[];
+  trendCaption?: string;
 }
 
 export default function StatDrillDrawer({
   open, onClose, rows, headlineLabel, headlineValue, emptyHint, formatValue,
+  listLabel = "Top contributors", trend, trendCaption,
 }: Props) {
   if (!open) return null;
 
@@ -51,7 +58,9 @@ export default function StatDrillDrawer({
           </button>
         </div>
 
-        <h3 className="ad-label mb-2">Top contributors</h3>
+        {trend && <DrillTrendChart series={trend} caption={trendCaption ?? "Added"} />}
+
+        <h3 className="ad-label mb-2">{listLabel}</h3>
 
         {rows.length === 0 ? (
           <p className="ad-inset p-6 text-center text-sm ad-text-3">{emptyHint}</p>

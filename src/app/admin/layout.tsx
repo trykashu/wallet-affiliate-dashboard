@@ -6,6 +6,8 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
 import AdminSidebar            from "@/components/admin/AdminSidebar";
 import BalanceVisibilityToggle from "@/components/admin/BalanceVisibilityToggle";
+import BrandScopeToggle        from "@/components/admin/BrandScopeToggle";
+import { getBrandScope }       from "@/lib/admin/brand-scope";
 import type { NavItem }        from "@/components/layout/AppSidebar";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +57,7 @@ export default async function AdminLayout({
   if (!isAdminEmail(user.email)) redirect("/dashboard");
 
   const pendingReviewCount = await getPendingReviewBatchCount();
+  const brandScope = await getBrandScope();
   const adminNav: NavItem[] = BASE_ADMIN_NAV.map((item) =>
     item.href === "/admin/payouts"
       ? { ...item, badge: pendingReviewCount }
@@ -93,6 +96,7 @@ export default async function AdminLayout({
               <p className="text-[11px] ad-text-3 hidden sm:block">{today}</p>
             </div>
             <div className="flex items-center gap-2.5">
+              <BrandScopeToggle scope={brandScope} />
               <BalanceVisibilityToggle />
             </div>
           </div>

@@ -2,18 +2,14 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
+import { getBrandScope, inScope } from "@/lib/admin/brand-scope";
 import { fmt }                 from "@/lib/fmt";
-import AffiliateGrowthChart    from "@/components/admin/AffiliateGrowthChart";
-import ReferralTrendChart      from "@/components/admin/ReferralTrendChart";
-import { buildSegmentedReferralTrend } from "@/lib/admin/referral-trend";
 import EarningsTrendChart      from "@/components/admin/EarningsTrendChart";
 import TopAffiliatesTable      from "@/components/admin/TopAffiliatesTable";
-import SystemFunnelCard        from "@/components/admin/SystemFunnelCard";
-import PayoutsSummaryCard      from "@/components/admin/PayoutsSummaryCard";
 import SyncButtons             from "@/components/admin/SyncButtons";
 import OverviewStatsRow        from "@/components/admin/OverviewStatsRow";
 import type { StatRow }        from "@/components/admin/StatDrillDrawer";
-import type { Affiliate, ReferredUser, Earning, WebhookEvent, Transaction } from "@/types/database";
+import type { Affiliate, ReferredUser, Earning, Transaction } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
@@ -24,19 +20,17 @@ export default async function AdminOverviewPage() {
   if (!user) redirect("/login");
   if (!isAdminEmail(user.email)) redirect("/dashboard");
 
+  const scope = await getBrandScope();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
-  const [affiliatesResult, usersResult, earningsResult, webhookResult, txnsResult] = await Promise.all([
+  const [affiliatesResult, usersResult, earningsResult, txnsResult] = await Promise.all([
     db.from("affiliates").select("*").order("created_at", { ascending: false }),
     db.from("referred_users").select("*").order("created_at", { ascending: false }),
     db.from("earnings").select("*"),
-    db.from("webhook_events")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(10),
     db.from("transactions")
-      .select("affiliate_id, transaction_type, self_referral, transaction_date, amount")
+      .select("affiliate_id, transaction_type, transaction_date, amount")
       .gte("transaction_date", (() => {
         const d = new Date();
         d.setMonth(d.getMonth() - 13);
@@ -44,21 +38,19 @@ export default async function AdminOverviewPage() {
       })()),
   ]);
 
-  const affiliates:  Affiliate[]    = affiliatesResult.data  ?? [];
-  const users:       ReferredUser[] = usersResult.data       ?? [];
-  const allEarnings: Earning[]      = earningsResult.data    ?? [];
-  const webhooks:    WebhookEvent[] = webhookResult.data     ?? [];
-  const transactions: Pick<Transaction, "affiliate_id" | "transaction_type" | "self_referral" | "transaction_date" | "amount">[] =
-    txnsResult.data ?? [];
+  // ── Brand scope ──────────────────────────────────────────────────
+  // Kashu (whitelabel_brand_id null) vs Payova (whitelabel_brand_id set) are
+  // kept entirely separate. Child rows are scoped via their affiliate.
+  const allAffiliates: Affiliate[] = affiliatesResult.data ?? [];
+  const affiliates = allAffiliates.filter((a) => inScope(a.whitelabel_brand_id, scope));
+  const scopedIds = new Set(affiliates.map((a) => a.id));
 
-  const payovaIds = new Set(
-    affiliates.filter((a) => a.whitelabel_brand_id != null).map((a) => a.id),
-  );
-  const referralTrend = buildSegmentedReferralTrend(users, transactions, payovaIds, new Date());
+  const users: ReferredUser[] = (usersResult.data ?? []).filter((u: ReferredUser) => scopedIds.has(u.affiliate_id));
+  const allEarnings: Earning[] = (earningsResult.data ?? []).filter((e: Earning) => scopedIds.has(e.affiliate_id));
+  const transactions: Pick<Transaction, "affiliate_id" | "transaction_type" | "transaction_date" | "amount">[] =
+    (txnsResult.data ?? []).filter((t: { affiliate_id: string }) => scopedIds.has(t.affiliate_id));
 
-  // -- Affiliate breakdown --
-  // Charts and headline counts use only affiliates whose agreement is signed.
-  // Pre-signature rows are tracked separately in the Pipeline card below.
+  // -- Affiliate breakdown -- (signed only for headline counts/charts)
   const completedAffiliates       = affiliates.filter((a) => a.agreement_status === "Completed");
   const pendingSignatureAffiliates = affiliates.filter((a) => a.agreement_status === "Pending Partner Signature");
   const declinedAffiliates         = affiliates.filter((a) => a.agreement_status === "Declined");
@@ -77,7 +69,6 @@ export default async function AdminOverviewPage() {
   const declinedVolume         = sumVolume(declinedAffiliates);
   const notCreatedVolume       = sumVolume(notCreatedAffiliates);
 
-  // -- Total referred volume — across ALL affiliates including pending-signature.
   const totalVolume = affiliates.reduce((sum, a) => sum + (a.referred_volume_total ?? 0), 0);
 
   // -- Earnings breakdown --
@@ -86,10 +77,7 @@ export default async function AdminOverviewPage() {
   const paidEarnings     = allEarnings.filter((e) => e.status === "paid").reduce((s, e) => s + e.amount, 0);
   const totalEarnings    = pendingEarnings + approvedEarnings + paidEarnings;
 
-  // ── Month-over-month deltas ──────────────────────────────────────
-  // Derived entirely from rows ALREADY fetched above (created_at /
-  // agreement_completed_at). No new queries. A delta is null when there's
-  // no comparable prior-month base, so the UI shows no delta rather than ∞%.
+  // ── Month-over-month deltas (from already-fetched rows; null = no base) ──
   const now = new Date();
   const curMonthStart  = new Date(now.getFullYear(), now.getMonth(), 1);
   const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -123,52 +111,52 @@ export default async function AdminOverviewPage() {
   }
   const earningsDelta = pctDelta(earnCur, earnPrev);
 
-  // Volume delta is NOT derivable: referred_volume_total is a current snapshot
-  // with no time dimension. Shown without a delta rather than a fabricated one.
+  // Volume delta isn't derivable from the referred_volume_total snapshot.
   const volumeDelta: number | null = null;
 
-  // ── 12-month volume trend (TPV default, Cash Collected toggle) ────
-  // Both derived from rows ALREADY fetched: TPV from Transfer-In transactions
-  // (transaction_date), cash collected from earnings.transaction_fee_amount
-  // (created_at). No new queries.
-  const tpvBuckets = new Map<string, number>();
-  for (const t of transactions) {
-    if (t.transaction_type !== "Transfer In") continue;
-    if (!t.transaction_date) continue;
-    const d = new Date(t.transaction_date);
-    const k = `${d.getFullYear()}-${d.getMonth()}`;
-    tpvBuckets.set(k, (tpvBuckets.get(k) ?? 0) + (Number(t.amount) || 0));
-  }
-  const cashBuckets = new Map<string, number>();
-  for (const e of allEarnings) {
-    if (!e.created_at) continue;
-    const d = new Date(e.created_at);
-    const k = `${d.getFullYear()}-${d.getMonth()}`;
-    cashBuckets.set(k, (cashBuckets.get(k) ?? 0) + (Number(e.transaction_fee_amount) || 0));
-  }
+  // ── 12-month windows ─────────────────────────────────────────────
   const trendMonths = Array.from({ length: 12 }, (_, idx) =>
     new Date(curMonthStart.getFullYear(), curMonthStart.getMonth() - (11 - idx), 1),
   );
-  const tpvTrend = trendMonths.map((d) => ({
-    label: d.toLocaleDateString("en-US", { month: "short" }),
-    value: tpvBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0,
-  }));
-  const cashTrend = trendMonths.map((d) => ({
-    label: d.toLocaleDateString("en-US", { month: "short" }),
-    value: cashBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0,
-  }));
+  const monthLabel = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
+  const monthKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}`;
 
-  // ── System funnel — signups / activated from status_slug (already fetched).
-  // "Clicks" has no source → flagged placeholder in the card.
-  const FUNNEL_ORDER = [
-    "waitlist", "booked_call", "sent_onboarding", "signed_up",
-    "transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank",
-  ];
-  const stageRank = (slug: string) => FUNNEL_ORDER.indexOf(slug);
-  const signedUpCount = users.filter((u) => stageRank(u.status_slug) >= FUNNEL_ORDER.indexOf("signed_up")).length;
-  const activatedCount = users.filter((u) => stageRank(u.status_slug) >= FUNNEL_ORDER.indexOf("transaction_run")).length;
+  // Sum series helper (currency) and count series helper (additions).
+  const sumByMonth = (rows: Array<{ ts: string | null | undefined; v: number }>) => {
+    const m = new Map<string, number>();
+    for (const r of rows) {
+      if (!r.ts) continue;
+      const d = new Date(r.ts);
+      const k = monthKey(d);
+      m.set(k, (m.get(k) ?? 0) + (Number(r.v) || 0));
+    }
+    return trendMonths.map((d) => ({ label: monthLabel(d), value: m.get(monthKey(d)) ?? 0 }));
+  };
+  const countByMonth = (timestamps: Array<string | null | undefined>) => {
+    const m = new Map<string, number>();
+    for (const t of timestamps) {
+      if (!t) continue;
+      const d = new Date(t);
+      const k = monthKey(d);
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return trendMonths.map((d) => ({ label: monthLabel(d), value: m.get(monthKey(d)) ?? 0 }));
+  };
 
-  // ── Top-10 contributors for each headline stat (click-to-drill cards) ──
+  // System volume trend — TPV (Transfer-In) default, Cash Collected toggle.
+  const tpvTrend = sumByMonth(
+    transactions
+      .filter((t) => t.transaction_type === "Transfer In")
+      .map((t) => ({ ts: t.transaction_date, v: Number(t.amount) || 0 })),
+  );
+  const cashTrend = sumByMonth(allEarnings.map((e) => ({ ts: e.created_at, v: Number(e.transaction_fee_amount) || 0 })));
+
+  // Drill-in additions-by-month.
+  const affiliatesAddedTrend = countByMonth(completedAffiliates.map((a) => a.agreement_completed_at ?? a.created_at));
+  const usersAddedTrend = countByMonth(users.map((u) => u.created_at));
+
+  // ── Drill lists ──────────────────────────────────────────────────
+  // Affiliates: most recently signed (additions, not "contributors").
   const topAffiliates: StatRow[] = completedAffiliates
     .slice()
     .sort((a, b) => {
@@ -239,7 +227,6 @@ export default async function AdminOverviewPage() {
       };
     });
 
-  // ── Top affiliates (ranked analytics table) ──────────────────────
   const topAffiliateRows = affiliates
     .map((a) => ({
       affiliate_id: a.id,
@@ -274,6 +261,8 @@ export default async function AdminOverviewPage() {
         topByUsers={topByUsers}
         topByVolume={topByVolume}
         topByEarnings={topByEarnings}
+        affiliatesTrend={affiliatesAddedTrend}
+        usersTrend={usersAddedTrend}
       />
 
       {/* System volume trend + top affiliates — side by side.
@@ -281,34 +270,14 @@ export default async function AdminOverviewPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-stretch">
         <EarningsTrendChart tpv={tpvTrend} cash={cashTrend} />
         <div className="relative min-h-0">
-          {/* lg:absolute lets the chart define the row height; the table fills
-              it and scrolls instead of growing the row. */}
           <div className="lg:absolute lg:inset-0">
             <TopAffiliatesTable rows={topAffiliateRows} />
           </div>
         </div>
       </div>
 
-      {/* Data sync controls — directly under the pair, compact to stay in view */}
+      {/* Data sync controls */}
       <SyncButtons />
-
-      {/* System funnel + payouts summary */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-        <SystemFunnelCard totalLeads={users.length} signedUp={signedUpCount} activated={activatedCount} />
-        <PayoutsSummaryCard ready={approvedEarnings} pending={pendingEarnings} paid={paidEarnings} />
-      </div>
-
-      {/* Referral + growth trend charts */}
-      <ReferralTrendChart monthly={referralTrend.main.monthly} weekly={referralTrend.main.weekly} />
-      <ReferralTrendChart
-        monthly={referralTrend.payova.monthly}
-        weekly={referralTrend.payova.weekly}
-        title="Payova — Users Referred & Referred Volume"
-        barColor="#16A34A"
-        lineColor="#00DE8F"
-        gradientId="payovaVolumeGrad"
-      />
-      <AffiliateGrowthChart affiliates={completedAffiliates} />
 
       {/* Affiliate Pipeline — pre-signature breakdown */}
       <AffiliatePipelineCard
@@ -322,54 +291,6 @@ export default async function AdminOverviewPage() {
         notCreatedVolume={notCreatedVolume}
         total={affiliates.length}
       />
-
-      {/* Recent webhook events */}
-      <div className="ad-card overflow-hidden">
-        <div className="px-5 py-4 border-b border-[var(--ad-border)]">
-          <h3 className="text-sm font-semibold ad-text-1">Recent Webhook Activity</h3>
-          <p className="text-[11px] ad-text-3 mt-0.5">Last 10 events</p>
-        </div>
-        {webhooks.length === 0 ? (
-          <div className="px-5 py-10 text-center">
-            <p className="text-sm ad-text-3">No webhook events recorded yet.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-[var(--ad-border)] bg-[var(--ad-inset)]">
-                  <th className="ad-th">Event Type</th>
-                  <th className="ad-th">Status</th>
-                  <th className="ad-th hidden sm:table-cell">Idempotency Key</th>
-                  <th className="ad-th">Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[var(--ad-border)]">
-                {webhooks.map((wh) => (
-                  <tr key={wh.id} className="hover:bg-[var(--ad-surface-2)] transition-colors">
-                    <td className="ad-td">
-                      <span className="text-sm font-medium ad-text-1">{wh.event_type}</span>
-                    </td>
-                    <td className="ad-td">
-                      <span className={`ad-badge ${wh.processed ? "ad-badge-pos" : wh.error_message ? "ad-badge-neg" : "ad-badge-amber"}`}>
-                        {wh.processed ? "processed" : wh.error_message ? "error" : "pending"}
-                      </span>
-                    </td>
-                    <td className="ad-td hidden sm:table-cell">
-                      <span className="text-xs ad-text-3 font-mono truncate max-w-[200px] block">
-                        {wh.idempotency_key}
-                      </span>
-                    </td>
-                    <td className="ad-td">
-                      <span className="text-xs ad-text-3">{fmt.relative(wh.created_at)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
     </>
   );
 }

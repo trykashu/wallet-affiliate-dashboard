@@ -2,6 +2,7 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
+import { getBrandScope, inScope } from "@/lib/admin/brand-scope";
 import { getBankReviewReasons } from "@/lib/bank-quality";
 import AffiliateTable          from "@/components/admin/AffiliateTable";
 import type { Affiliate, ReferredUser, Earning } from "@/types/database";
@@ -26,6 +27,8 @@ export default async function AdminAffiliatesPage() {
   if (!user) redirect("/login");
   if (!isAdminEmail(user.email)) redirect("/dashboard");
 
+  const scope = await getBrandScope();
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = createServiceClient() as any;
 
@@ -36,7 +39,7 @@ export default async function AdminAffiliatesPage() {
     db.from("payout_accounts").select("affiliate_id, account_name, metadata").eq("is_verified", true),
   ]);
 
-  const affiliates:  Affiliate[]    = affiliatesResult.data ?? [];
+  const affiliates:  Affiliate[]    = (affiliatesResult.data ?? []).filter((a: Affiliate) => inScope(a.whitelabel_brand_id, scope));
   const users:       ReferredUser[] = usersResult.data      ?? [];
   const allEarnings: Earning[]      = earningsResult.data   ?? [];
 

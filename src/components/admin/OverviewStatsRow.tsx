@@ -28,6 +28,9 @@ interface Props {
   topByUsers: StatRow[];
   topByVolume: StatRow[];
   topByEarnings: StatRow[];
+  /** Additions-by-month series shown in the drill drawers. */
+  affiliatesTrend: { label: string; value: number }[];
+  usersTrend: { label: string; value: number }[];
 }
 
 type CardKind = "count" | "currency";
@@ -39,6 +42,7 @@ export default function OverviewStatsRow({
   totalEarnings, totalEarningsSub,
   affiliatesDelta, usersDelta, volumeDelta, earningsDelta,
   topAffiliates, topByUsers, topByVolume, topByEarnings,
+  affiliatesTrend, usersTrend,
 }: Props) {
   const [open, setOpen] = useState<StatKey | null>(null);
 
@@ -65,6 +69,9 @@ export default function OverviewStatsRow({
           headlineValue: fmt.count(totalAffiliates),
           emptyHint: "No signed affiliates yet.",
           formatValue: () => "",
+          listLabel: "Recently added",
+          trend: affiliatesTrend,
+          trendCaption: "Affiliates added",
         };
       case "users":
         return {
@@ -73,6 +80,9 @@ export default function OverviewStatsRow({
           headlineValue: fmt.count(totalUsers),
           emptyHint: "No referred users yet.",
           formatValue: formatCount,
+          listLabel: "Top contributors",
+          trend: usersTrend,
+          trendCaption: "Users added",
         };
       case "volume":
         return {
@@ -81,6 +91,9 @@ export default function OverviewStatsRow({
           headlineValue: fmt.currencyCompact(totalVolume),
           emptyHint: "No volume recorded yet.",
           formatValue: formatCurrency,
+          listLabel: "Top contributors",
+          trend: undefined as { label: string; value: number }[] | undefined,
+          trendCaption: undefined as string | undefined,
         };
       case "earnings":
         return {
@@ -89,6 +102,9 @@ export default function OverviewStatsRow({
           headlineValue: fmt.currencyCompact(totalEarnings),
           emptyHint: "No earnings recorded yet.",
           formatValue: formatCurrency,
+          listLabel: "Top contributors",
+          trend: undefined as { label: string; value: number }[] | undefined,
+          trendCaption: undefined as string | undefined,
         };
       default:
         return null;
@@ -121,6 +137,9 @@ export default function OverviewStatsRow({
           headlineValue={drawerConfig.headlineValue}
           emptyHint={drawerConfig.emptyHint}
           formatValue={drawerConfig.formatValue}
+          listLabel={drawerConfig.listLabel}
+          trend={drawerConfig.trend}
+          trendCaption={drawerConfig.trendCaption}
         />
       )}
     </>
