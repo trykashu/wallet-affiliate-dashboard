@@ -127,20 +127,36 @@ export default async function AdminOverviewPage() {
   // with no time dimension. Shown without a delta rather than a fabricated one.
   const volumeDelta: number | null = null;
 
-  // ── 12-month earnings trend (sum by created_at month) ────────────
-  const trendBuckets = new Map<string, number>();
+  // ── 12-month volume trend (TPV default, Cash Collected toggle) ────
+  // Both derived from rows ALREADY fetched: TPV from Transfer-In transactions
+  // (transaction_date), cash collected from earnings.transaction_fee_amount
+  // (created_at). No new queries.
+  const tpvBuckets = new Map<string, number>();
+  for (const t of transactions) {
+    if (t.transaction_type !== "Transfer In") continue;
+    if (!t.transaction_date) continue;
+    const d = new Date(t.transaction_date);
+    const k = `${d.getFullYear()}-${d.getMonth()}`;
+    tpvBuckets.set(k, (tpvBuckets.get(k) ?? 0) + (Number(t.amount) || 0));
+  }
+  const cashBuckets = new Map<string, number>();
   for (const e of allEarnings) {
     if (!e.created_at) continue;
     const d = new Date(e.created_at);
-    trendBuckets.set(`${d.getFullYear()}-${d.getMonth()}`, (trendBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0) + e.amount);
+    const k = `${d.getFullYear()}-${d.getMonth()}`;
+    cashBuckets.set(k, (cashBuckets.get(k) ?? 0) + (Number(e.transaction_fee_amount) || 0));
   }
-  const earningsTrend = Array.from({ length: 12 }, (_, idx) => {
-    const d = new Date(curMonthStart.getFullYear(), curMonthStart.getMonth() - (11 - idx), 1);
-    return {
-      label: d.toLocaleDateString("en-US", { month: "short" }),
-      value: trendBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0,
-    };
-  });
+  const trendMonths = Array.from({ length: 12 }, (_, idx) =>
+    new Date(curMonthStart.getFullYear(), curMonthStart.getMonth() - (11 - idx), 1),
+  );
+  const tpvTrend = trendMonths.map((d) => ({
+    label: d.toLocaleDateString("en-US", { month: "short" }),
+    value: tpvBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0,
+  }));
+  const cashTrend = trendMonths.map((d) => ({
+    label: d.toLocaleDateString("en-US", { month: "short" }),
+    value: cashBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0,
+  }));
 
   // ── System funnel — signups / activated from status_slug (already fetched).
   // "Clicks" has no source → flagged placeholder in the card.
@@ -260,11 +276,11 @@ export default async function AdminOverviewPage() {
         topByEarnings={topByEarnings}
       />
 
-      {/* System earnings trend */}
-      <EarningsTrendChart series={earningsTrend} />
-
-      {/* Top affiliates (ranked analytics) */}
-      <TopAffiliatesTable rows={topAffiliateRows} />
+      {/* System volume trend + top affiliates — side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5 items-start">
+        <EarningsTrendChart tpv={tpvTrend} cash={cashTrend} />
+        <TopAffiliatesTable rows={topAffiliateRows} />
+      </div>
 
       {/* System funnel + payouts summary */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">

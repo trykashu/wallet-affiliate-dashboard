@@ -4,9 +4,14 @@ import { useMemo, useState } from "react";
 import { fmt } from "@/lib/fmt";
 import Money from "./Money";
 
+type Point = { label: string; value: number };
+type Metric = "tpv" | "cash";
+
 interface Props {
-  /** Oldest → newest monthly buckets. Computed page-side from earnings rows. */
-  series: { label: string; value: number }[];
+  /** Referred volume (TPV) per month — oldest → newest. */
+  tpv: Point[];
+  /** Cash collected (Kashu fee) per month — oldest → newest. */
+  cash: Point[];
 }
 
 function smoothPath(points: { x: number; y: number }[]) {
@@ -19,16 +24,17 @@ function smoothPath(points: { x: number; y: number }[]) {
   }, "");
 }
 
-const W = 720, H = 220, padX = 48, padY = 22, padBottom = 28;
+const W = 560, H = 220, padX = 48, padY = 22, padBottom = 28;
 const innerW = W - padX * 2;
 const innerH = H - padY - padBottom;
 
-export default function EarningsTrendChart({ series }: Props) {
+export default function EarningsTrendChart({ tpv, cash }: Props) {
+  const [metric, setMetric] = useState<Metric>("tpv");
   const [hover, setHover] = useState<number | null>(null);
 
+  const series = metric === "tpv" ? tpv : cash;
   const total = series.reduce((s, p) => s + p.value, 0);
   const maxVal = Math.max(...series.map((p) => p.value), 1);
-  // Round the y-axis ceiling up to a clean step.
   const yMax = niceCeil(maxVal);
 
   const points = useMemo(
@@ -55,32 +61,51 @@ export default function EarningsTrendChart({ series }: Props) {
 
   return (
     <div className="ad-card p-4 sm:p-6">
-      <div className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold ad-text-1">System Earnings Trend</h3>
-          <p className="text-[11px] ad-text-3 mt-0.5">Commissions accrued per month · last {series.length} months</p>
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold ad-text-1">System Volume Trend</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">
+            {metric === "tpv" ? "Referred volume (TPV)" : "Cash collected (Kashu fee)"} per month · last {series.length} months
+          </p>
         </div>
-        <div className="text-right">
-          <p className="ad-label">Trailing total</p>
-          <p className="text-lg font-semibold ad-text-1 mt-0.5"><Money value={total} /></p>
+        {/* TPV / Cash toggle — segmented control */}
+        <div className="flex items-center gap-1 p-0.5 rounded-full flex-shrink-0" style={{ backgroundColor: "var(--ad-inset)", border: "1px solid var(--ad-border)" }}>
+          {([["tpv", "TPV"], ["cash", "Cash"]] as [Metric, string][]).map(([k, label]) => (
+            <button
+              key={k}
+              onClick={() => setMetric(k)}
+              className="text-[11px] font-medium px-2.5 py-1 rounded-full transition-colors"
+              style={
+                metric === k
+                  ? { backgroundColor: "var(--ad-accent-soft)", color: "var(--ad-accent-strong)" }
+                  : { color: "var(--ad-text-3)" }
+              }
+            >
+              {label}
+            </button>
+          ))}
         </div>
       </div>
 
+      <div className="mb-3">
+        <p className="ad-label">Trailing total</p>
+        <p className="text-lg font-semibold ad-text-1 mt-0.5"><Money value={total} /></p>
+      </div>
+
       {total === 0 ? (
-        <div className="ad-inset h-[160px] flex items-center justify-center">
-          <p className="text-sm ad-text-3">No earnings recorded in this window yet.</p>
+        <div className="ad-inset h-[140px] flex items-center justify-center">
+          <p className="text-sm ad-text-3">No {metric === "tpv" ? "volume" : "cash collected"} in this window yet.</p>
         </div>
       ) : (
         <div className="relative">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="none">
             <defs>
-              <linearGradient id="adEarningsArea" x1="0" y1="0" x2="0" y2="1">
+              <linearGradient id="adVolumeArea" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--ad-accent)" stopOpacity="0.22" />
                 <stop offset="100%" stopColor="var(--ad-accent)" stopOpacity="0" />
               </linearGradient>
             </defs>
 
-            {/* Grid + y labels */}
             {yTicks.map((tick) => {
               const y = padY + innerH - (tick / yMax) * innerH;
               return (
@@ -93,11 +118,9 @@ export default function EarningsTrendChart({ series }: Props) {
               );
             })}
 
-            {/* Area + line */}
-            <path d={areaPath} fill="url(#adEarningsArea)" />
+            <path d={areaPath} fill="url(#adVolumeArea)" />
             <path d={linePath} fill="none" stroke="var(--ad-accent)" strokeWidth="1.75" strokeLinecap="round" />
 
-            {/* Hover guide + active dot */}
             {hp && (
               <>
                 <line x1={hp.x} y1={padY} x2={hp.x} y2={padY + innerH} stroke="var(--ad-accent)" strokeWidth="1" strokeDasharray="3 3" opacity="0.5" />
@@ -105,14 +128,12 @@ export default function EarningsTrendChart({ series }: Props) {
               </>
             )}
 
-            {/* X labels */}
             {series.map((p, i) => (
               <text key={i} x={points[i].x} y={H - 6} fill="var(--ad-text-3)" fontSize="9" textAnchor="middle">
                 {p.label}
               </text>
             ))}
 
-            {/* Hover hit-areas (one column per month) */}
             {series.map((_, i) => {
               const colW = innerW / Math.max(series.length - 1, 1);
               return (
@@ -130,7 +151,6 @@ export default function EarningsTrendChart({ series }: Props) {
             })}
           </svg>
 
-          {/* Tooltip */}
           {hover !== null && hp && (
             <div
               className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[120%] whitespace-nowrap rounded-lg px-2.5 py-1.5"
