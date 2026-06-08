@@ -2,7 +2,7 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
-import { fmt }                 from "@/lib/fmt";
+import Money                   from "@/components/admin/Money";
 import AdminEarningsTable      from "@/components/admin/AdminEarningsTable";
 import AuditPanel              from "@/components/admin/AuditPanel";
 import type { AdminEarning }   from "@/components/admin/AdminEarningsTable";
@@ -111,20 +111,20 @@ export default async function AdminEarningsPage() {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="stat-card accent-top">
-          <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Pending</p>
-          <p className="text-display-sm font-bold tabular-nums mt-1 text-amber-500">{fmt.currencyCompact(pending)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">{allEarnings.filter((e) => e.status === "pending").length} earnings</p>
+        <div className="ad-card p-5">
+          <p className="ad-label">Pending</p>
+          <p className="text-[26px] font-semibold mt-1.5" style={{ color: "#F4C152" }}><Money value={pending} /></p>
+          <p className="text-[10px] ad-text-3 mt-1.5">{allEarnings.filter((e) => e.status === "pending").length} earnings</p>
         </div>
-        <div className="stat-card accent-top">
-          <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Approved</p>
-          <p className="text-display-sm font-bold tabular-nums mt-1 text-accent">{fmt.currencyCompact(approved)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">{allEarnings.filter((e) => e.status === "approved").length} earnings</p>
+        <div className="ad-card p-5">
+          <p className="ad-label">Approved</p>
+          <p className="text-[26px] font-semibold mt-1.5 ad-pos"><Money value={approved} /></p>
+          <p className="text-[10px] ad-text-3 mt-1.5">{allEarnings.filter((e) => e.status === "approved").length} earnings</p>
         </div>
-        <div className="stat-card accent-top">
-          <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Paid</p>
-          <p className="text-display-sm font-bold tabular-nums mt-1 text-gray-900">{fmt.currencyCompact(paid)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">{allEarnings.filter((e) => e.status === "paid").length} earnings</p>
+        <div className="ad-card p-5">
+          <p className="ad-label">Paid</p>
+          <p className="text-[26px] font-semibold mt-1.5 ad-text-1"><Money value={paid} /></p>
+          <p className="text-[10px] ad-text-3 mt-1.5">{allEarnings.filter((e) => e.status === "paid").length} earnings</p>
         </div>
       </div>
 

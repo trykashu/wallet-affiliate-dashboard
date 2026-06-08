@@ -103,65 +103,65 @@ export default function AdminShareTemplates({ initialRows }: { initialRows: Shar
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Share Templates</h1>
-          <p className="text-sm text-brand-400 mt-1">
+          <h1 className="text-2xl font-bold ad-text-1">Share Templates</h1>
+          <p className="text-sm ad-text-3 mt-1">
             Pre-written social copy shown to affiliates on the /tools tab.
           </p>
         </div>
-        <button onClick={openNew} className="btn-primary px-4 py-2 rounded-xl text-sm">
+        <button onClick={openNew} className="ad-btn-primary px-4 py-2 rounded-xl text-sm">
           + Add template
         </button>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="ad-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-surface-200/60 bg-surface-50/60">
-                <th className="th">Title</th>
-                <th className="th">Platform</th>
-                <th className="th">Category</th>
-                <th className="th">Body</th>
-                <th className="th">Order</th>
-                <th className="th">Published</th>
-                <th className="th text-right">Actions</th>
+              <tr className="border-b border-[var(--ad-border)] bg-[var(--ad-inset)]">
+                <th className="ad-th">Title</th>
+                <th className="ad-th">Platform</th>
+                <th className="ad-th">Category</th>
+                <th className="ad-th">Body</th>
+                <th className="ad-th">Order</th>
+                <th className="ad-th">Published</th>
+                <th className="ad-th text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-200/60">
+            <tbody className="divide-y divide-[var(--ad-border)]">
               {initialRows.length === 0 && (
-                <tr><td colSpan={7} className="td text-center text-sm text-brand-400 py-12">
+                <tr><td colSpan={7} className="ad-td text-center text-sm ad-text-3 py-12">
                   No templates yet. Click <span className="font-semibold">+ Add template</span>.
                 </td></tr>
               )}
               {initialRows.map((t) => (
-                <tr key={t.id} className="hover:bg-surface-100/40 transition-colors">
-                  <td className="td">
-                    <p className="text-sm font-semibold text-gray-900">{t.title}</p>
+                <tr key={t.id} className="hover:bg-[var(--ad-surface-2)] transition-colors">
+                  <td className="ad-td">
+                    <p className="text-sm font-semibold ad-text-1">{t.title}</p>
                   </td>
-                  <td className="td text-xs uppercase text-brand-400 tracking-wider">{t.platform}</td>
-                  <td className="td text-xs uppercase text-brand-400 tracking-wider">{t.category}</td>
-                  <td className="td max-w-md">
-                    <p className="text-xs text-brand-400 truncate">{t.body}</p>
+                  <td className="ad-td text-xs uppercase ad-text-3 tracking-wider">{t.platform}</td>
+                  <td className="ad-td text-xs uppercase ad-text-3 tracking-wider">{t.category}</td>
+                  <td className="ad-td max-w-md">
+                    <p className="text-xs ad-text-3 truncate">{t.body}</p>
                   </td>
-                  <td className="td text-xs tabular-nums text-brand-400">{t.sort_order}</td>
-                  <td className="td">
+                  <td className="ad-td text-xs tabular-nums ad-text-3">{t.sort_order}</td>
+                  <td className="ad-td">
                     <button
                       onClick={() => handleToggle(t.id, t.is_published)}
                       disabled={pending}
                       className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
                         t.is_published
-                          ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                          : "text-brand-400 bg-surface-100 border-surface-200"
+                          ? "text-[var(--ad-pos)] bg-[rgba(52,211,153,0.10)] border-[rgba(52,211,153,0.28)]"
+                          : "text-[var(--ad-text-3)] bg-[var(--ad-surface-2)] border-[var(--ad-border)]"
                       }`}
                     >
                       {t.is_published ? "Published" : "Hidden"}
                     </button>
                   </td>
-                  <td className="td">
+                  <td className="ad-td">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEdit(t)} className="text-xs text-brand-600 hover:underline">Edit</button>
+                      <button onClick={() => openEdit(t)} className="text-xs ad-accent-text hover:underline">Edit</button>
                       <button onClick={() => handleDelete(t.id)} disabled={pending}
-                              className="text-xs text-red-600 hover:underline">Delete</button>
+                              className="text-xs text-[var(--ad-neg)] hover:underline">Delete</button>
                     </div>
                   </td>
                 </tr>
@@ -173,36 +173,36 @@ export default function AdminShareTemplates({ initialRows }: { initialRows: Shar
 
       {editing && (
         <>
-          <div className="fixed inset-0 bg-gray-900/30 z-40 drawer-backdrop" onClick={close} />
-          <div className="fixed inset-y-0 right-0 w-full max-w-md bg-white shadow-card-md p-6 z-50 overflow-y-auto drawer-panel">
+          <div className="fixed inset-0 bg-black/60 z-40 drawer-backdrop" onClick={close} />
+          <div className="fixed inset-y-0 right-0 w-full max-w-md p-6 z-50 overflow-y-auto drawer-panel">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-lg font-semibold ad-text-1">
                 {editing.id ? "Edit template" : "New template"}
               </h2>
-              <button onClick={close} className="text-sm text-brand-400 hover:text-gray-900">Close</button>
+              <button onClick={close} className="text-sm ad-text-3 hover:text-[var(--ad-text)]">Close</button>
             </div>
 
             {error && (
-              <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-xs text-red-700">{error}</div>
+              <div className="mb-4 p-3 rounded-xl bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)] text-xs text-[var(--ad-neg)]">{error}</div>
             )}
 
             <div className="space-y-4">
               <Field label="Title">
-                <input className="input-base w-full"
+                <input className="ad-input w-full"
                        value={editing.title}
                        onChange={(e) => setEditing({ ...editing, title: e.target.value })} />
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Platform">
-                  <select className="input-base w-full"
+                  <select className="ad-input w-full"
                           value={editing.platform}
                           onChange={(e) => setEditing({ ...editing, platform: e.target.value as ShareTemplate["platform"] })}>
                     {PLATFORMS.map((p) => <option key={p} value={p}>{p}</option>)}
                   </select>
                 </Field>
                 <Field label="Category">
-                  <select className="input-base w-full"
+                  <select className="ad-input w-full"
                           value={editing.category}
                           onChange={(e) => setEditing({ ...editing, category: e.target.value as ShareTemplate["category"] })}>
                     {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
@@ -214,25 +214,25 @@ export default function AdminShareTemplates({ initialRows }: { initialRows: Shar
                 <div className="flex flex-wrap gap-1 mb-2">
                   {TEMPLATE_VARS.map((v) => (
                     <button key={v} type="button" onClick={() => insertVar(v)}
-                            className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-surface-100 border border-surface-200 text-brand-600 hover:bg-surface-200 transition-colors">
+                            className="text-[10px] font-semibold px-2 py-1 rounded-lg bg-[var(--ad-surface-2)] border border-[var(--ad-border)] ad-text-2 hover:bg-[var(--ad-border)] transition-colors">
                       {`{{${v}}}`}
                     </button>
                   ))}
                 </div>
-                <textarea ref={bodyRef} className="input-base w-full font-mono text-xs" rows={6}
+                <textarea ref={bodyRef} className="ad-input w-full font-mono text-xs" rows={6}
                           value={editing.body}
                           onChange={(e) => setEditing({ ...editing, body: e.target.value })} />
               </Field>
 
               <Field label="Live preview">
-                <div className="card p-3 text-sm text-gray-900 whitespace-pre-wrap leading-relaxed bg-surface-50">
-                  {preview || <span className="text-brand-400 italic">Body is empty.</span>}
+                <div className="ad-inset p-3 text-sm ad-text-1 whitespace-pre-wrap leading-relaxed">
+                  {preview || <span className="ad-text-3 italic">Body is empty.</span>}
                 </div>
               </Field>
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Sort order">
-                  <input type="number" className="input-base w-full tabular-nums"
+                  <input type="number" className="ad-input w-full tabular-nums"
                          value={editing.sort_order}
                          onChange={(e) => setEditing({ ...editing, sort_order: parseInt(e.target.value, 10) || 0 })} />
                 </Field>
@@ -241,15 +241,15 @@ export default function AdminShareTemplates({ initialRows }: { initialRows: Shar
                     <input type="checkbox"
                            checked={editing.is_published}
                            onChange={(e) => setEditing({ ...editing, is_published: e.target.checked })} />
-                    <span className="text-sm text-gray-900">{editing.is_published ? "Yes" : "No"}</span>
+                    <span className="text-sm ad-text-1">{editing.is_published ? "Yes" : "No"}</span>
                   </label>
                 </Field>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-surface-200/60">
-                <button onClick={close} className="text-sm text-brand-400 hover:text-gray-900">Cancel</button>
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-[var(--ad-border)]">
+                <button onClick={close} className="text-sm ad-text-3 hover:text-[var(--ad-text)]">Cancel</button>
                 <button onClick={handleSave} disabled={pending || !editing.title.trim() || !editing.body.trim()}
-                        className="btn-primary px-4 py-2 rounded-xl text-sm disabled:opacity-50">
+                        className="ad-btn-primary px-4 py-2 rounded-xl text-sm disabled:opacity-50">
                   {pending ? "Saving..." : "Save"}
                 </button>
               </div>
@@ -264,7 +264,7 @@ export default function AdminShareTemplates({ initialRows }: { initialRows: Shar
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">{label}</label>
+      <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">{label}</label>
       <div className="mt-1">{children}</div>
     </div>
   );

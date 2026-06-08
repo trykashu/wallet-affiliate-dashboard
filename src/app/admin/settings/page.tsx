@@ -28,8 +28,8 @@ export default async function AdminSettingsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-sm font-bold text-brand-400 uppercase tracking-wider">Settings</h2>
-        <p className="text-xs text-brand-400 mt-0.5">Configure payout and system settings</p>
+        <h2 className="text-sm font-bold ad-text-3 uppercase tracking-wider">Settings</h2>
+        <p className="text-xs ad-text-3 mt-0.5">Configure payout and system settings</p>
       </div>
 
       <AdminSettingsForm settings={currentSettings} />

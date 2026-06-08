@@ -135,26 +135,26 @@ export default function AuditPanel() {
     : 0;
 
   return (
-    <div className="card p-5">
+    <div className="ad-card p-5">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">PTL ↔ UT Audit</h3>
-          <p className="text-[10px] text-brand-400 mt-0.5 uppercase tracking-wider font-medium">
+          <h3 className="text-sm font-semibold ad-text-1">PTL ↔ UT Audit</h3>
+          <p className="text-[10px] ad-text-3 mt-0.5 uppercase tracking-wider font-medium">
             Cross-checks Partner Transaction Log against User Transactions
           </p>
         </div>
         <button
           onClick={runAudit}
           disabled={loading}
-          className="btn-primary text-xs"
+          className="ad-btn-primary text-xs"
         >
           {loading ? "Auditing…" : "Trigger UTX / PTX Audit"}
         </button>
       </div>
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 rounded-lg mb-3">
-          <p className="text-xs text-red-700">{error}</p>
+        <div className="p-3 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)] rounded-lg mb-3">
+          <p className="text-xs text-[var(--ad-neg)]">{error}</p>
         </div>
       )}
 
@@ -167,37 +167,37 @@ export default function AuditPanel() {
           </div>
 
           {annealError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-xs text-red-700">{annealError}</p>
+            <div className="p-3 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)] rounded-lg">
+              <p className="text-xs text-[var(--ad-neg)]">{annealError}</p>
             </div>
           )}
 
           {actionable > 0 && annealPhase !== "done" && (
-            <div className="flex flex-wrap items-center gap-3 p-3 bg-surface-50/60 border border-surface-200/60 rounded-xl">
+            <div className="flex flex-wrap items-center gap-3 p-3 ad-inset">
               {annealPhase === "preview" && annealPreview ? (
                 <>
-                  <p className="text-xs text-gray-900 flex-1">
+                  <p className="text-xs ad-text-1 flex-1">
                     Will <strong>create {annealPreview.create}</strong> PTL row{annealPreview.create === 1 ? "" : "s"} and{" "}
                     <strong>correct {annealPreview.correct}</strong> unpaid drift{annealPreview.correct === 1 ? "" : "s"}.{" "}
-                    <span className="text-brand-400">
+                    <span className="ad-text-3">
                       Skipping {annealPreview.skip_paid_drifts} paid drift{annealPreview.skip_paid_drifts === 1 ? "" : "s"} + {annealPreview.skip_orphans} orphan{annealPreview.skip_orphans === 1 ? "" : "s"}.
                     </span>
                   </p>
-                  <button onClick={applyAnneal} disabled={annealPhase !== "preview"} className="btn-primary text-xs">
+                  <button onClick={applyAnneal} disabled={annealPhase !== "preview"} className="ad-btn-primary text-xs">
                     Confirm &amp; anneal
                   </button>
-                  <button onClick={() => setAnnealPhase("idle")} className="text-xs text-brand-400 hover:text-gray-700">
+                  <button onClick={() => setAnnealPhase("idle")} className="text-xs ad-text-3 hover:text-[var(--ad-text)]">
                     Cancel
                   </button>
                 </>
               ) : annealPhase === "applying" ? (
-                <p className="text-xs text-brand-400">Annealing…</p>
+                <p className="text-xs ad-text-3">Annealing…</p>
               ) : (
                 <>
-                  <p className="text-xs text-gray-900 flex-1">
+                  <p className="text-xs ad-text-1 flex-1">
                     {actionable} discrepanc{actionable === 1 ? "y" : "ies"} can be auto-fixed from User Transactions.
                   </p>
-                  <button onClick={previewAnneal} disabled={annealPhase === "previewing"} className="btn-primary text-xs">
+                  <button onClick={previewAnneal} disabled={annealPhase === "previewing"} className="ad-btn-primary text-xs">
                     {annealPhase === "previewing" ? "Checking…" : "Anneal the fixes"}
                   </button>
                 </>
@@ -206,43 +206,43 @@ export default function AuditPanel() {
           )}
 
           {annealResult && annealPhase === "done" && (
-            <div className="p-3 bg-accent/10 border border-accent/30 rounded-xl">
-              <p className="text-xs text-gray-900">
+            <div className="p-3 bg-[rgba(52,211,153,0.10)] border border-[rgba(52,211,153,0.28)] rounded-xl">
+              <p className="text-xs ad-text-1">
                 ✓ Created {annealResult.created} · corrected {annealResult.corrected}
                 {annealResult.already_existed > 0 && (
-                  <span className="text-brand-400"> · {annealResult.already_existed} already existed</span>
+                  <span className="ad-text-3"> · {annealResult.already_existed} already existed</span>
                 )}
                 {annealResult.failed.length > 0 && (
-                  <span className="text-red-600"> · {annealResult.failed.length} failed</span>
+                  <span className="text-[var(--ad-neg)]"> · {annealResult.failed.length} failed</span>
                 )}
-                <span className="text-brand-400"> · skipped {annealResult.skipped.paidDrifts} paid + {annealResult.skipped.orphans} orphans</span>
+                <span className="ad-text-3"> · skipped {annealResult.skipped.paidDrifts} paid + {annealResult.skipped.orphans} orphans</span>
               </p>
               {annealResult.failed.length > 0 && (
-                <ul className="mt-1 text-[10px] text-red-600 list-disc pl-4">
+                <ul className="mt-1 text-[10px] text-[var(--ad-neg)] list-disc pl-4">
                   {annealResult.failed.map((f) => <li key={f.id}>{f.id}: {f.reason}</li>)}
                 </ul>
               )}
             </div>
           )}
 
-          <p className="text-[10px] text-brand-400">
+          <p className="text-[10px] ad-text-3">
             Generated {new Date(result.generated_at).toLocaleString()}
           </p>
 
           {result.months.length === 0 && (
-            <p className="text-xs text-brand-400">No months to report.</p>
+            <p className="text-xs ad-text-3">No months to report.</p>
           )}
 
           {result.months.map((m) => {
             const hasIssues = m.orphans.length > 0 || m.drifts.length > 0 || m.missing.length > 0;
             return (
-              <details key={m.month} open={hasIssues} className="border border-surface-200/60 rounded-xl overflow-hidden">
-                <summary className="cursor-pointer px-4 py-3 bg-surface-50/60 flex items-center justify-between">
-                  <span className="text-sm font-semibold text-gray-900">{m.month}</span>
-                  <span className="text-[10px] text-brand-400 font-medium">
+              <details key={m.month} open={hasIssues} className="border border-[var(--ad-border)] rounded-xl overflow-hidden">
+                <summary className="cursor-pointer px-4 py-3 bg-[var(--ad-inset)] flex items-center justify-between">
+                  <span className="text-sm font-semibold ad-text-1">{m.month}</span>
+                  <span className="text-[10px] ad-text-3 font-medium">
                     {m.ptl_count} PTL rows · {fmt.currency(m.ptl_sum)}
                     {hasIssues && (
-                      <span className="ml-2 text-red-600 font-semibold">
+                      <span className="ml-2 text-[var(--ad-neg)] font-semibold">
                         {m.orphans.length + m.drifts.length + m.missing.length} issue
                         {m.orphans.length + m.drifts.length + m.missing.length === 1 ? "" : "s"}
                       </span>
@@ -255,17 +255,17 @@ export default function AuditPanel() {
                     {m.orphans.length > 0 && (
                       <Section title={`Orphan PTL rows (${m.orphans.length})`} hint="PTL row has no matching UT — refund, typo, or manual entry">
                         <table className="w-full text-xs">
-                          <thead className="text-brand-400 text-[10px] uppercase tracking-wider">
+                          <thead className="ad-text-3 text-[10px] uppercase tracking-wider">
                             <tr><th className="text-left py-1">Email</th><th className="text-left">TxnID</th><th className="text-right">Amount</th><th className="text-left pl-3">Date</th><th className="text-left pl-3">PTL ID</th></tr>
                           </thead>
                           <tbody>
                             {m.orphans.map((o) => (
-                              <tr key={o.ptl_id} className="border-t border-surface-200/60">
+                              <tr key={o.ptl_id} className="border-t border-[var(--ad-border)]">
                                 <td className="py-1">{o.user_email}</td>
                                 <td className="font-mono text-[10px]">{o.transaction_id}</td>
                                 <td className="text-right tabular-nums">{fmt.currency(o.amount)}</td>
-                                <td className="pl-3 text-brand-400">{o.transaction_date.slice(0, 10)}</td>
-                                <td className="pl-3 font-mono text-[10px] text-brand-400">{o.ptl_id}</td>
+                                <td className="pl-3 ad-text-3">{o.transaction_date.slice(0, 10)}</td>
+                                <td className="pl-3 font-mono text-[10px] ad-text-3">{o.ptl_id}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -276,17 +276,17 @@ export default function AuditPanel() {
                     {m.drifts.length > 0 && (
                       <Section title={`Amount drifts (${m.drifts.length})`} hint="PTL Amount differs from UT Amount">
                         <table className="w-full text-xs">
-                          <thead className="text-brand-400 text-[10px] uppercase tracking-wider">
+                          <thead className="ad-text-3 text-[10px] uppercase tracking-wider">
                             <tr><th className="text-left py-1">TxnID</th><th className="text-right">PTL</th><th className="text-right">UT</th><th className="text-right">Δ</th><th className="text-left pl-3">PTL ID</th></tr>
                           </thead>
                           <tbody>
                             {m.drifts.map((d) => (
-                              <tr key={d.ptl_id} className="border-t border-surface-200/60">
+                              <tr key={d.ptl_id} className="border-t border-[var(--ad-border)]">
                                 <td className="py-1 font-mono text-[10px]">{d.transaction_id}</td>
                                 <td className="text-right tabular-nums">{fmt.currency(d.ptl_amount)}</td>
                                 <td className="text-right tabular-nums">{fmt.currency(d.ut_amount)}</td>
-                                <td className={`text-right tabular-nums font-semibold ${d.delta > 0 ? "text-amber-600" : "text-red-600"}`}>{fmt.currency(d.delta)}</td>
-                                <td className="pl-3 font-mono text-[10px] text-brand-400">{d.ptl_id}</td>
+                                <td className={`text-right tabular-nums font-semibold ${d.delta > 0 ? "text-[#F4C152]" : "text-[var(--ad-neg)]"}`}>{fmt.currency(d.delta)}</td>
+                                <td className="pl-3 font-mono text-[10px] ad-text-3">{d.ptl_id}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -297,30 +297,30 @@ export default function AuditPanel() {
                     {m.missing.length > 0 && (
                       <Section title={`Missing from PTL (${m.missing.length})`} hint="UT Transfer In with referrer but no PTL row — affiliate under-paid">
                         <table className="w-full text-xs">
-                          <thead className="text-brand-400 text-[10px] uppercase tracking-wider">
+                          <thead className="ad-text-3 text-[10px] uppercase tracking-wider">
                             <tr><th className="text-left py-1">Email</th><th className="text-left">Referrer</th><th className="text-left">TxnID</th><th className="text-right">Amount</th><th className="text-left pl-3">Date</th><th className="text-right pl-3">Action</th></tr>
                           </thead>
                           <tbody>
                             {m.missing.map((mr) => {
                               const state = creating[mr.ut_id];
                               return (
-                                <tr key={mr.ut_id} className="border-t border-surface-200/60">
+                                <tr key={mr.ut_id} className="border-t border-[var(--ad-border)]">
                                   <td className="py-1">{mr.user_email}</td>
                                   <td className="font-mono text-[10px]">{mr.referrer}</td>
                                   <td className="font-mono text-[10px]">{mr.transaction_id}</td>
                                   <td className="text-right tabular-nums">{fmt.currency(mr.amount)}</td>
-                                  <td className="pl-3 text-brand-400">{mr.transaction_date.slice(0, 10)}</td>
+                                  <td className="pl-3 ad-text-3">{mr.transaction_date.slice(0, 10)}</td>
                                   <td className="pl-3 text-right">
                                     {state === "done" ? (
-                                      <span className="text-[10px] text-accent font-semibold">✓ Created</span>
+                                      <span className="text-[10px] text-[var(--ad-pos)] font-semibold">✓ Created</span>
                                     ) : state === "loading" ? (
-                                      <span className="text-[10px] text-brand-400">Creating…</span>
+                                      <span className="text-[10px] ad-text-3">Creating…</span>
                                     ) : state ? (
-                                      <span className="text-[10px] text-red-600" title={state}>Error</span>
+                                      <span className="text-[10px] text-[var(--ad-neg)]" title={state}>Error</span>
                                     ) : (
                                       <button
                                         onClick={() => createMissing(mr.ut_id)}
-                                        className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted"
+                                        className="text-[10px] font-semibold ad-accent-text underline decoration-dotted"
                                       >
                                         Create in PTL
                                       </button>
@@ -335,7 +335,7 @@ export default function AuditPanel() {
                     )}
                   </div>
                 ) : (
-                  <p className="px-4 py-3 text-xs text-accent">✓ Clean — PTL and UT match.</p>
+                  <p className="px-4 py-3 text-xs text-[var(--ad-pos)]">✓ Clean — PTL and UT match.</p>
                 )}
               </details>
             );
@@ -348,13 +348,13 @@ export default function AuditPanel() {
 
 function SummaryCard({ label, value, color }: { label: string; value: number; color: "red" | "amber" | "accent" }) {
   const cls =
-    color === "red" ? "text-red-600" :
-    color === "amber" ? "text-amber-600" :
-    "text-accent";
+    color === "red" ? "text-[var(--ad-neg)]" :
+    color === "amber" ? "text-[#F4C152]" :
+    "text-[var(--ad-pos)]";
   return (
-    <div className="bg-surface-100/60 border border-surface-200/60 rounded-xl px-3 py-3">
-      <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium mb-1">{label}</p>
-      <p className={`text-stat font-bold tabular-nums ${value > 0 ? cls : "text-gray-900"}`}>{value}</p>
+    <div className="ad-inset px-3 py-3">
+      <p className="text-[10px] ad-text-3 uppercase tracking-wider font-medium mb-1">{label}</p>
+      <p className={`text-stat font-bold tabular-nums ${value > 0 ? cls : "ad-text-1"}`}>{value}</p>
     </div>
   );
 }
@@ -362,8 +362,8 @@ function SummaryCard({ label, value, color }: { label: string; value: number; co
 function Section({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="text-xs font-semibold text-gray-900 mb-1">{title}</p>
-      <p className="text-[10px] text-brand-400 mb-2">{hint}</p>
+      <p className="text-xs font-semibold ad-text-1 mb-1">{title}</p>
+      <p className="text-[10px] ad-text-3 mb-2">{hint}</p>
       {children}
     </div>
   );

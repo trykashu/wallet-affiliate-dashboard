@@ -323,3 +323,257 @@
 @media (prefers-reduced-motion: reduce) {
   .ambient-orb { animation: none !important; }
 }
+
+/* ════════════════════════════════════════════════════════════════
+   ADMIN THEME — scoped dark, restrained "Mercury-grade" surface.
+   EVERYTHING is namespaced under [data-admin-theme] so it can NEVER
+   leak into the affiliate dashboard or the view-as render. A future
+   recolor is a token change in this block only — components consume
+   the variables, never raw hex.
+   ════════════════════════════════════════════════════════════════ */
+[data-admin-theme] {
+  --ad-bg:            #0B0E13; /* near-black blue-charcoal canvas */
+  --ad-surface:       #141821; /* card surface, one step up */
+  --ad-surface-2:     #1A1F2A; /* hover step */
+  --ad-inset:         #0E1219; /* wells / insets */
+  --ad-border:        #222934; /* hairline */
+  --ad-border-strong: #2C333F;
+  --ad-text:          #F4F5F7; /* primary */
+  --ad-text-2:        #9CA2AE; /* secondary — used heavily for hierarchy */
+  --ad-text-3:        #626975; /* tertiary / muted */
+  --ad-accent:        #5B6EF0; /* the ONE accent — indigo */
+  --ad-accent-strong: #6E7FF3;
+  --ad-accent-soft:   rgba(91, 110, 240, 0.12);
+  --ad-accent-border: rgba(91, 110, 240, 0.38);
+  --ad-pos:           #34D399; /* positive */
+  --ad-neg:           #F2706E; /* negative */
+  --ad-radius:        14px;
+  --ad-gutter:        20px;
+
+  background-color: var(--ad-bg);
+  color: var(--ad-text);
+  font-family: var(--font-admin), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+[data-admin-theme] ::selection {
+  background-color: var(--ad-accent-soft);
+  color: var(--ad-text);
+}
+
+/* Dark scrollbars within the admin shell */
+[data-admin-theme] ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.10); border-radius: 9999px; }
+[data-admin-theme] ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.20); }
+[data-admin-theme] ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Surfaces ──────────────────────────────────────────────────── */
+[data-admin-theme] .ad-card {
+  background-color: var(--ad-surface);
+  border: 1px solid var(--ad-border);
+  border-radius: var(--ad-radius);
+}
+/* Interactive cards: subtle border/background shift on hover — never a lift or shadow pop */
+[data-admin-theme] .ad-card-interactive { cursor: pointer; }
+[data-admin-theme] .ad-card-interactive:hover {
+  background-color: var(--ad-surface-2);
+  border-color: var(--ad-border-strong);
+}
+[data-admin-theme] .ad-inset {
+  background-color: var(--ad-inset);
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+}
+[data-admin-theme] .ad-divider { border-top: 1px solid var(--ad-border); }
+
+/* ── Text helpers ──────────────────────────────────────────────── */
+[data-admin-theme] .ad-text-1 { color: var(--ad-text); }
+[data-admin-theme] .ad-text-2 { color: var(--ad-text-2); }
+[data-admin-theme] .ad-text-3 { color: var(--ad-text-3); }
+[data-admin-theme] .ad-pos    { color: var(--ad-pos); }
+[data-admin-theme] .ad-neg    { color: var(--ad-neg); }
+[data-admin-theme] .ad-accent-text { color: var(--ad-accent); }
+[data-admin-theme] .ad-label {
+  color: var(--ad-text-3);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* Big numbers: tight tracking, tabular figures */
+[data-admin-theme] .ad-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+[data-admin-theme] .ad-btn-primary {
+  background-color: var(--ad-accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 0.5rem 1.1rem;
+  border-radius: 9999px;
+}
+[data-admin-theme] .ad-btn-primary:hover { background-color: var(--ad-accent-strong); }
+[data-admin-theme] .ad-btn-primary:active { transform: scale(0.97); }
+[data-admin-theme] .ad-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+[data-admin-theme] .ad-btn-ghost {
+  color: var(--ad-text-2);
+  font-weight: 500;
+  font-size: 13px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 9999px;
+  border: 1px solid var(--ad-border);
+  background-color: transparent;
+}
+[data-admin-theme] .ad-btn-ghost:hover { color: var(--ad-text); background-color: var(--ad-surface-2); border-color: var(--ad-border-strong); }
+
+/* ── Tables ────────────────────────────────────────────────────── */
+[data-admin-theme] .ad-th {
+  padding: 0.75rem 1.1rem;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ad-text-3);
+}
+[data-admin-theme] .ad-td {
+  padding: 0.85rem 1.1rem;
+  font-size: 13px;
+  color: var(--ad-text-2);
+}
+[data-admin-theme] .ad-row { border-top: 1px solid var(--ad-border); }
+[data-admin-theme] .ad-row:hover { background-color: var(--ad-surface-2); }
+[data-admin-theme] .ad-row-selected {
+  background-color: var(--ad-accent-soft);
+  box-shadow: inset 2px 0 0 var(--ad-accent);
+}
+
+/* ── Badges ────────────────────────────────────────────────────── */
+[data-admin-theme] .ad-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 9999px;
+  padding: 0.1rem 0.55rem;
+  font-size: 10px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+[data-admin-theme] .ad-badge-pos     { color: var(--ad-pos); background: rgba(52, 211, 153, 0.10); border-color: rgba(52, 211, 153, 0.28); }
+[data-admin-theme] .ad-badge-neg     { color: var(--ad-neg); background: rgba(242, 112, 110, 0.10); border-color: rgba(242, 112, 110, 0.28); }
+[data-admin-theme] .ad-badge-amber   { color: #F4C152; background: rgba(244, 193, 82, 0.10); border-color: rgba(244, 193, 82, 0.26); }
+[data-admin-theme] .ad-badge-accent  { color: var(--ad-accent-strong); background: var(--ad-accent-soft); border-color: var(--ad-accent-border); }
+[data-admin-theme] .ad-badge-neutral { color: var(--ad-text-2); background: var(--ad-surface-2); border-color: var(--ad-border); }
+
+/* ── Sidebar nav (admin fork) ─────────────────────────────────── */
+[data-admin-theme] .ad-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ad-text-2);
+  text-align: left;
+  cursor: pointer;
+}
+[data-admin-theme] .ad-nav-item:hover { color: var(--ad-text); background-color: rgba(255, 255, 255, 0.04); }
+[data-admin-theme] .ad-nav-item-active { color: var(--ad-text); background-color: var(--ad-accent-soft); }
+[data-admin-theme] .ad-nav-label {
+  padding: 0 0.85rem;
+  margin: 1.25rem 0 0.5rem;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ad-text-3);
+}
+
+/* ── Balance-visibility mask ───────────────────────────────────── */
+[data-admin-theme] [data-sensitive] { transition: filter 200ms ease; }
+[data-admin-theme].mask-money [data-sensitive] {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+}
+
+/* ── Inputs / selects ──────────────────────────────────────────── */
+[data-admin-theme] .ad-input,
+[data-admin-theme] .ad-select {
+  background-color: var(--ad-inset);
+  border: 1px solid var(--ad-border);
+  border-radius: 10px;
+  color: var(--ad-text);
+}
+[data-admin-theme] .ad-input::placeholder { color: var(--ad-text-3); }
+[data-admin-theme] .ad-input:focus,
+[data-admin-theme] .ad-select:focus {
+  outline: none;
+  border-color: var(--ad-accent-border);
+  box-shadow: 0 0 0 2px var(--ad-accent-soft);
+}
+[data-admin-theme] .ad-select option { background-color: var(--ad-surface); color: var(--ad-text); }
+
+/* ── Compact row-action buttons ────────────────────────────────── */
+[data-admin-theme] .ad-act {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0.35rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid var(--ad-border);
+  color: var(--ad-text-2);
+  background-color: transparent;
+}
+[data-admin-theme] .ad-act:hover { background-color: var(--ad-surface-2); color: var(--ad-text); border-color: var(--ad-border-strong); }
+[data-admin-theme] .ad-act:disabled { opacity: 0.5; cursor: not-allowed; }
+[data-admin-theme] .ad-act-amber { color: #F4C152; }
+[data-admin-theme] .ad-act-pos:hover { color: var(--ad-pos); border-color: rgba(52, 211, 153, 0.4); background-color: rgba(52, 211, 153, 0.08); }
+[data-admin-theme] .ad-act-neg:hover { color: var(--ad-neg); border-color: rgba(242, 112, 110, 0.4); background-color: rgba(242, 112, 110, 0.08); }
+
+/* ── Modal surface ─────────────────────────────────────────────── */
+[data-admin-theme] .ad-modal {
+  background-color: var(--ad-surface);
+  border: 1px solid var(--ad-border);
+  border-radius: 18px;
+}
+
+/* Admin slide-over drawers — give the shared .drawer-* primitives a dark
+   fixed surface inside the admin shell (several admin modals use bare
+   .drawer-panel). Scoped so the affiliate dashboard is unaffected. */
+[data-admin-theme] .drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 40;
+}
+[data-admin-theme] .drawer-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 100%;
+  max-width: 28rem;
+  overflow-y: auto;
+  padding: 1.5rem;
+  background: var(--ad-surface);
+  border-left: 1px solid var(--ad-border);
+  color: var(--ad-text);
+  z-index: 50;
+}
+
+/* ── Superscript cents (the craft detail) ─────────────────────── */
+[data-admin-theme] .ad-cents {
+  font-size: 0.56em;
+  font-weight: 600;
+  vertical-align: super;
+  line-height: 0;
+  color: var(--ad-text-2);
+  margin-left: 0.06em;
+  letter-spacing: 0;
+}

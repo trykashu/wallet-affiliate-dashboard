@@ -6,6 +6,10 @@ import { fmt }                 from "@/lib/fmt";
 import AffiliateGrowthChart    from "@/components/admin/AffiliateGrowthChart";
 import ReferralTrendChart      from "@/components/admin/ReferralTrendChart";
 import { buildSegmentedReferralTrend } from "@/lib/admin/referral-trend";
+import EarningsTrendChart      from "@/components/admin/EarningsTrendChart";
+import TopAffiliatesTable      from "@/components/admin/TopAffiliatesTable";
+import SystemFunnelCard        from "@/components/admin/SystemFunnelCard";
+import PayoutsSummaryCard      from "@/components/admin/PayoutsSummaryCard";
 import SyncButtons             from "@/components/admin/SyncButtons";
 import OverviewStatsRow        from "@/components/admin/OverviewStatsRow";
 import type { StatRow }        from "@/components/admin/StatDrillDrawer";
@@ -74,8 +78,6 @@ export default async function AdminOverviewPage() {
   const notCreatedVolume       = sumVolume(notCreatedAffiliates);
 
   // -- Total referred volume — across ALL affiliates including pending-signature.
-  // Pre-signed affiliates can still drive real volume, and surfacing it is useful
-  // leverage to get them to sign.
   const totalVolume = affiliates.reduce((sum, a) => sum + (a.referred_volume_total ?? 0), 0);
 
   // -- Earnings breakdown --
@@ -84,10 +86,73 @@ export default async function AdminOverviewPage() {
   const paidEarnings     = allEarnings.filter((e) => e.status === "paid").reduce((s, e) => s + e.amount, 0);
   const totalEarnings    = pendingEarnings + approvedEarnings + paidEarnings;
 
-  // ── Top-10 contributors for each headline stat ───────────────────
-  // Used by the click-to-drill stat cards.
+  // ── Month-over-month deltas ──────────────────────────────────────
+  // Derived entirely from rows ALREADY fetched above (created_at /
+  // agreement_completed_at). No new queries. A delta is null when there's
+  // no comparable prior-month base, so the UI shows no delta rather than ∞%.
+  const now = new Date();
+  const curMonthStart  = new Date(now.getFullYear(), now.getMonth(), 1);
+  const prevMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-  // 1. Affiliates: most recently signed (10 most recent agreement_completed_at).
+  const pctDelta = (cur: number, prev: number): number | null =>
+    prev <= 0 ? null : ((cur - prev) / prev) * 100;
+
+  const bucketCount = (timestamps: Array<string | null | undefined>) => {
+    let cur = 0, prev = 0;
+    for (const t of timestamps) {
+      if (!t) continue;
+      const d = new Date(t);
+      if (d >= curMonthStart) cur++;
+      else if (d >= prevMonthStart) prev++;
+    }
+    return { cur, prev };
+  };
+
+  const affBuckets = bucketCount(completedAffiliates.map((a) => a.agreement_completed_at ?? a.created_at));
+  const affiliatesDelta = pctDelta(affBuckets.cur, affBuckets.prev);
+
+  const userBuckets = bucketCount(users.map((u) => u.created_at));
+  const usersDelta = pctDelta(userBuckets.cur, userBuckets.prev);
+
+  let earnCur = 0, earnPrev = 0;
+  for (const e of allEarnings) {
+    if (!e.created_at) continue;
+    const d = new Date(e.created_at);
+    if (d >= curMonthStart) earnCur += e.amount;
+    else if (d >= prevMonthStart) earnPrev += e.amount;
+  }
+  const earningsDelta = pctDelta(earnCur, earnPrev);
+
+  // Volume delta is NOT derivable: referred_volume_total is a current snapshot
+  // with no time dimension. Shown without a delta rather than a fabricated one.
+  const volumeDelta: number | null = null;
+
+  // ── 12-month earnings trend (sum by created_at month) ────────────
+  const trendBuckets = new Map<string, number>();
+  for (const e of allEarnings) {
+    if (!e.created_at) continue;
+    const d = new Date(e.created_at);
+    trendBuckets.set(`${d.getFullYear()}-${d.getMonth()}`, (trendBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0) + e.amount);
+  }
+  const earningsTrend = Array.from({ length: 12 }, (_, idx) => {
+    const d = new Date(curMonthStart.getFullYear(), curMonthStart.getMonth() - (11 - idx), 1);
+    return {
+      label: d.toLocaleDateString("en-US", { month: "short" }),
+      value: trendBuckets.get(`${d.getFullYear()}-${d.getMonth()}`) ?? 0,
+    };
+  });
+
+  // ── System funnel — signups / activated from status_slug (already fetched).
+  // "Clicks" has no source → flagged placeholder in the card.
+  const FUNNEL_ORDER = [
+    "waitlist", "booked_call", "sent_onboarding", "signed_up",
+    "transaction_run", "funds_in_wallet", "ach_initiated", "funds_in_bank",
+  ];
+  const stageRank = (slug: string) => FUNNEL_ORDER.indexOf(slug);
+  const signedUpCount = users.filter((u) => stageRank(u.status_slug) >= FUNNEL_ORDER.indexOf("signed_up")).length;
+  const activatedCount = users.filter((u) => stageRank(u.status_slug) >= FUNNEL_ORDER.indexOf("transaction_run")).length;
+
+  // ── Top-10 contributors for each headline stat (click-to-drill cards) ──
   const topAffiliates: StatRow[] = completedAffiliates
     .slice()
     .sort((a, b) => {
@@ -106,7 +171,6 @@ export default async function AdminOverviewPage() {
         : `joined ${fmt.date(a.created_at)}`,
     }));
 
-  // 2. Users: top 10 affiliates by referred user count.
   const usersByAffiliate = new Map<string, number>();
   for (const u of users) {
     usersByAffiliate.set(u.affiliate_id, (usersByAffiliate.get(u.affiliate_id) ?? 0) + 1);
@@ -127,7 +191,6 @@ export default async function AdminOverviewPage() {
       };
     });
 
-  // 3. Volume: top 10 affiliates by referred_volume_total.
   const topByVolume: StatRow[] = affiliates
     .slice()
     .sort((a, b) => (b.referred_volume_total ?? 0) - (a.referred_volume_total ?? 0))
@@ -141,7 +204,6 @@ export default async function AdminOverviewPage() {
       sub: a.business_name ?? "",
     }));
 
-  // 4. Earnings: top 10 affiliates by total earnings (all statuses combined).
   const earningsByAffiliate = new Map<string, number>();
   for (const e of allEarnings) {
     earningsByAffiliate.set(e.affiliate_id, (earningsByAffiliate.get(e.affiliate_id) ?? 0) + e.amount);
@@ -161,21 +223,24 @@ export default async function AdminOverviewPage() {
       };
     });
 
+  // ── Top affiliates (ranked analytics table) ──────────────────────
+  const topAffiliateRows = affiliates
+    .map((a) => ({
+      affiliate_id: a.id,
+      agent_name: a.agent_name,
+      business_name: a.business_name ?? null,
+      volume: a.referred_volume_total ?? 0,
+      earnings: earningsByAffiliate.get(a.id) ?? 0,
+      users: usersByAffiliate.get(a.id) ?? 0,
+      agreement_status: a.agreement_status ?? "Not Created",
+    }))
+    .filter((r) => r.volume > 0 || r.earnings > 0)
+    .sort((a, b) => b.volume - a.volume)
+    .slice(0, 8);
+
   return (
     <>
-      {/* Trend charts — limited to affiliates with a Completed agreement */}
-      <AffiliateGrowthChart affiliates={completedAffiliates} />
-      <ReferralTrendChart monthly={referralTrend.main.monthly} weekly={referralTrend.main.weekly} />
-      <ReferralTrendChart
-        monthly={referralTrend.payova.monthly}
-        weekly={referralTrend.payova.weekly}
-        title="Payova — Users Referred & Referred Volume"
-        barColor="#7C3AED"
-        lineColor="#8B5CF6"
-        gradientId="payovaVolumeGrad"
-      />
-
-      {/* Stat cards */}
+      {/* KPI hero */}
       <OverviewStatsRow
         totalAffiliates={completedCount}
         totalAffiliatesSub={`${pendingSignatureCount} awaiting signature / ${declinedCount} declined`}
@@ -185,11 +250,39 @@ export default async function AdminOverviewPage() {
         totalVolumeSub="Lifetime transaction volume"
         totalEarnings={totalEarnings}
         totalEarningsSub={`${fmt.currency(pendingEarnings)} pending / ${fmt.currency(approvedEarnings)} approved / ${fmt.currency(paidEarnings)} paid`}
+        affiliatesDelta={affiliatesDelta}
+        usersDelta={usersDelta}
+        volumeDelta={volumeDelta}
+        earningsDelta={earningsDelta}
         topAffiliates={topAffiliates}
         topByUsers={topByUsers}
         topByVolume={topByVolume}
         topByEarnings={topByEarnings}
       />
+
+      {/* System earnings trend */}
+      <EarningsTrendChart series={earningsTrend} />
+
+      {/* Top affiliates (ranked analytics) */}
+      <TopAffiliatesTable rows={topAffiliateRows} />
+
+      {/* System funnel + payouts summary */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+        <SystemFunnelCard totalLeads={users.length} signedUp={signedUpCount} activated={activatedCount} />
+        <PayoutsSummaryCard ready={approvedEarnings} pending={pendingEarnings} paid={paidEarnings} />
+      </div>
+
+      {/* Referral + growth trend charts */}
+      <ReferralTrendChart monthly={referralTrend.main.monthly} weekly={referralTrend.main.weekly} />
+      <ReferralTrendChart
+        monthly={referralTrend.payova.monthly}
+        weekly={referralTrend.payova.weekly}
+        title="Payova — Users Referred & Referred Volume"
+        barColor="#7C3AED"
+        lineColor="#8B5CF6"
+        gradientId="payovaVolumeGrad"
+      />
+      <AffiliateGrowthChart affiliates={completedAffiliates} />
 
       {/* Affiliate Pipeline — pre-signature breakdown */}
       <AffiliatePipelineCard
@@ -208,44 +301,44 @@ export default async function AdminOverviewPage() {
       <SyncButtons />
 
       {/* Recent webhook events */}
-      <div className="card overflow-hidden">
-        <div className="px-5 py-4 border-b border-surface-200/60">
-          <h3 className="text-sm font-semibold text-gray-900">Recent Webhook Activity</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Last 10 events</p>
+      <div className="ad-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--ad-border)]">
+          <h3 className="text-sm font-semibold ad-text-1">Recent Webhook Activity</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">Last 10 events</p>
         </div>
         {webhooks.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <p className="text-sm text-brand-400">No webhook events recorded yet.</p>
+            <p className="text-sm ad-text-3">No webhook events recorded yet.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-surface-200/60 bg-surface-50/60">
-                  <th className="th">Event Type</th>
-                  <th className="th">Status</th>
-                  <th className="th hidden sm:table-cell">Idempotency Key</th>
-                  <th className="th">Time</th>
+                <tr className="border-b border-[var(--ad-border)] bg-[var(--ad-inset)]">
+                  <th className="ad-th">Event Type</th>
+                  <th className="ad-th">Status</th>
+                  <th className="ad-th hidden sm:table-cell">Idempotency Key</th>
+                  <th className="ad-th">Time</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-200/60">
+              <tbody className="divide-y divide-[var(--ad-border)]">
                 {webhooks.map((wh) => (
-                  <tr key={wh.id} className="hover:bg-surface-100/40 transition-colors">
-                    <td className="td">
-                      <span className="text-sm font-medium text-gray-900">{wh.event_type}</span>
+                  <tr key={wh.id} className="hover:bg-[var(--ad-surface-2)] transition-colors">
+                    <td className="ad-td">
+                      <span className="text-sm font-medium ad-text-1">{wh.event_type}</span>
                     </td>
-                    <td className="td">
-                      <span className={`badge ${wh.processed ? "badge-accent" : wh.error_message ? "badge-red" : "badge-amber"}`}>
+                    <td className="ad-td">
+                      <span className={`ad-badge ${wh.processed ? "ad-badge-pos" : wh.error_message ? "ad-badge-neg" : "ad-badge-amber"}`}>
                         {wh.processed ? "processed" : wh.error_message ? "error" : "pending"}
                       </span>
                     </td>
-                    <td className="td hidden sm:table-cell">
-                      <span className="text-xs text-brand-400 font-mono truncate max-w-[200px] block">
+                    <td className="ad-td hidden sm:table-cell">
+                      <span className="text-xs ad-text-3 font-mono truncate max-w-[200px] block">
                         {wh.idempotency_key}
                       </span>
                     </td>
-                    <td className="td">
-                      <span className="text-xs text-brand-400">{fmt.relative(wh.created_at)}</span>
+                    <td className="ad-td">
+                      <span className="text-xs ad-text-3">{fmt.relative(wh.created_at)}</span>
                     </td>
                   </tr>
                 ))}
@@ -288,18 +381,18 @@ function AffiliatePipelineCard({
   const max = Math.max(...stages.map((s) => s.count), 1);
 
   const toneClasses: Record<typeof stages[number]["tone"], { bar: string; text: string }> = {
-    accent: { bar: "bg-accent",         text: "text-accent"     },
-    amber:  { bar: "bg-amber-400",      text: "text-amber-700"  },
-    red:    { bar: "bg-red-400",        text: "text-red-700"    },
-    muted:  { bar: "bg-surface-300",    text: "text-brand-400"  },
+    accent: { bar: "bg-[var(--ad-accent)]", text: "ad-accent-text" },
+    amber:  { bar: "bg-[#F4C152]",          text: "text-[#F4C152]" },
+    red:    { bar: "bg-[var(--ad-neg)]",    text: "text-[var(--ad-neg)]" },
+    muted:  { bar: "bg-[var(--ad-text-3)]", text: "ad-text-3" },
   };
 
   return (
-    <div className="card overflow-hidden">
-      <div className="px-5 py-4 border-b border-surface-200/60 flex items-center justify-between">
+    <div className="ad-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-[var(--ad-border)] flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Affiliate Pipeline</h3>
-          <p className="text-xs text-brand-400 mt-0.5">
+          <h3 className="text-sm font-semibold ad-text-1">Affiliate Pipeline</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">
             Where {fmt.count(total)} affiliate records sit in the agreement flow
           </p>
         </div>
@@ -311,9 +404,9 @@ function AffiliatePipelineCard({
           return (
             <div key={s.label} className="flex items-center gap-3">
               <div className="w-44 flex-shrink-0">
-                <p className="text-xs font-medium text-gray-900">{s.label}</p>
+                <p className="text-xs font-medium ad-text-1">{s.label}</p>
               </div>
-              <div className="flex-1 h-2 bg-surface-100 rounded-full overflow-hidden">
+              <div className="flex-1 h-2 bg-[var(--ad-inset)] rounded-full overflow-hidden">
                 <div
                   className={`h-full ${toneClasses[s.tone].bar} rounded-full transition-all`}
                   style={{ width: `${barW}%` }}
@@ -324,11 +417,11 @@ function AffiliatePipelineCard({
                   <span className={`text-sm font-semibold tabular-nums ${toneClasses[s.tone].text}`}>
                     {fmt.count(s.count)}
                   </span>
-                  <span className="text-[10px] text-brand-400 tabular-nums">
+                  <span className="text-[10px] ad-text-3 tabular-nums">
                     {pct.toFixed(0)}%
                   </span>
                 </div>
-                <span className="text-[11px] text-brand-400 tabular-nums">
+                <span className="text-[11px] ad-text-3 tabular-nums">
                   {s.volume > 0 ? fmt.currencyCompact(s.volume) : "$0"} volume
                 </span>
               </div>
@@ -339,4 +432,3 @@ function AffiliatePipelineCard({
     </div>
   );
 }
-

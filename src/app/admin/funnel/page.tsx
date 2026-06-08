@@ -2,8 +2,8 @@ import { redirect }            from "next/navigation";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
-import HolographicFunnel       from "@/components/dashboard/HolographicFunnel";
-import DropOffAnalysis         from "@/components/dashboard/DropOffAnalysis";
+import HolographicFunnel       from "@/components/admin/AdminHolographicFunnel";
+import DropOffAnalysis         from "@/components/admin/AdminDropOffAnalysis";
 import type { ReferredUser, FunnelEvent, FunnelStatus, StageDuration } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -74,8 +74,8 @@ export default async function AdminFunnelPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-sm font-bold text-brand-400 uppercase tracking-wider">System-Wide Funnel</h2>
-        <p className="text-xs text-brand-400 mt-0.5">All affiliates combined</p>
+        <h2 className="text-sm font-bold ad-text-3 uppercase tracking-wider">System-Wide Funnel</h2>
+        <p className="text-xs ad-text-3 mt-0.5">All affiliates combined</p>
       </div>
 
       <HolographicFunnel

@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
+import Money from "./Money";
 import type { PayoutStatus } from "@/types/database";
 
 export interface PayoutRow {
@@ -84,38 +85,37 @@ export default function PayoutBatchManager({
 
   const statusBadge = (status: PayoutStatus) => {
     const cls =
-      status === "completed"  ? "badge-accent" :
-      status === "processing" ? "badge-amber"  :
-      status === "failed"     ? "badge-red"    : "badge-amber";
-    return <span className={`badge ${cls}`}>{status}</span>;
+      status === "completed"  ? "ad-badge-pos" :
+      status === "processing" ? "ad-badge-amber"  :
+      status === "failed"     ? "ad-badge-neg"    : "ad-badge-amber";
+    return <span className={`ad-badge ${cls}`}>{status}</span>;
   };
 
   return (
     <div className="space-y-6">
       {statementError && (
-        <div className="card p-3 bg-red-50 border-red-200">
-          <p className="text-xs text-red-700">{statementError}</p>
+        <div className="ad-card p-3 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)]">
+          <p className="text-xs text-[var(--ad-neg)]">{statementError}</p>
           <button
             onClick={() => setStatementError(null)}
-            className="text-[10px] text-red-700 underline mt-1"
+            className="text-[10px] text-[var(--ad-neg)] underline mt-1"
           >Dismiss</button>
         </div>
       )}
 
       {/* Payout batch tracking */}
-      <div className="card overflow-hidden">
-        <div className="px-5 py-4 border-b border-surface-200/60 flex flex-wrap items-center gap-3 justify-between">
+      <div className="ad-card overflow-hidden">
+        <div className="px-5 py-4 border-b border-[var(--ad-border)] flex flex-wrap items-center gap-3 justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-gray-900">Payout History</h3>
-            <p className="text-xs text-brand-400 mt-0.5">{payouts.length} payouts</p>
+            <h3 className="text-sm font-semibold ad-text-1">Payout History</h3>
+            <p className="text-xs ad-text-3 mt-0.5">{payouts.length} payouts</p>
           </div>
           <div className="flex items-center gap-2">
             {processingPayouts.length > 0 && (
               <button
                 onClick={handleCheckMercury}
                 disabled={checkingMercury}
-                className="flex items-center gap-1.5 text-xs font-medium text-brand-600 border border-brand-200 hover:border-brand-400
-                           rounded-lg px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-white"
+                className="ad-act"
               >
                 {checkingMercury ? <Spinner /> : (
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -130,66 +130,66 @@ export default function PayoutBatchManager({
 
         {payouts.length === 0 ? (
           <div className="px-5 py-10 text-center">
-            <p className="text-sm text-brand-400">No payouts created yet.</p>
+            <p className="text-sm ad-text-3">No payouts created yet.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
-                <tr className="border-b border-surface-200/60 bg-surface-50/60">
-                  <th className="th">Affiliate</th>
-                  <th className="th">Amount</th>
-                  <th className="th hidden sm:table-cell">Period</th>
-                  <th className="th">Status</th>
-                  <th className="th hidden md:table-cell">Reference</th>
-                  <th className="th hidden md:table-cell">Created</th>
-                  <th className="th hidden lg:table-cell text-center">Statement</th>
-                  <th className="th">Actions</th>
+                <tr className="border-b border-[var(--ad-border)] bg-[var(--ad-inset)]">
+                  <th className="ad-th">Affiliate</th>
+                  <th className="ad-th">Amount</th>
+                  <th className="ad-th hidden sm:table-cell">Period</th>
+                  <th className="ad-th">Status</th>
+                  <th className="ad-th hidden md:table-cell">Reference</th>
+                  <th className="ad-th hidden md:table-cell">Created</th>
+                  <th className="ad-th hidden lg:table-cell text-center">Statement</th>
+                  <th className="ad-th">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-200/60">
+              <tbody className="divide-y divide-[var(--ad-border)]">
                 {payouts.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-100/40 transition-colors">
-                    <td className="td">
-                      <span className="text-sm font-medium text-gray-900">{p.affiliate_name}</span>
+                  <tr key={p.id} className="hover:bg-[var(--ad-surface-2)] transition-colors">
+                    <td className="ad-td">
+                      <span className="text-sm font-medium ad-text-1">{p.affiliate_name}</span>
                     </td>
-                    <td className="td">
-                      <span className="text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(p.amount)}</span>
+                    <td className="ad-td">
+                      <Money value={p.amount} className="text-sm font-bold ad-text-1" />
                     </td>
-                    <td className="td hidden sm:table-cell">
-                      <span className="text-xs text-brand-400">{p.period ?? "—"}</span>
+                    <td className="ad-td hidden sm:table-cell">
+                      <span className="text-xs ad-text-3">{p.period ?? "—"}</span>
                     </td>
-                    <td className="td">{statusBadge(p.status)}</td>
-                    <td className="td hidden md:table-cell">
-                      <span className="text-xs text-brand-400 font-mono truncate max-w-[140px] block">
+                    <td className="ad-td">{statusBadge(p.status)}</td>
+                    <td className="ad-td hidden md:table-cell">
+                      <span className="text-xs ad-text-3 font-mono truncate max-w-[140px] block">
                         {p.provider_reference_id ?? "—"}
                       </span>
                     </td>
-                    <td className="td hidden md:table-cell">
-                      <span className="text-xs text-brand-400">{fmt.date(p.created_at)}</span>
+                    <td className="ad-td hidden md:table-cell">
+                      <span className="text-xs ad-text-3">{fmt.date(p.created_at)}</span>
                     </td>
-                    <td className="td hidden lg:table-cell text-center">
+                    <td className="ad-td hidden lg:table-cell text-center">
                       {p.status === "completed" || p.status === "processing" ? (
                         <button
                           onClick={() => handleGenerateStatement(p.id)}
                           disabled={statementId === p.id}
                           title="Render statement PDF and upload to Supabase + Airtable"
-                          className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                          className="text-[10px] font-semibold ad-accent-text hover:underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {statementId === p.id ? "…" : "Generate"}
                         </button>
                       ) : (
-                        <span className="text-[10px] text-brand-400">—</span>
+                        <span className="text-[10px] ad-text-3">—</span>
                       )}
                     </td>
-                    <td className="td">
+                    <td className="ad-td">
                       <div className="flex items-center gap-1">
                         {(p.status === "processing" || p.status === "requested") && (
                           <>
                             <button
                               onClick={() => handleUpdateStatus(p.id, "completed")}
                               disabled={updatingId === p.id}
-                              className="text-[10px] font-medium text-accent border border-accent/30 hover:border-accent
+                              className="ad-act ad-act-pos text-[10px]
                                          rounded px-2 py-1 transition-all disabled:opacity-50"
                             >
                               {updatingId === p.id ? "..." : "Complete"}
@@ -197,7 +197,7 @@ export default function PayoutBatchManager({
                             <button
                               onClick={() => handleUpdateStatus(p.id, "failed")}
                               disabled={updatingId === p.id}
-                              className="text-[10px] font-medium text-red-500 border border-red-200 hover:border-red-400
+                              className="ad-act ad-act-neg text-[10px]
                                          rounded px-2 py-1 transition-all disabled:opacity-50"
                             >
                               {updatingId === p.id ? "..." : "Failed"}
@@ -208,7 +208,7 @@ export default function PayoutBatchManager({
                           <button
                             onClick={() => handleUpdateStatus(p.id, "requested")}
                             disabled={updatingId === p.id}
-                            className="text-[10px] font-medium text-amber-600 border border-amber-200 hover:border-amber-400
+                            className="ad-act ad-act-amber text-[10px]
                                        rounded px-2 py-1 transition-all disabled:opacity-50"
                           >
                             {updatingId === p.id ? "..." : "Retry"}
@@ -223,8 +223,8 @@ export default function PayoutBatchManager({
           </div>
         )}
 
-        <div className="px-5 py-3 border-t border-surface-200/60 bg-surface-50/60">
-          <p className="text-xs text-brand-400">{payouts.length} payouts total</p>
+        <div className="px-5 py-3 border-t border-[var(--ad-border)] bg-[var(--ad-inset)]">
+          <p className="text-xs ad-text-3">{payouts.length} payouts total</p>
         </div>
       </div>
     </div>

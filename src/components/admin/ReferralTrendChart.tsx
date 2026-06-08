@@ -38,8 +38,8 @@ export default function ReferralTrendChart({
   monthly,
   weekly,
   title = "Users Referred & Referred Volume",
-  barColor = "#0C5147",
-  lineColor = "#00DE8F",
+  barColor = "#5B6EF0",
+  lineColor = "#34D399",
   gradientId = "referralVolumeGrad",
 }: Props) {
   const [granularity, setGranularity] = useState<"monthly" | "weekly">("monthly");
@@ -76,11 +76,11 @@ export default function ReferralTrendChart({
   const volTicks = niceTicks(volumeMax);
 
   return (
-    <div className="card p-4 sm:p-6">
+    <div className="ad-card p-4 sm:p-6">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-          <p className="text-xs text-brand-400 mt-0.5">
+          <h3 className="text-sm font-semibold ad-text-1">{title}</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">
             New referred users and Transfer-In volume per {granularity === "monthly" ? "month" : "week"}
           </p>
         </div>
@@ -88,7 +88,7 @@ export default function ReferralTrendChart({
           aria-label="Time period"
           value={granularity}
           onChange={(e) => setGranularity(e.target.value as "monthly" | "weekly")}
-          className="border border-gray-200 rounded-xl text-sm text-gray-900 bg-white px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-600/20 focus:border-brand-600"
+          className="ad-select text-sm px-3 py-1.5"
         >
           <option value="monthly">Monthly</option>
           <option value="weekly">Weekly</option>
@@ -97,10 +97,10 @@ export default function ReferralTrendChart({
 
       {/* Legend */}
       <div className="flex items-center gap-4 mb-2">
-        <span className="flex items-center gap-1.5 text-[11px] text-brand-400">
+        <span className="flex items-center gap-1.5 text-[11px] ad-text-3">
           <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: barColor }} /> Users referred
         </span>
-        <span className="flex items-center gap-1.5 text-[11px] text-brand-400">
+        <span className="flex items-center gap-1.5 text-[11px] ad-text-3">
           <span className="inline-block w-4 h-0.5 rounded-full" style={{ background: lineColor }} /> Referred volume
         </span>
       </div>
@@ -118,8 +118,8 @@ export default function ReferralTrendChart({
           const y = padY + innerH - (tick / usersMax) * innerH;
           return (
             <g key={`u-${tick}`}>
-              <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4" />
-              <text x={padL - 4} y={y + 3} fill="#9CA3AF" fontSize="8" textAnchor="end">{tick}</text>
+              <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="var(--ad-border)" strokeWidth="1" />
+              <text x={padL - 4} y={y + 3} fill="var(--ad-text-3)" fontSize="8" textAnchor="end">{tick}</text>
             </g>
           );
         })}
@@ -128,7 +128,7 @@ export default function ReferralTrendChart({
         {volTicks.map((tick) => {
           const y = padY + innerH - (tick / volumeMax) * innerH;
           return (
-            <text key={`v-${tick}`} x={W - padR + 4} y={y + 3} fill="#9CA3AF" fontSize="8" textAnchor="start">
+            <text key={`v-${tick}`} x={W - padR + 4} y={y + 3} fill="var(--ad-text-3)" fontSize="8" textAnchor="start">
               {fmt.currencyCompact(tick)}
             </text>
           );
@@ -146,12 +146,12 @@ export default function ReferralTrendChart({
         <path d={areaPath} fill={`url(#${gradientId})`} />
         <path d={linePath} fill="none" stroke={lineColor} strokeWidth="2" strokeLinecap="round" />
         {linePoints.map((pt, i) => (
-          <circle key={`dot-${data[i].key}`} cx={pt.x} cy={pt.y} r="3" fill="#ffffff" stroke={lineColor} strokeWidth="1.5" />
+          <circle key={`dot-${data[i].key}`} cx={pt.x} cy={pt.y} r="3" fill="var(--ad-surface)" stroke={lineColor} strokeWidth="1.5" />
         ))}
 
         {/* X labels */}
         {data.map((b, i) => (
-          <text key={`x-${b.key}`} x={centerX(i)} y={H - 4} fill="#64748B" fontSize="9" textAnchor="middle">
+          <text key={`x-${b.key}`} x={centerX(i)} y={H - 4} fill="var(--ad-text-3)" fontSize="9" textAnchor="middle">
             {b.label}
           </text>
         ))}

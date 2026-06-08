@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { fmt } from "@/lib/fmt";
+import Money from "./Money";
 import StatDrillDrawer, {
   formatCount,
   formatCurrency,
@@ -18,20 +19,42 @@ interface Props {
   totalVolumeSub: string;
   totalEarnings: number;
   totalEarningsSub: string;
+  /** Month-over-month % deltas (null = no comparable base / not derivable). */
+  affiliatesDelta: number | null;
+  usersDelta: number | null;
+  volumeDelta: number | null;
+  earningsDelta: number | null;
   topAffiliates: StatRow[];
   topByUsers: StatRow[];
   topByVolume: StatRow[];
   topByEarnings: StatRow[];
 }
 
+type CardKind = "count" | "currency";
+
 export default function OverviewStatsRow({
   totalAffiliates, totalAffiliatesSub,
   totalUsers, totalUsersSub,
   totalVolume, totalVolumeSub,
   totalEarnings, totalEarningsSub,
+  affiliatesDelta, usersDelta, volumeDelta, earningsDelta,
   topAffiliates, topByUsers, topByVolume, topByEarnings,
 }: Props) {
   const [open, setOpen] = useState<StatKey | null>(null);
+
+  const cards: {
+    key: StatKey;
+    label: string;
+    value: number;
+    kind: CardKind;
+    sub: string;
+    delta: number | null;
+  }[] = [
+    { key: "affiliates", label: "Total Affiliates",      value: totalAffiliates, kind: "count",    sub: totalAffiliatesSub, delta: affiliatesDelta },
+    { key: "users",      label: "Total Referred Users",  value: totalUsers,      kind: "count",    sub: totalUsersSub,      delta: usersDelta },
+    { key: "volume",     label: "Total Referred Volume", value: totalVolume,     kind: "currency", sub: totalVolumeSub,     delta: volumeDelta },
+    { key: "earnings",   label: "Total Earnings",        value: totalEarnings,   kind: "currency", sub: totalEarningsSub,   delta: earningsDelta },
+  ];
 
   const drawerConfig = (() => {
     switch (open) {
@@ -41,7 +64,7 @@ export default function OverviewStatsRow({
           headlineLabel: "Total Affiliates",
           headlineValue: fmt.count(totalAffiliates),
           emptyHint: "No signed affiliates yet.",
-          formatValue: () => "", // affiliates stat row has no numeric value; use sub only
+          formatValue: () => "",
         };
       case "users":
         return {
@@ -75,34 +98,18 @@ export default function OverviewStatsRow({
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCardButton
-          label="Total Affiliates"
-          value={fmt.count(totalAffiliates)}
-          sub={totalAffiliatesSub}
-          accentColor="brand"
-          onClick={() => setOpen("affiliates")}
-        />
-        <StatCardButton
-          label="Total Referred Users"
-          value={fmt.count(totalUsers)}
-          sub={totalUsersSub}
-          accentColor="accent"
-          onClick={() => setOpen("users")}
-        />
-        <StatCardButton
-          label="Total Referred Volume"
-          value={fmt.currencyCompact(totalVolume)}
-          sub={totalVolumeSub}
-          accentColor="accent"
-          onClick={() => setOpen("volume")}
-        />
-        <StatCardButton
-          label="Total Earnings"
-          value={fmt.currencyCompact(totalEarnings)}
-          sub={totalEarningsSub}
-          accentColor="brand"
-          onClick={() => setOpen("earnings")}
-        />
+        {cards.map((c) => (
+          <StatCardButton
+            key={c.key}
+            label={c.label}
+            value={c.value}
+            kind={c.kind}
+            sub={c.sub}
+            delta={c.delta}
+            selected={open === c.key}
+            onClick={() => setOpen(c.key)}
+          />
+        ))}
       </div>
 
       {drawerConfig && (
@@ -120,32 +127,60 @@ export default function OverviewStatsRow({
   );
 }
 
+function DeltaChip({ pct }: { pct: number }) {
+  const up = pct >= 0;
+  return (
+    <span className={`ad-badge ${up ? "ad-badge-pos" : "ad-badge-neg"}`}>
+      <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor">
+        {up ? (
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+        ) : (
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        )}
+      </svg>
+      {Math.abs(pct).toFixed(1)}%
+    </span>
+  );
+}
+
 function StatCardButton({
-  label, value, sub, accentColor, onClick,
+  label, value, kind, sub, delta, selected, onClick,
 }: {
   label: string;
-  value: string;
+  value: number;
+  kind: CardKind;
   sub: string;
-  accentColor: "brand" | "accent";
+  delta: number | null;
+  selected: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="stat-card accent-top text-left hover:shadow-card-md hover:-translate-y-0.5 transition-all group"
+      className={`ad-card ad-card-interactive text-left p-5 group ${selected ? "ad-row-selected" : ""}`}
     >
       <div className="flex items-center justify-between">
-        <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">{label}</p>
-        <svg className="w-3.5 h-3.5 text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+        <p className="ad-label">{label}</p>
+        <svg
+          className="w-3.5 h-3.5 ad-text-3 opacity-0 group-hover:opacity-100 transition-opacity"
+          fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 8.25L21 12m0 0l-3.75 3.75M21 12H3" />
         </svg>
       </div>
-      <p className={`text-display-sm font-bold tabular-nums mt-1 ${
-        accentColor === "accent" ? "text-accent" : "text-gray-900"
-      }`}>
-        {value}
+
+      <p className="mt-2.5 text-[26px] sm:text-[30px] font-semibold ad-text-1 leading-none">
+        {kind === "currency"
+          ? <Money value={value} />
+          : <span className="ad-num">{fmt.count(value)}</span>}
       </p>
-      <p className="text-[10px] text-brand-400 mt-1.5 leading-relaxed">{sub}</p>
+
+      <div className="mt-2.5 flex items-center gap-2">
+        {delta !== null && <DeltaChip pct={delta} />}
+        {delta !== null && <span className="text-[10px] ad-text-3">vs last mo.</span>}
+      </div>
+
+      <p className="text-[10px] ad-text-3 mt-2 leading-relaxed">{sub}</p>
     </button>
   );
 }

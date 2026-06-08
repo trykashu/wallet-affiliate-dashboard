@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
+import Money from "./Money";
 import type { BatchSummary } from "./BatchReviewSection";
 
 interface Props {
@@ -81,29 +82,29 @@ export default function RequestedBatchesSection({ batches }: Props) {
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-sm font-bold text-brand-400 uppercase tracking-wider">Ready to execute</h2>
-        <p className="text-xs text-brand-400 mt-0.5">{batches.length} batch{batches.length === 1 ? "" : "es"} approved · awaiting Mercury</p>
+        <h2 className="text-sm font-bold ad-text-3 uppercase tracking-wider">Ready to execute</h2>
+        <p className="text-xs ad-text-3 mt-0.5">{batches.length} batch{batches.length === 1 ? "" : "es"} approved · awaiting Mercury</p>
       </div>
 
       {error && (
-        <div className="card p-4 bg-red-50 border-red-300 border-2">
+        <div className="ad-card p-4 bg-[rgba(242,112,110,0.12)] border-2 border-[rgba(242,112,110,0.4)]">
           <div className="flex items-start gap-2">
-            <svg className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <svg className="w-5 h-5 text-[var(--ad-neg)] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
             </svg>
             <div className="flex-1">
-              <p className="text-sm font-bold text-red-700">Mercury execute failed</p>
-              <p className="text-xs text-red-700 mt-1 whitespace-pre-wrap">{error}</p>
-              <button onClick={() => setError(null)} className="text-[10px] text-red-700 underline mt-2">Dismiss</button>
+              <p className="text-sm font-bold text-[var(--ad-neg)]">Mercury execute failed</p>
+              <p className="text-xs text-[var(--ad-neg)] mt-1 whitespace-pre-wrap">{error}</p>
+              <button onClick={() => setError(null)} className="text-[10px] text-[var(--ad-neg)] underline mt-2">Dismiss</button>
             </div>
           </div>
         </div>
       )}
 
       {reverifyMsg && (
-        <div className={`card p-3 ${reverifyMsg.kind === "ok" ? "bg-accent/10 border-accent/30" : "bg-red-50 border-red-200"}`}>
-          <p className={`text-xs ${reverifyMsg.kind === "ok" ? "text-accent" : "text-red-700"}`}>{reverifyMsg.text}</p>
-          <button onClick={() => setReverifyMsg(null)} className="text-[10px] underline mt-1 text-gray-600">Dismiss</button>
+        <div className={`card p-3 ${reverifyMsg.kind === "ok" ? "bg-[rgba(52,211,153,0.10)] border border-[rgba(52,211,153,0.28)]" : "bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)]"}`}>
+          <p className={`text-xs ${reverifyMsg.kind === "ok" ? "text-[var(--ad-pos)]" : "text-[var(--ad-neg)]"}`}>{reverifyMsg.text}</p>
+          <button onClick={() => setReverifyMsg(null)} className="text-[10px] underline mt-1 ad-text-3">Dismiss</button>
         </div>
       )}
 
@@ -111,51 +112,51 @@ export default function RequestedBatchesSection({ batches }: Props) {
         {batches.map((b) => {
           const missingCount = b.payouts.filter((p) => !p.has_address).length;
           return (
-          <div key={b.batch_id} className="card overflow-hidden">
-            <div className="p-4 flex items-center justify-between gap-3 border-b border-surface-200/60">
+          <div key={b.batch_id} className="ad-card overflow-hidden">
+            <div className="p-4 flex items-center justify-between gap-3 border-b border-[var(--ad-border)]">
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-900">Period {b.period}</p>
-                <p className="text-[10px] text-brand-400 mt-0.5">
+                <p className="text-sm font-semibold ad-text-1">Period {b.period}</p>
+                <p className="text-[10px] ad-text-3 mt-0.5">
                   {b.payout_count} payout{b.payout_count === 1 ? "" : "s"}
                   {missingCount > 0 && (
-                    <span className="ml-2 text-amber-700 font-semibold">· {missingCount} missing address</span>
+                    <span className="ml-2 text-[#F4C152] font-semibold">· {missingCount} missing address</span>
                   )}
                 </p>
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
-                <span className="text-base font-bold text-gray-900 tabular-nums">{fmt.currency(b.total_amount)}</span>
+                <Money value={b.total_amount} className="text-base font-bold ad-text-1" />
                 <button
                   onClick={() => handleExecute(b)}
                   disabled={busyBatchId === b.batch_id}
-                  className="text-xs font-semibold text-white bg-accent hover:bg-accent/90 rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >{busyBatchId === b.batch_id ? "Executing…" : "Execute via Mercury"}</button>
               </div>
             </div>
 
             <table className="w-full text-xs">
               <thead>
-                <tr className="bg-surface-50/60 text-brand-400 uppercase tracking-wider text-[10px]">
-                  <th className="th text-left">Affiliate</th>
-                  <th className="th text-right">Amount</th>
-                  <th className="th text-left">Address</th>
-                  <th className="th text-right">Action</th>
+                <tr className="bg-[var(--ad-inset)] ad-text-3 uppercase tracking-wider text-[10px]">
+                  <th className="ad-th text-left">Affiliate</th>
+                  <th className="ad-th text-right">Amount</th>
+                  <th className="ad-th text-left">Address</th>
+                  <th className="ad-th text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-200/60">
+              <tbody className="divide-y divide-[var(--ad-border)]">
                 {b.payouts.map((p) => (
-                  <tr key={p.id} className="hover:bg-surface-100/40">
-                    <td className="td">
-                      <span className="text-sm text-gray-900">{p.affiliate_name}</span>
+                  <tr key={p.id} className="hover:bg-[var(--ad-surface-2)]">
+                    <td className="ad-td">
+                      <span className="text-sm ad-text-1">{p.affiliate_name}</span>
                     </td>
-                    <td className="td text-right tabular-nums">{fmt.currency(p.amount)}</td>
-                    <td className="td">
+                    <td className="ad-td text-right"><Money value={p.amount} className="ad-text-2" /></td>
+                    <td className="ad-td">
                       {p.has_address ? (
-                        <span className="text-[10px] text-accent">✓ Complete</span>
+                        <span className="text-[10px] text-[var(--ad-pos)]">✓ Complete</span>
                       ) : (
-                        <span className="text-[10px] text-amber-700 font-semibold">✗ Missing</span>
+                        <span className="text-[10px] text-[#F4C152] font-semibold">✗ Missing</span>
                       )}
                     </td>
-                    <td className="td text-right">
+                    <td className="ad-td text-right">
                       <div className="flex items-center justify-end gap-2">
                         {p.pandadoc_id && (
                           <button
@@ -163,7 +164,7 @@ export default function RequestedBatchesSection({ batches }: Props) {
                             disabled={reverifyingAffId === p.affiliate_id}
                             title="Re-fetch bank details + address from PandaDoc and save"
                             className={`text-[10px] font-semibold underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed ${
-                              p.has_address ? "text-brand-600 hover:text-brand-700" : "text-amber-700 hover:text-amber-800"
+                              p.has_address ? "ad-accent-text" : "text-[#F4C152] hover:opacity-80"
                             }`}
                           >
                             {reverifyingAffId === p.affiliate_id ? "Re-verifying…" : "Re-verify from PandaDoc"}
@@ -173,13 +174,13 @@ export default function RequestedBatchesSection({ batches }: Props) {
                           <button
                             onClick={() => setAddressModal({ affiliate_id: p.affiliate_id, affiliate_name: p.affiliate_name })}
                             title="Manually enter address — use when PandaDoc Re-verify fails"
-                            className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted"
+                            className="text-[10px] font-semibold ad-accent-text hover:underline decoration-dotted"
                           >
                             Enter address manually
                           </button>
                         )}
                         {p.has_address && !p.pandadoc_id && (
-                          <span className="text-[10px] text-brand-400">No PandaDoc</span>
+                          <span className="text-[10px] ad-text-3">No PandaDoc</span>
                         )}
                       </div>
                     </td>
@@ -263,43 +264,43 @@ function AddressModal({
       <div className="drawer-backdrop" onClick={() => !busy && onClose()} />
       <div className="drawer-panel max-w-md">
         <div className="mb-4">
-          <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Manual address</p>
-          <h2 className="text-lg font-bold text-gray-900 mt-1">Enter address for {affiliateName}</h2>
-          <p className="text-xs text-brand-400 mt-1">Required by Mercury to create the ACH recipient. Saved to the affiliate&apos;s default payout account.</p>
+          <p className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Manual address</p>
+          <h2 className="text-lg font-bold ad-text-1 mt-1">Enter address for {affiliateName}</h2>
+          <p className="text-xs ad-text-3 mt-1">Required by Mercury to create the ACH recipient. Saved to the affiliate&apos;s default payout account.</p>
         </div>
         <div className="space-y-3">
           <div>
-            <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Address Line 1</label>
-            <input value={address1} onChange={(e) => setAddress1(e.target.value)} placeholder="304 S. Jones Blvd" className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1" />
+            <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Address Line 1</label>
+            <input value={address1} onChange={(e) => setAddress1(e.target.value)} placeholder="304 S. Jones Blvd" className="ad-input w-full px-3 py-2 rounded-xl text-sm mt-1" />
           </div>
           <div>
-            <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Address Line 2 (optional)</label>
-            <input value={address2} onChange={(e) => setAddress2(e.target.value)} placeholder="Suite 100" className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1" />
+            <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Address Line 2 (optional)</label>
+            <input value={address2} onChange={(e) => setAddress2(e.target.value)} placeholder="Suite 100" className="ad-input w-full px-3 py-2 rounded-xl text-sm mt-1" />
           </div>
           <div className="grid grid-cols-3 gap-2">
             <div className="col-span-2">
-              <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">City</label>
-              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Las Vegas" className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1" />
+              <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">City</label>
+              <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Las Vegas" className="ad-input w-full px-3 py-2 rounded-xl text-sm mt-1" />
             </div>
             <div>
-              <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">State</label>
-              <input value={region} onChange={(e) => setRegion(e.target.value.toUpperCase().slice(0, 2))} placeholder="NV" maxLength={2} className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1 uppercase tabular-nums" />
+              <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">State</label>
+              <input value={region} onChange={(e) => setRegion(e.target.value.toUpperCase().slice(0, 2))} placeholder="NV" maxLength={2} className="ad-input w-full px-3 py-2 rounded-xl text-sm mt-1 uppercase tabular-nums" />
             </div>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">ZIP Code</label>
-            <input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="89107" maxLength={10} className="input-base w-full px-3 py-2 rounded-xl text-sm mt-1 tabular-nums" />
+            <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">ZIP Code</label>
+            <input value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder="89107" maxLength={10} className="ad-input w-full px-3 py-2 rounded-xl text-sm mt-1 tabular-nums" />
           </div>
         </div>
         {err && (
-          <div className="mt-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700">{err}</div>
+          <div className="mt-3 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)] rounded-xl px-3 py-2 text-xs text-[var(--ad-neg)]">{err}</div>
         )}
         <div className="mt-5 flex items-center justify-end gap-2">
-          <button onClick={onClose} disabled={busy} className="text-xs font-semibold text-brand-600 px-3 py-2">Cancel</button>
+          <button onClick={onClose} disabled={busy} className="text-xs font-semibold ad-text-2 px-3 py-2">Cancel</button>
           <button
             onClick={save}
             disabled={!canSave || busy}
-            className="btn-primary text-xs px-4 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ad-btn-primary text-xs px-4 py-2 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? "Saving…" : "Save address"}
           </button>

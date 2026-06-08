@@ -45,19 +45,19 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Panel */}
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-card-lg overflow-hidden animate-scale-in">
+      <div className="relative w-full max-w-md ad-modal overflow-hidden animate-scale-in">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-surface-200/60">
+        <div className="px-6 pt-6 pb-4 border-b border-[var(--ad-border)]">
           <div className="flex items-start justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Invite Affiliate</h2>
-              <p className="text-xs text-brand-400 mt-0.5">
+              <h2 className="text-base font-semibold ad-text-1">Invite Affiliate</h2>
+              <p className="text-xs ad-text-3 mt-0.5">
                 Send a dashboard invite to an existing affiliate.
               </p>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-xl text-brand-400 hover:text-brand-600 hover:bg-surface-100 transition-colors"
+              className="p-1.5 rounded-xl ad-text-3 hover:text-[var(--ad-text)] hover:bg-[var(--ad-surface-2)] transition-colors"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -69,13 +69,13 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
         {/* Success state */}
         {sent ? (
           <div className="px-6 py-10 text-center">
-            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center">
-              <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[rgba(52,211,153,0.10)] border border-[rgba(52,211,153,0.28)] flex items-center justify-center">
+              <svg className="w-6 h-6 text-[var(--ad-pos)]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
               </svg>
             </div>
-            <p className="text-sm font-semibold text-gray-900">Invite sent!</p>
-            <p className="text-xs text-brand-400 mt-1">
+            <p className="text-sm font-semibold ad-text-1">Invite sent!</p>
+            <p className="text-xs ad-text-3 mt-1">
               They&apos;ll receive an email to set up their dashboard account.
             </p>
           </div>
@@ -83,8 +83,8 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
           /* Form */
           <form onSubmit={handleSubmit} className="px-6 py-5 space-y-4">
             <div>
-              <label className="block text-xs font-medium text-brand-600 mb-1.5">
-                Affiliate Email <span className="text-red-400">*</span>
+              <label className="block text-xs font-medium ad-text-2 mb-1.5">
+                Affiliate Email <span className="text-[var(--ad-neg)]">*</span>
               </label>
               <input
                 type="email"
@@ -92,26 +92,23 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 placeholder="affiliate@example.com"
-                className="w-full px-3 py-2 text-sm bg-surface-100/60 border border-surface-200 rounded-xl
-                           text-gray-900 placeholder-brand-400/50
-                           focus:outline-none focus:ring-2 focus:ring-accent/30 focus:border-accent
-                           transition-colors"
+                className="w-full px-3 py-2 text-sm ad-input transition-colors"
               />
             </div>
 
             {/* Info callout */}
-            <div className="bg-blue-50 border border-blue-100 rounded-xl p-3 flex gap-2.5">
-              <svg className="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+            <div className="ad-inset p-3 flex gap-2.5">
+              <svg className="w-4 h-4 text-[var(--ad-text-3)] flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
               </svg>
-              <p className="text-xs text-blue-600 leading-relaxed">
+              <p className="text-xs ad-text-3 leading-relaxed">
                 The affiliate must already exist in the system.
                 They&apos;ll receive an email to create their dashboard account.
               </p>
             </div>
 
             {error && (
-              <p className="text-xs text-red-500 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+              <p className="text-xs text-[var(--ad-neg)] bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)] rounded-xl px-3 py-2">
                 {error}
               </p>
             )}
@@ -120,14 +117,14 @@ export default function InviteAffiliateModal({ onClose, onSuccess }: Props) {
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 btn-ghost text-sm"
+                className="flex-1 ad-btn-ghost text-sm justify-center"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 disabled={loading || !email.trim()}
-                className="flex-1 btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+                className="flex-1 ad-btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-60"
               >
                 {loading ? (
                   <>

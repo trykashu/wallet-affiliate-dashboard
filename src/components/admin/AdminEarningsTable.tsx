@@ -3,7 +3,8 @@
 import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
-import TierBadge from "@/components/ui/TierBadge";
+import AdminTierBadge from "@/components/admin/AdminTierBadge";
+import Money from "./Money";
 import { COMMISSION_RATES } from "@/lib/tier";
 import type { EarningStatus, AffiliateTier } from "@/types/database";
 
@@ -23,16 +24,16 @@ function contractLabel(status: string | null): string {
 function contractBadgeClass(status: string | null): string {
   const base = "text-[10px] font-semibold px-2 py-0.5 rounded-full border";
   if (status === "Completed" || status === "signed") {
-    return `${base} text-emerald-700 bg-emerald-50 border-emerald-200`;
+    return `${base} text-[var(--ad-pos)] bg-[rgba(52,211,153,0.10)] border-[rgba(52,211,153,0.28)]`;
   }
   if (status === "Declined") {
-    return `${base} text-red-700 bg-red-50 border-red-200`;
+    return `${base} text-[var(--ad-neg)] bg-[rgba(242,112,110,0.10)] border-[rgba(242,112,110,0.28)]`;
   }
   if (!status || status === "Not Created") {
-    return `${base} text-brand-400 bg-surface-100 border-surface-200`;
+    return `${base} text-[var(--ad-text-3)] bg-[var(--ad-surface-2)] border-[var(--ad-border)]`;
   }
   // Pending Partner / Pending Kashu
-  return `${base} text-amber-700 bg-amber-50 border-amber-200`;
+  return `${base} text-[#F4C152] bg-[rgba(244,193,82,0.10)] border-[rgba(244,193,82,0.26)]`;
 }
 
 function formatMonthLabel(yyyyMm: string): string {
@@ -155,26 +156,26 @@ export default function AdminEarningsTable({
 
   const statusBadge = (status: EarningStatus) => {
     const cls =
-      status === "approved" ? "badge-accent" :
-      status === "paid"     ? "badge-accent" :
-      status === "reversed" ? "badge-red"    : "badge-amber";
-    return <span className={`badge ${cls}`}>{status}</span>;
+      status === "approved" ? "ad-badge-pos" :
+      status === "paid"     ? "ad-badge-neutral" :
+      status === "reversed" ? "ad-badge-neg"  : "ad-badge-amber";
+    return <span className={`ad-badge ${cls}`}>{status}</span>;
   };
 
   return (
-    <div className="card overflow-hidden">
+    <div className="ad-card overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-surface-200/60 flex flex-wrap items-center gap-3 justify-between">
+      <div className="px-5 py-4 border-b border-[var(--ad-border)] flex flex-wrap items-center gap-3 justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">All Earnings</h3>
-          <p className="text-xs text-brand-400 mt-0.5">
+          <h3 className="text-sm font-semibold ad-text-1">All Earnings</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">
             {statusFilter !== "all" || month !== "all"
               ? `${filtered.length} of ${earnings.length}`
               : earnings.length}{" "}
             earnings
           </p>
           {blockedPendingCount > 0 && (
-            <p className="text-[10px] text-amber-700 mt-0.5">
+            <p className="text-[10px] text-[#F4C152] mt-0.5">
               {blockedPendingCount} pending blocked by unsigned contract
             </p>
           )}
@@ -184,7 +185,7 @@ export default function AdminEarningsTable({
           <select
             value={month}
             onChange={(e) => setMonth(e.target.value)}
-            className="text-xs rounded-lg border border-surface-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
+            className="text-xs ad-select px-2.5 py-1.5"
           >
             <option value="all">All months</option>
             {availableMonths.map((m) => (
@@ -195,7 +196,7 @@ export default function AdminEarningsTable({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as EarningStatus | "all" | "blocked")}
-            className="text-xs rounded-lg border border-surface-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
+            className="text-xs ad-select px-2.5 py-1.5"
           >
             <option value="all">All statuses</option>
             <option value="pending">Pending</option>
@@ -209,8 +210,7 @@ export default function AdminEarningsTable({
             <button
               onClick={handleBulkApprove}
               disabled={selectedPendingCount === 0 || approving}
-              className="flex items-center gap-1.5 text-xs font-medium text-white bg-accent hover:bg-accent/90
-                         rounded-lg px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="ad-btn-primary flex items-center gap-1.5"
             >
               {approving ? (
                 <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
@@ -232,50 +232,50 @@ export default function AdminEarningsTable({
       <div className="overflow-x-auto">
         <table className="min-w-full">
           <thead>
-            <tr className="border-b border-surface-200/60 bg-surface-50/60">
+            <tr className="border-b border-[var(--ad-border)] bg-[var(--ad-inset)]">
               {eligiblePendingIds.length > 0 && (
-                <th className="th w-10">
+                <th className="ad-th w-10">
                   <input
                     type="checkbox"
                     checked={selected.size === eligiblePendingIds.length && eligiblePendingIds.length > 0}
                     onChange={toggleSelectAll}
-                    className="rounded border-surface-200"
+                    className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
                   />
                 </th>
               )}
-              <th className="th">Tx Date</th>
-              <th className="th hidden sm:table-cell">Affiliate</th>
-              <th className="th hidden md:table-cell">Contract</th>
-              <th className="th hidden md:table-cell">User</th>
-              <th className="th hidden xl:table-cell">Tier</th>
-              <th className="th text-right">TPV</th>
-              <th className="th text-right hidden lg:table-cell">Funnel %</th>
-              <th className="th text-right hidden lg:table-cell">Cash Collected</th>
-              <th className="th text-right hidden lg:table-cell">Comm %</th>
-              <th className="th text-right">Commission</th>
-              <th className="th">Status</th>
+              <th className="ad-th">Tx Date</th>
+              <th className="ad-th hidden sm:table-cell">Affiliate</th>
+              <th className="ad-th hidden md:table-cell">Contract</th>
+              <th className="ad-th hidden md:table-cell">User</th>
+              <th className="ad-th hidden xl:table-cell">Tier</th>
+              <th className="ad-th text-right">TPV</th>
+              <th className="ad-th text-right hidden lg:table-cell">Funnel %</th>
+              <th className="ad-th text-right hidden lg:table-cell">Cash Collected</th>
+              <th className="ad-th text-right hidden lg:table-cell">Comm %</th>
+              <th className="ad-th text-right">Commission</th>
+              <th className="ad-th">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-surface-200/60">
+          <tbody className="divide-y divide-[var(--ad-border)]">
             {filtered.map((e) => {
               const blocked = e.status === "pending" && !isContractSigned(e.contract_status);
               const isSelectable = eligiblePendingSet.has(e.id);
               return (
                 <tr
                   key={e.id}
-                  className={`hover:bg-surface-100/40 transition-colors ${blocked ? "opacity-60" : ""}`}
+                  className={`hover:bg-[var(--ad-surface-2)] transition-colors ${blocked ? "opacity-60" : ""}`}
                 >
                   {eligiblePendingIds.length > 0 && (
-                    <td className="td w-10">
+                    <td className="ad-td w-10">
                       {isSelectable ? (
                         <input
                           type="checkbox"
                           checked={selected.has(e.id)}
                           onChange={() => toggleSelect(e.id)}
-                          className="rounded border-surface-200"
+                          className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
                         />
                       ) : e.status === "pending" ? (
-                        <span title="Contract not signed — cannot approve" className="inline-flex w-4 h-4 items-center justify-center text-brand-400">
+                        <span title="Contract not signed — cannot approve" className="inline-flex w-4 h-4 items-center justify-center ad-text-3">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round"
                               d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
@@ -284,53 +284,53 @@ export default function AdminEarningsTable({
                       ) : null}
                     </td>
                   )}
-                  <td className="td">
-                    <span className="text-xs text-brand-400">
-                      {e.transaction_date ? fmt.date(e.transaction_date) : <span className="text-brand-400/60">—</span>}
+                  <td className="ad-td">
+                    <span className="text-xs ad-text-3">
+                      {e.transaction_date ? fmt.date(e.transaction_date) : <span className="ad-text-3">—</span>}
                     </span>
                   </td>
-                  <td className="td hidden sm:table-cell">
-                    <span className="text-xs text-gray-700 font-medium">{e.affiliate_name}</span>
+                  <td className="ad-td hidden sm:table-cell">
+                    <span className="text-xs ad-text-2 font-medium">{e.affiliate_name}</span>
                   </td>
-                  <td className="td hidden md:table-cell">
+                  <td className="ad-td hidden md:table-cell">
                     <span className={contractBadgeClass(e.contract_status)}>
                       {contractLabel(e.contract_status)}
                     </span>
                   </td>
-                  <td className="td hidden md:table-cell">
-                    <span className="text-xs text-gray-600">{e.referred_user_name}</span>
+                  <td className="ad-td hidden md:table-cell">
+                    <span className="text-xs ad-text-3">{e.referred_user_name}</span>
                   </td>
-                  <td className="td hidden xl:table-cell">
-                    <TierBadge tier={e.tier_at_earning} />
+                  <td className="ad-td hidden xl:table-cell">
+                    <AdminTierBadge tier={e.tier_at_earning} />
                   </td>
-                  <td className="td text-right">
-                    <span className="text-xs text-gray-700 tabular-nums">
-                      {e.tpv != null ? fmt.currency(e.tpv) : <span className="text-brand-400">&mdash;</span>}
+                  <td className="ad-td text-right">
+                    <span className="text-xs ad-text-2 tabular-nums">
+                      {e.tpv != null ? <Money value={e.tpv} compact /> : <span className="ad-text-3">&mdash;</span>}
                     </span>
                   </td>
-                  <td className="td text-right hidden lg:table-cell">
-                    <span className="text-xs text-brand-400 tabular-nums">
+                  <td className="ad-td text-right hidden lg:table-cell">
+                    <span className="text-xs ad-text-3 tabular-nums">
                       {e.funnel_percent != null
                         ? `${Number(e.funnel_percent).toFixed(Number(e.funnel_percent) % 1 === 0 ? 0 : 2).replace(/\.?0+$/, "")}%`
                         : "—"}
                     </span>
                   </td>
-                  <td className="td text-right hidden lg:table-cell">
-                    <span className="text-xs text-gray-700 tabular-nums">{fmt.currency(Number(e.transaction_fee_amount) || 0)}</span>
+                  <td className="ad-td text-right hidden lg:table-cell">
+                    <Money value={Number(e.transaction_fee_amount) || 0} className="text-xs ad-text-2" />
                   </td>
-                  <td className="td text-right hidden lg:table-cell">
-                    <span className="text-xs text-brand-400 tabular-nums">
+                  <td className="ad-td text-right hidden lg:table-cell">
+                    <span className="text-xs ad-text-3 tabular-nums">
                       {(COMMISSION_RATES[e.tier_at_earning] * 100).toFixed(0)}%
                     </span>
                   </td>
-                  <td className="td text-right">
-                    <span className="text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(e.amount)}</span>
+                  <td className="ad-td text-right">
+                    <Money value={e.amount} className="text-sm font-bold ad-text-1" />
                   </td>
-                  <td className="td">
+                  <td className="ad-td">
                     <div className="flex items-center gap-2">
                       {statusBadge(e.status)}
                       {e.payout_id && (
-                        <span className="badge badge-amber text-[10px]" title="In a payout batch">In batch</span>
+                        <span className="ad-badge ad-badge-amber text-[10px]" title="In a payout batch">In batch</span>
                       )}
                     </div>
                   </td>
@@ -339,7 +339,7 @@ export default function AdminEarningsTable({
             })}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={eligiblePendingIds.length > 0 ? 12 : 11} className="px-5 py-10 text-center text-sm text-brand-400">
+                <td colSpan={eligiblePendingIds.length > 0 ? 12 : 11} className="px-5 py-10 text-center text-sm ad-text-3">
                   No earnings match the current filter.
                 </td>
               </tr>
@@ -348,8 +348,8 @@ export default function AdminEarningsTable({
         </table>
       </div>
 
-      <div className="px-5 py-3 border-t border-surface-200/60 bg-surface-50/60">
-        <p className="text-xs text-brand-400">
+      <div className="px-5 py-3 border-t border-[var(--ad-border)] bg-[var(--ad-inset)]">
+        <p className="text-xs ad-text-3">
           {statusFilter !== "all" || month !== "all"
             ? `${filtered.length} of ${earnings.length}`
             : earnings.length}{" "}

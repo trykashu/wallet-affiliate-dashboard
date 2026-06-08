@@ -134,21 +134,21 @@ export default function BankDetailsUpload() {
   const invalidCount = preview ? preview.length - validCount : 0;
 
   return (
-    <div className="card p-6 space-y-4">
+    <div className="ad-card p-6 space-y-4">
       <div>
-        <h3 className="text-sm font-bold text-brand-400 uppercase tracking-wider">
+        <h3 className="text-sm font-bold ad-text-3 uppercase tracking-wider">
           Import Bank Details
         </h3>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm ad-text-3 mt-1">
           Upload a CSV with columns: email, routing_number, account_number, account_name
         </p>
       </div>
 
       {/* Drop zone / file picker */}
-      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-200 rounded-xl cursor-pointer hover:border-accent hover:bg-surface-100/60 transition-colors">
+      <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[var(--ad-border)] rounded-xl cursor-pointer hover:border-[var(--ad-accent)] hover:bg-[var(--ad-surface-2)] transition-colors">
         <div className="flex flex-col items-center justify-center pt-5 pb-6">
           <svg
-            className="w-8 h-8 mb-2 text-brand-400"
+            className="w-8 h-8 mb-2 ad-text-3"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -160,7 +160,7 @@ export default function BankDetailsUpload() {
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
             />
           </svg>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm ad-text-3">
             {file ? file.name : "Click to select CSV file"}
           </p>
         </div>
@@ -173,7 +173,7 @@ export default function BankDetailsUpload() {
       </label>
 
       {parseError && (
-        <div className="bg-red-50 text-red-600 border border-red-200 rounded-xl px-4 py-3 text-sm">
+        <div className="bg-[rgba(242,112,110,0.10)] text-[var(--ad-neg)] border border-[rgba(242,112,110,0.28)] rounded-xl px-4 py-3 text-sm">
           {parseError}
         </div>
       )}
@@ -182,25 +182,25 @@ export default function BankDetailsUpload() {
       {preview && preview.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-3 text-sm">
-            <span className="text-gray-600">{preview.length} rows found</span>
-            <span className="text-accent font-medium">{validCount} valid</span>
+            <span className="ad-text-3">{preview.length} rows found</span>
+            <span className="text-[var(--ad-pos)] font-medium">{validCount} valid</span>
             {invalidCount > 0 && (
-              <span className="text-red-500 font-medium">{invalidCount} invalid</span>
+              <span className="text-[var(--ad-neg)] font-medium">{invalidCount} invalid</span>
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-surface-200/60">
+          <div className="overflow-x-auto rounded-xl border border-[var(--ad-border)]">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-surface-100/60">
-                  <th className="th text-left px-3 py-2">Email</th>
-                  <th className="th text-left px-3 py-2">Routing #</th>
-                  <th className="th text-left px-3 py-2">Account #</th>
-                  <th className="th text-left px-3 py-2">Name</th>
-                  <th className="th text-center px-3 py-2">Status</th>
+                <tr className="bg-[var(--ad-surface-2)]">
+                  <th className="ad-th text-left px-3 py-2">Email</th>
+                  <th className="ad-th text-left px-3 py-2">Routing #</th>
+                  <th className="ad-th text-left px-3 py-2">Account #</th>
+                  <th className="ad-th text-left px-3 py-2">Name</th>
+                  <th className="ad-th text-center px-3 py-2">Status</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-surface-200/60">
+              <tbody className="divide-y divide-[var(--ad-border)]">
                 {preview.map((row, i) => {
                   const isValid = row.routingValid && row.accountValid;
                   const cleaned = cleanAccountNumber(row.account_number);
@@ -210,19 +210,19 @@ export default function BankDetailsUpload() {
                   const cleanedRouting = cleanRoutingNumber(row.routing_number);
 
                   return (
-                    <tr key={i} className={isValid ? "" : "bg-red-50/50"}>
-                      <td className="px-3 py-2 text-gray-600">{row.email}</td>
-                      <td className="px-3 py-2 text-gray-600 tabular-nums">{cleanedRouting}</td>
-                      <td className="px-3 py-2 text-gray-600 tabular-nums">{masked}</td>
-                      <td className="px-3 py-2 text-gray-600">{row.account_name || "-"}</td>
+                    <tr key={i} className={isValid ? "" : "bg-[rgba(242,112,110,0.06)]"}>
+                      <td className="px-3 py-2 ad-text-3">{row.email}</td>
+                      <td className="px-3 py-2 ad-text-3 tabular-nums">{cleanedRouting}</td>
+                      <td className="px-3 py-2 ad-text-3 tabular-nums">{masked}</td>
+                      <td className="px-3 py-2 ad-text-3">{row.account_name || "-"}</td>
                       <td className="px-3 py-2 text-center">
                         {isValid ? (
-                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-accent/10 text-accent text-xs font-bold">
+                          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[rgba(52,211,153,0.10)] text-[var(--ad-pos)] text-xs font-bold">
                             &#10003;
                           </span>
                         ) : (
                           <span
-                            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-100 text-red-500 text-xs font-bold cursor-help"
+                            className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-[rgba(242,112,110,0.15)] text-[var(--ad-neg)] text-xs font-bold cursor-help"
                             title={row.routingError || row.accountError || "Invalid"}
                           >
                             &#10007;
@@ -239,7 +239,7 @@ export default function BankDetailsUpload() {
           <button
             onClick={handleUpload}
             disabled={uploading || validCount === 0}
-            className="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ad-btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {uploading ? (
               <span className="flex items-center gap-2">
@@ -272,38 +272,38 @@ export default function BankDetailsUpload() {
       {result && (
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-accent/10 rounded-xl px-4 py-3 text-center">
-              <p className="text-lg font-bold text-accent tabular-nums">{result.created}</p>
-              <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Created</p>
+            <div className="bg-[rgba(52,211,153,0.10)] rounded-xl px-4 py-3 text-center">
+              <p className="text-lg font-bold text-[var(--ad-pos)] tabular-nums">{result.created}</p>
+              <p className="text-[10px] ad-text-3 uppercase tracking-wider font-medium">Created</p>
             </div>
-            <div className="bg-blue-50 rounded-xl px-4 py-3 text-center">
-              <p className="text-lg font-bold text-blue-600 tabular-nums">{result.updated}</p>
-              <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Updated</p>
+            <div className="bg-[var(--ad-inset)] rounded-xl px-4 py-3 text-center">
+              <p className="text-lg font-bold ad-text-1 tabular-nums">{result.updated}</p>
+              <p className="text-[10px] ad-text-3 uppercase tracking-wider font-medium">Updated</p>
             </div>
-            <div className={`rounded-xl px-4 py-3 text-center ${result.errors.length > 0 ? "bg-red-50" : "bg-surface-100/60"}`}>
-              <p className={`text-lg font-bold tabular-nums ${result.errors.length > 0 ? "text-red-500" : "text-gray-400"}`}>
+            <div className={`rounded-xl px-4 py-3 text-center ${result.errors.length > 0 ? "bg-[rgba(242,112,110,0.10)]" : "bg-[var(--ad-surface-2)]"}`}>
+              <p className={`text-lg font-bold tabular-nums ${result.errors.length > 0 ? "text-[var(--ad-neg)]" : "ad-text-3"}`}>
                 {result.errors.length}
               </p>
-              <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Errors</p>
+              <p className="text-[10px] ad-text-3 uppercase tracking-wider font-medium">Errors</p>
             </div>
           </div>
 
           {result.errors.length > 0 && (
-            <div className="overflow-x-auto rounded-xl border border-red-200">
+            <div className="overflow-x-auto rounded-xl border border-[rgba(242,112,110,0.28)]">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-red-50">
-                    <th className="th text-left px-3 py-2">Row</th>
-                    <th className="th text-left px-3 py-2">Email</th>
-                    <th className="th text-left px-3 py-2">Error</th>
+                  <tr className="bg-[rgba(242,112,110,0.10)]">
+                    <th className="ad-th text-left px-3 py-2">Row</th>
+                    <th className="ad-th text-left px-3 py-2">Email</th>
+                    <th className="ad-th text-left px-3 py-2">Error</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-red-100">
+                <tbody className="divide-y divide-[rgba(242,112,110,0.2)]">
                   {result.errors.map((err, i) => (
                     <tr key={i}>
-                      <td className="px-3 py-2 text-gray-600 tabular-nums">{err.row}</td>
-                      <td className="px-3 py-2 text-gray-600">{err.email}</td>
-                      <td className="px-3 py-2 text-red-600">{err.error}</td>
+                      <td className="px-3 py-2 ad-text-3 tabular-nums">{err.row}</td>
+                      <td className="px-3 py-2 ad-text-3">{err.email}</td>
+                      <td className="px-3 py-2 text-[var(--ad-neg)]">{err.error}</td>
                     </tr>
                   ))}
                 </tbody>

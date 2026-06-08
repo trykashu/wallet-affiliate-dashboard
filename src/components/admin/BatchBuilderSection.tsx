@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
+import Money from "./Money";
 import BankPreviewDrawer, { type BankPreview } from "@/components/admin/BankPreviewDrawer";
 
 export interface BatchBuilderEarning {
@@ -72,10 +73,10 @@ function rateLabel(rate: number | null, basis: "tpv" | "kashu_fee" | "mixed" | n
 }
 
 function tierBadgeClass(tier: AffiliateRow["tier"]): string {
-  if (tier === "platinum") return "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border-slate-300";
-  if (tier === "custom")   return "bg-purple-500/10 text-purple-700 border-purple-500/20";
-  if (tier === "mixed")    return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-amber-50 text-amber-700 border-amber-200"; // gold default
+  if (tier === "platinum") return "bg-[var(--ad-surface-2)] text-[var(--ad-text-1)] border-[var(--ad-border-strong)]";
+  if (tier === "custom")   return "bg-[var(--ad-accent-soft)] text-[var(--ad-accent-strong)] border-[var(--ad-accent-border)]";
+  if (tier === "mixed")    return "bg-[rgba(244,193,82,0.10)] text-[#F4C152] border-[rgba(244,193,82,0.26)]";
+  return "bg-[rgba(244,193,82,0.10)] text-[#F4C152] border-[rgba(244,193,82,0.26)]"; // gold default
 }
 function tierLabel(tier: AffiliateRow["tier"]): string {
   return tier.charAt(0).toUpperCase() + tier.slice(1);
@@ -294,14 +295,14 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
     <div className="space-y-3">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h2 className="text-sm font-bold text-brand-400 uppercase tracking-wider">Prepare batch</h2>
-          <p className="text-xs text-brand-400 mt-0.5">Approved earnings grouped by affiliate for the chosen month.</p>
+          <h2 className="text-sm font-bold ad-text-3 uppercase tracking-wider">Prepare batch</h2>
+          <p className="text-xs ad-text-3 mt-0.5">Approved earnings grouped by affiliate for the chosen month.</p>
         </div>
         <div className="flex items-center gap-2">
           <select
             value={month}
             onChange={(e) => { setMonth(e.target.value); setSelectedAffiliates(new Set()); }}
-            className="text-xs rounded-lg border border-surface-200 bg-white text-gray-900 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-brand-600/30"
+            className="text-xs ad-select px-2.5 py-1.5"
           >
             {availableMonths.map((m) => (
               <option key={m} value={m}>{formatMonthLabel(m)}</option>
@@ -310,7 +311,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           <button
             onClick={openDrawer}
             disabled={submittableEarningIds.length === 0 || submitting}
-            className="text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Submit for review ({submittableRows.length})
           </button>
@@ -318,104 +319,104 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
       </div>
 
       {error && (
-        <div className="card p-3 bg-red-50 border-red-200">
-          <p className="text-xs text-red-700">{error}</p>
+        <div className="ad-card p-3 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)]">
+          <p className="text-xs text-[var(--ad-neg)]">{error}</p>
         </div>
       )}
 
       {refetchError && (
-        <div className="card p-3 bg-red-50 border-red-200">
-          <p className="text-xs text-red-700">{refetchError}</p>
-          <button onClick={() => setRefetchError(null)} className="text-[10px] text-red-700 underline mt-1">Dismiss</button>
+        <div className="ad-card p-3 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)]">
+          <p className="text-xs text-[var(--ad-neg)]">{refetchError}</p>
+          <button onClick={() => setRefetchError(null)} className="text-[10px] text-[var(--ad-neg)] underline mt-1">Dismiss</button>
         </div>
       )}
 
       {/* Running batch total — updates as AM selects/deselects. Shows the
           full TPV → Kashu Fee → Commission chain so the calculation is
           transparent at a glance. */}
-      <div className="card p-4 space-y-3 bg-gradient-to-br from-brand-50/40 to-surface-50/60 border border-brand-200/40">
+      <div className="ad-card p-4 space-y-3 bg-[var(--ad-inset)] border border-[var(--ad-border)]">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div>
-            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Volume Referred (TPV)</p>
-            <p className="text-stat font-bold tabular-nums text-gray-900">{fmt.currency(submittableTpv)}</p>
+            <p className="text-[10px] ad-text-3 uppercase tracking-wider font-medium">Volume Referred (TPV)</p>
+            <p className="text-stat font-bold ad-text-1"><Money value={submittableTpv} /></p>
           </div>
-          <div className="hidden md:flex items-center justify-center text-brand-400">→</div>
+          <div className="hidden md:flex items-center justify-center ad-text-3">→</div>
           <div>
-            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Cash Collected (Kashu Fee)</p>
-            <p className="text-stat font-bold tabular-nums text-gray-900">{fmt.currency(submittableCashCollected)}</p>
+            <p className="text-[10px] ad-text-3 uppercase tracking-wider font-medium">Cash Collected (Kashu Fee)</p>
+            <p className="text-stat font-bold ad-text-1"><Money value={submittableCashCollected} /></p>
           </div>
-          <div className="hidden md:flex items-center justify-center text-brand-400">→</div>
+          <div className="hidden md:flex items-center justify-center ad-text-3">→</div>
           <div>
-            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Commission Owed</p>
-            <p className="text-display-sm font-bold tabular-nums text-accent">{fmt.currency(submittableTotal)}</p>
+            <p className="text-[10px] ad-text-3 uppercase tracking-wider font-medium">Commission Owed</p>
+            <p className="text-display-sm font-bold ad-pos"><Money value={submittableTotal} /></p>
           </div>
         </div>
-        <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-surface-200/60">
-          <div className="flex items-center gap-4 text-[10px] text-brand-400">
-            <span><span className="font-semibold text-gray-900 tabular-nums">{submittableRows.length}</span> affiliates</span>
+        <div className="flex items-center justify-between flex-wrap gap-2 pt-2 border-t border-[var(--ad-border)]">
+          <div className="flex items-center gap-4 text-[10px] ad-text-3">
+            <span><span className="font-semibold ad-text-1 tabular-nums">{submittableRows.length}</span> affiliates</span>
             <span>·</span>
-            <span><span className="font-semibold text-gray-900 tabular-nums">{submittableEarningIds.length}</span> earnings</span>
+            <span><span className="font-semibold ad-text-1 tabular-nums">{submittableEarningIds.length}</span> earnings</span>
             {submittableRows.length > 0 && (
               <>
                 <span>·</span>
-                <span>Avg <span className="font-semibold text-gray-900">{fmt.currency(submittableTotal / submittableRows.length)}</span> per affiliate</span>
+                <span>Avg <span className="font-semibold ad-text-1">{fmt.currency(submittableTotal / submittableRows.length)}</span> per affiliate</span>
               </>
             )}
           </div>
           {submittableCashCollected > 0 && (
-            <p className="text-[10px] text-brand-400">
-              Effective rate: <span className="font-semibold text-gray-900 tabular-nums">{((submittableTotal / submittableCashCollected) * 100).toFixed(2)}% of fee</span>
+            <p className="text-[10px] ad-text-3">
+              Effective rate: <span className="font-semibold ad-text-1 tabular-nums">{((submittableTotal / submittableCashCollected) * 100).toFixed(2)}% of fee</span>
             </p>
           )}
         </div>
       </div>
 
-      <div className="card overflow-hidden">
+      <div className="ad-card overflow-hidden">
         {rows.length === 0 ? (
-          <div className="p-6 text-center text-sm text-brand-400">
+          <div className="p-6 text-center text-sm ad-text-3">
             No approved + unbatched earnings in {formatMonthLabel(month)}.
           </div>
         ) : (
           <table className="min-w-full">
             <thead>
-              <tr className="border-b border-surface-200/60 bg-surface-50/60">
-                <th className="th w-10">
+              <tr className="border-b border-[var(--ad-border)] bg-[var(--ad-inset)]">
+                <th className="ad-th w-10">
                   <input
                     type="checkbox"
                     checked={allSelected}
                     onChange={toggleAll}
-                    className="rounded border-surface-200"
+                    className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
                     aria-label="Select all"
                   />
                 </th>
-                <th className="th">Affiliate</th>
-                <th className="th">Tier</th>
-                <th className="th text-right">Rate</th>
-                <th className="th text-right hidden md:table-cell">Volume (TPV)</th>
-                <th className="th text-right hidden md:table-cell">Cash Collected</th>
-                <th className="th text-right hidden xl:table-cell">Earnings</th>
-                <th className="th text-right">Commission</th>
-                <th className="th">Status</th>
+                <th className="ad-th">Affiliate</th>
+                <th className="ad-th">Tier</th>
+                <th className="ad-th text-right">Rate</th>
+                <th className="ad-th text-right hidden md:table-cell">Volume (TPV)</th>
+                <th className="ad-th text-right hidden md:table-cell">Cash Collected</th>
+                <th className="ad-th text-right hidden xl:table-cell">Earnings</th>
+                <th className="ad-th text-right">Commission</th>
+                <th className="ad-th">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-surface-200/60">
+            <tbody className="divide-y divide-[var(--ad-border)]">
               {rows.map((r) => {
                 const eligible = r.is_payable && r.contract_signed;
                 const checked = selectedAffiliates.has(r.affiliate_id);
                 return (
-                  <tr key={r.affiliate_id} className={`hover:bg-surface-100/40 transition-colors ${!eligible ? "opacity-60" : ""}`}>
-                    <td className="td w-10">
+                  <tr key={r.affiliate_id} className={`hover:bg-[var(--ad-surface-2)] transition-colors ${!eligible ? "opacity-60" : ""}`}>
+                    <td className="ad-td w-10">
                       {eligible ? (
                         <input
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleAffiliate(r.affiliate_id)}
-                          className="rounded border-surface-200"
+                          className="rounded border-[var(--ad-border)] accent-[#5B6EF0]"
                           aria-label={`Select ${r.affiliate_name}`}
                         />
                       ) : (
                         <span title={!r.contract_signed ? "Contract not signed" : "No verified payout account"}
-                              className="inline-flex w-4 h-4 items-center justify-center text-brand-400">
+                              className="inline-flex w-4 h-4 items-center justify-center ad-text-3">
                           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round"
                               d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
@@ -423,33 +424,33 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                         </span>
                       )}
                     </td>
-                    <td className="td">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{r.affiliate_name}</p>
-                      {r.business_name && <p className="text-[10px] text-brand-400 truncate">{r.business_name}</p>}
+                    <td className="ad-td">
+                      <p className="text-sm font-semibold ad-text-1 truncate">{r.affiliate_name}</p>
+                      {r.business_name && <p className="text-[10px] ad-text-3 truncate">{r.business_name}</p>}
                     </td>
-                    <td className="td">
+                    <td className="ad-td">
                       <span className={`inline-flex items-center text-[10px] font-semibold border rounded-full px-2 py-0.5 ${tierBadgeClass(r.tier)}`}>
                         {tierLabel(r.tier)}
                       </span>
                     </td>
-                    <td className="td text-right text-xs tabular-nums text-gray-700">{rateLabel(r.rate, r.basis)}</td>
-                    <td className="td text-right text-xs text-gray-700 tabular-nums hidden md:table-cell">{fmt.currency(r.tpv)}</td>
-                    <td className="td text-right text-xs text-gray-700 tabular-nums hidden md:table-cell">{fmt.currency(r.cash_collected)}</td>
-                    <td className="td text-right text-xs text-gray-700 tabular-nums hidden xl:table-cell">{fmt.count(r.count)}</td>
-                    <td className="td text-right text-sm font-bold text-gray-900 tabular-nums">{fmt.currency(r.total)}</td>
-                    <td className="td">
+                    <td className="ad-td text-right text-xs tabular-nums ad-text-2">{rateLabel(r.rate, r.basis)}</td>
+                    <td className="ad-td text-right text-xs ad-text-2 tabular-nums hidden md:table-cell">{fmt.currency(r.tpv)}</td>
+                    <td className="ad-td text-right text-xs ad-text-2 tabular-nums hidden md:table-cell">{fmt.currency(r.cash_collected)}</td>
+                    <td className="ad-td text-right text-xs ad-text-2 tabular-nums hidden xl:table-cell">{fmt.count(r.count)}</td>
+                    <td className="ad-td text-right"><Money value={r.total} className="text-sm font-bold ad-text-1" /></td>
+                    <td className="ad-td">
                       {!r.contract_signed && (
-                        <span className="badge badge-red text-[10px]">Contract pending</span>
+                        <span className="ad-badge ad-badge-neg text-[10px]">Contract pending</span>
                       )}
                       {r.contract_signed && !r.is_payable && (
                         <div className="flex items-center gap-2">
-                          <span className="badge badge-amber text-[10px]">No bank on file</span>
+                          <span className="ad-badge ad-badge-amber text-[10px]">No bank on file</span>
                           {r.pandadoc_id && (
                             <button
                               onClick={() => openRefetchPreview({ affiliate_id: r.affiliate_id, affiliate_name: r.affiliate_name, pandadoc_id: r.pandadoc_id })}
                               disabled={previewState?.affiliate_id === r.affiliate_id}
                               title="Re-fetch bank details from PandaDoc"
-                              className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="text-[10px] font-semibold ad-accent-text hover:underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {previewState?.affiliate_id === r.affiliate_id ? "…" : "Refetch"}
                             </button>
@@ -458,11 +459,11 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                       )}
                       {eligible && (
                         <div className="flex items-center gap-2">
-                          <span className="badge badge-accent text-[10px]">Ready</span>
+                          <span className="ad-badge ad-badge-pos text-[10px]">Ready</span>
                           {r.bank_review_reasons.length > 0 && (
                             <span
                               title={r.bank_review_reasons.join(" · ")}
-                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5"
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-[#F4C152] bg-[rgba(244,193,82,0.10)] border border-[rgba(244,193,82,0.26)] rounded-full px-2 py-0.5"
                             >
                               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.732 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
                               Review
@@ -473,7 +474,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                               onClick={() => openRefetchPreview({ affiliate_id: r.affiliate_id, affiliate_name: r.affiliate_name, pandadoc_id: r.pandadoc_id })}
                               disabled={previewState?.affiliate_id === r.affiliate_id}
                               title="Re-verify bank details against PandaDoc"
-                              className="text-[10px] font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="text-[10px] font-semibold ad-accent-text hover:underline decoration-dotted disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               {previewState?.affiliate_id === r.affiliate_id ? "…" : "Re-verify"}
                             </button>
@@ -495,55 +496,55 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           <div className="drawer-panel">
             <div className="flex items-center justify-between mb-5">
               <div>
-                <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Payout batch</p>
-                <h2 className="text-xl font-bold text-gray-900 mt-1">Submit for Finance review</h2>
+                <p className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Payout batch</p>
+                <h2 className="text-xl font-bold ad-text-1 mt-1">Submit for Finance review</h2>
               </div>
               <button
                 onClick={() => !submitting && setDrawerOpen(false)}
-                className="text-sm text-brand-400 hover:text-gray-900"
+                className="text-sm ad-text-3 hover:text-[var(--ad-text)]"
                 aria-label="Close drawer"
               >Close</button>
             </div>
 
             <div className="space-y-4">
-              <div className="card p-4 bg-surface-50">
-                <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider mb-2">Summary</p>
+              <div className="ad-card p-4 bg-[var(--ad-inset)]">
+                <p className="text-[10px] font-bold ad-text-3 uppercase tracking-wider mb-2">Summary</p>
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-gray-900">{submittableRows.length} affiliate{submittableRows.length === 1 ? "" : "s"}, {submittableEarningIds.length} earning{submittableEarningIds.length === 1 ? "" : "s"}</p>
-                  <p className="text-base font-bold text-gray-900 tabular-nums">{fmt.currency(submittableTotal)}</p>
+                  <p className="text-sm ad-text-1">{submittableRows.length} affiliate{submittableRows.length === 1 ? "" : "s"}, {submittableEarningIds.length} earning{submittableEarningIds.length === 1 ? "" : "s"}</p>
+                  <p className="text-base font-bold ad-text-1"><Money value={submittableTotal} /></p>
                 </div>
-                <p className="text-[10px] text-brand-400 mt-2">Period: {formatMonthLabel(month)}</p>
+                <p className="text-[10px] ad-text-3 mt-2">Period: {formatMonthLabel(month)}</p>
               </div>
 
               <div>
-                <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Notes (optional)</label>
+                <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Notes (optional)</label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value.slice(0, 500))}
                   disabled={submitting}
                   rows={3}
                   placeholder="Anything Finance should know about this batch…"
-                  className="mt-1 input-base w-full resize-none"
+                  className="mt-1 ad-input w-full resize-none"
                 />
-                <p className="text-[10px] text-brand-400 mt-1 tabular-nums">{notes.length}/500</p>
+                <p className="text-[10px] ad-text-3 mt-1 tabular-nums">{notes.length}/500</p>
               </div>
 
               {error && (
-                <div className="card p-3 bg-red-50 border-red-200">
-                  <p className="text-xs text-red-700">{error}</p>
+                <div className="ad-card p-3 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)]">
+                  <p className="text-xs text-[var(--ad-neg)]">{error}</p>
                 </div>
               )}
 
-              <div className="pt-3 border-t border-surface-200/60 flex items-center justify-end gap-2">
+              <div className="pt-3 border-t border-[var(--ad-border)] flex items-center justify-end gap-2">
                 <button
                   onClick={() => setDrawerOpen(false)}
                   disabled={submitting}
-                  className="text-xs font-semibold text-brand-400 hover:text-gray-900 px-3 py-2"
+                  className="text-xs font-semibold ad-text-3 hover:text-[var(--ad-text)] px-3 py-2"
                 >Cancel</button>
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || submittableEarningIds.length === 0}
-                  className="text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >{submitting ? "Submitting…" : "Send to Finance"}</button>
               </div>
             </div>

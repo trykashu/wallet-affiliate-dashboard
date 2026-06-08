@@ -307,6 +307,41 @@ git push origin main
   — affiliates always already have an auth account from the admin invite flow, so the login
   page never needs to create one.
 
+### [2026-06-08] — Admin Panel Dark "Mercury-grade" Theme (admin-only)
+- **Context:** Redesigned the ENTIRE admin view (`src/app/admin/**`, `src/components/admin/**`)
+  to a restrained dark charcoal/indigo aesthetic. The affiliate dashboard and the view-as
+  path are intentionally untouched and still render the light/teal Kashu theme.
+- **Scoped token system (do NOT leak to affiliate side):** all admin styling lives under the
+  `[data-admin-theme]` wrapper (set on the root div in [admin/layout.tsx](src/app/admin/layout.tsx)).
+  Tokens + utilities are defined in [globals.css](src/app/globals.css) in the block headed
+  `ADMIN THEME`. Recolor = edit those CSS variables only (`--ad-bg/-surface/-inset/-border/
+  -text(-2/-3)/-accent/-pos/-neg`, `--ad-radius`). Utilities: `.ad-card`, `.ad-inset`,
+  `.ad-th/.ad-td/.ad-row(-selected)`, `.ad-btn-primary/.ad-btn-ghost`, `.ad-act(-pos/-neg/-amber)`,
+  `.ad-badge(-pos/-neg/-amber/-neutral/-accent)`, `.ad-input/.ad-select`, `.ad-nav-*`,
+  `.ad-modal`, `.ad-cents`, `.mask-money`, and scoped `.drawer-backdrop/.drawer-panel`.
+- **The ONE accent rule:** indigo `#5B6EF0` (`--ad-accent`) is reserved for the primary action
+  and the selected/highlighted row only — never decorative. Status uses pos/neg/amber/neutral.
+  Funnel stage colors stay the green gradient by design.
+- **Craft details:** [`Money`](src/components/admin/Money.tsx) renders large dollars + superscript
+  cents and carries `data-sensitive`. [`BalanceVisibilityToggle`](src/components/admin/BalanceVisibilityToggle.tsx)
+  toggles a `mask-money` class on the shell to blur every `data-sensitive` figure (CSS-only, works
+  across server components, persisted in localStorage). Font is self-hosted **Geist** via the
+  `geist` package (NOT next/font/google — avoids build-time font fetch), mapped to `--font-admin`.
+- **Fork pattern (CRITICAL):** components shared with the affiliate/demo views must NOT be edited
+  in place — fork them into `src/components/admin/`. Done this session: `AppSidebar`→`AdminSidebar`,
+  `ui/TierBadge`→`AdminTierBadge`, `dashboard/HolographicFunnel`→`AdminHolographicFunnel`,
+  `dashboard/DropOffAnalysis`→`AdminDropOffAnalysis` (admin funnel page imports the forks). The
+  canvas funnel needed its white background/fade-trail flipped to charcoal `#141821`.
+- **Data layer untouched:** new Overview surfaces (earnings trend, top affiliates, system funnel,
+  payouts summary, MoM deltas) are computed from rows ALREADY fetched — no new queries. Genuine
+  gaps are placeholders, not fabricated: funnel "clicks" (no source), payout batch queue on Overview
+  (payouts table not fetched there), volume MoM delta (snapshot has no time dimension).
+- **Payouts safety:** restyled surfaces only — the `isFinanceEmail` gate and all
+  approve/reject/execute authorization logic are byte-for-byte unchanged.
+- **Gotcha:** bulk class swaps via Python `.replace()` are order-sensitive — handle opacity
+  variants (`text-brand-400/60`) and double-border badges (`border border-x`) BEFORE blanket
+  token swaps, or they get mangled / missed.
+
 ---
 
 ## 7. Feature Roadmap Status

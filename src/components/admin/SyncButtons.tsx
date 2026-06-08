@@ -59,16 +59,16 @@ export default function SyncButtons() {
   }
 
   return (
-    <div className="card overflow-hidden">
-      <div className="px-5 py-4 border-b border-surface-200/60 flex items-center justify-between">
+    <div className="ad-card overflow-hidden">
+      <div className="px-5 py-4 border-b border-[var(--ad-border)] flex items-center justify-between">
         <div>
-          <h3 className="text-sm font-semibold text-gray-900">Data Sync</h3>
-          <p className="text-xs text-brand-400 mt-0.5">
+          <h3 className="text-sm font-semibold ad-text-1">Data Sync</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">
             Sync data from Airtable and HighLevel
           </p>
         </div>
         {lastResult && (
-          <span className="text-[10px] text-brand-400">
+          <span className="text-[10px] ad-text-3">
             Last run: {lastResult.time}
           </span>
         )}
@@ -78,7 +78,7 @@ export default function SyncButtons() {
         <button
           onClick={() => runSync("affiliates")}
           disabled={loading !== null}
-          className="btn-primary text-sm px-4 py-2 rounded-xl inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="ad-btn-ghost inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading === "affiliates" ? (
             <Spinner />
@@ -93,7 +93,7 @@ export default function SyncButtons() {
         <button
           onClick={() => runSync("transactions")}
           disabled={loading !== null}
-          className="btn-primary text-sm px-4 py-2 rounded-xl inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="ad-btn-ghost inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading === "transactions" ? (
             <Spinner />
@@ -108,7 +108,7 @@ export default function SyncButtons() {
         <button
           onClick={() => runSync("all")}
           disabled={loading !== null}
-          className="btn-accent text-sm px-4 py-2 rounded-xl inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="ad-btn-primary inline-flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {loading === "all" ? (
             <Spinner />
@@ -130,17 +130,17 @@ export default function SyncButtons() {
                 key={key}
                 className={`flex items-center gap-2 text-sm px-3 py-2 rounded-lg ${
                   result.ok
-                    ? "bg-accent/[0.06] text-gray-900"
+                    ? "bg-[var(--ad-inset)] ad-text-1 border border-[var(--ad-border)]"
                     : "bg-red-50 text-red-700"
                 }`}
               >
                 <span
                   className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                    result.ok ? "bg-accent" : "bg-red-500"
+                    result.ok ? "bg-[var(--ad-accent)]" : "bg-[var(--ad-neg)]"
                   }`}
                 />
                 <span className="font-medium capitalize">{key}:</span>
-                <span className="text-brand-400">{getSummary(result)}</span>
+                <span className="ad-text-3">{getSummary(result)}</span>
               </div>
             ))}
           </div>

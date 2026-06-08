@@ -4,6 +4,7 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail, isFinanceEmail } from "@/lib/admin";
 import { getBankReviewReasons } from "@/lib/bank-quality";
 import { fmt }                 from "@/lib/fmt";
+import Money                   from "@/components/admin/Money";
 import PayoutBatchManager      from "@/components/admin/PayoutBatchManager";
 import BankDetailsUpload       from "@/components/admin/BankDetailsUpload";
 import PdfBankUpload           from "@/components/admin/PdfBankUpload";
@@ -242,20 +243,20 @@ export default async function AdminPayoutsPage() {
     <div className="space-y-6">
       {/* Summary cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="stat-card accent-top">
-          <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Ready for Payout</p>
-          <p className="text-display-sm font-bold tabular-nums mt-1 text-accent">{fmt.currencyCompact(totalApproved)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">{payableAffiliateCount} affiliates above {fmt.currency(minPayout)} min</p>
+        <div className="ad-card p-5">
+          <p className="ad-label">Ready for Payout</p>
+          <p className="text-[26px] font-semibold mt-1.5 ad-pos"><Money value={totalApproved} /></p>
+          <p className="text-[10px] ad-text-3 mt-1.5">{payableAffiliateCount} affiliates above {fmt.currency(minPayout)} min</p>
         </div>
-        <div className="stat-card accent-top">
-          <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">In Progress</p>
-          <p className="text-display-sm font-bold tabular-nums mt-1 text-amber-500">{fmt.currencyCompact(totalPending)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">Pending review, requested, or processing</p>
+        <div className="ad-card p-5">
+          <p className="ad-label">In Progress</p>
+          <p className="text-[26px] font-semibold mt-1.5" style={{ color: "#F4C152" }}><Money value={totalPending} /></p>
+          <p className="text-[10px] ad-text-3 mt-1.5">Pending review, requested, or processing</p>
         </div>
-        <div className="stat-card accent-top">
-          <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">Total Paid</p>
-          <p className="text-display-sm font-bold tabular-nums mt-1 text-gray-900">{fmt.currencyCompact(totalPaid)}</p>
-          <p className="text-[10px] text-brand-400 mt-1.5">{allPayouts.filter((p) => p.status === "completed").length} completed payouts</p>
+        <div className="ad-card p-5">
+          <p className="ad-label">Total Paid</p>
+          <p className="text-[26px] font-semibold mt-1.5 ad-text-1"><Money value={totalPaid} /></p>
+          <p className="text-[10px] ad-text-3 mt-1.5">{allPayouts.filter((p) => p.status === "completed").length} completed payouts</p>
         </div>
       </div>
 

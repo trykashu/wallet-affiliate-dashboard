@@ -54,29 +54,29 @@ export default function BankPreviewDrawer({
       <div className="drawer-panel">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Confirm bank info</p>
-            <h2 className="text-xl font-bold text-gray-900 mt-1 truncate">{affiliateName ?? "Unknown affiliate"}</h2>
+            <p className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Confirm bank info</p>
+            <h2 className="text-xl font-bold ad-text-1 mt-1 truncate">{affiliateName ?? "Unknown affiliate"}</h2>
           </div>
           <button
             onClick={() => !submitting && onClose()}
-            className="text-sm text-brand-400 hover:text-gray-900"
+            className="text-sm ad-text-3 hover:text-[var(--ad-text)]"
             aria-label="Close drawer"
           >Close</button>
         </div>
 
         {loading && (
-          <div className="card p-6 text-center text-sm text-brand-400">Fetching from PandaDoc…</div>
+          <div className="ad-card p-6 text-center text-sm ad-text-3">Fetching from PandaDoc…</div>
         )}
 
         {error && (
-          <div className="card p-3 mb-4 bg-red-50 border-red-200">
-            <p className="text-xs text-red-700">{error}</p>
+          <div className="ad-card p-3 mb-4 bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)]">
+            <p className="text-xs text-[var(--ad-neg)]">{error}</p>
           </div>
         )}
 
         {preview && !loading && (
           <div className="space-y-4">
-            <div className="card p-4 bg-surface-50 space-y-3">
+            <div className="ad-card p-4 bg-[var(--ad-inset)] space-y-3">
               <PreviewField label="Account holder" value={preview.account_holder_name ?? "—"} />
               <PreviewField
                 label="Routing number"
@@ -94,37 +94,37 @@ export default function BankPreviewDrawer({
             </div>
 
             {(preview.address1 || preview.city || preview.region || preview.postal_code) && (
-              <div className="card p-4 bg-surface-50 space-y-3">
-                <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Mailing address (for Mercury)</p>
-                <p className="text-sm text-gray-900 leading-relaxed">
-                  {preview.address1 ?? <span className="text-brand-400">— address 1 missing —</span>}
+              <div className="ad-card p-4 bg-[var(--ad-inset)] space-y-3">
+                <p className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Mailing address (for Mercury)</p>
+                <p className="text-sm ad-text-1 leading-relaxed">
+                  {preview.address1 ?? <span className="ad-text-3">— address 1 missing —</span>}
                   {preview.address2 && <><br />{preview.address2}</>}
                   <br />
-                  {preview.city ?? <span className="text-brand-400">— city missing —</span>}
+                  {preview.city ?? <span className="ad-text-3">— city missing —</span>}
                   {", "}
-                  {preview.region ?? <span className="text-brand-400">— state missing —</span>}
+                  {preview.region ?? <span className="ad-text-3">— state missing —</span>}
                   {" "}
-                  {preview.postal_code ?? <span className="text-brand-400">— zip missing —</span>}
+                  {preview.postal_code ?? <span className="ad-text-3">— zip missing —</span>}
                   <br />
-                  <span className="text-xs text-brand-400">{preview.country ?? "US"}</span>
+                  <span className="text-xs ad-text-3">{preview.country ?? "US"}</span>
                 </p>
               </div>
             )}
 
             {preview.warnings.length > 0 && (
-              <div className="card p-3 bg-amber-50 border-amber-200">
-                <p className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-2">
+              <div className="ad-card p-3 bg-[rgba(244,193,82,0.10)] border border-[rgba(244,193,82,0.26)]">
+                <p className="text-[10px] font-bold text-[#F4C152] uppercase tracking-wider mb-2">
                   Extraction warnings
                 </p>
                 <ul className="space-y-1">
                   {preview.warnings.map((w, i) => (
-                    <li key={i} className="text-xs text-amber-900 leading-snug flex gap-2">
+                    <li key={i} className="text-xs text-[#F4C152] leading-snug flex gap-2">
                       <span aria-hidden>⚠</span>
                       <span>{w}</span>
                     </li>
                   ))}
                 </ul>
-                <p className="text-[10px] text-amber-700 mt-2 italic leading-snug">
+                <p className="text-[10px] text-[#F4C152] mt-2 italic leading-snug">
                   Compare against the source PandaDoc carefully before confirming.
                 </p>
               </div>
@@ -135,7 +135,7 @@ export default function BankPreviewDrawer({
                 href={pandadocUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-brand-600 hover:text-brand-700 underline decoration-dotted"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold ad-accent-text hover:underline decoration-dotted"
               >
                 Open contract in PandaDoc
                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
@@ -144,20 +144,20 @@ export default function BankPreviewDrawer({
               </a>
             )}
 
-            <p className="text-[11px] text-brand-400 leading-relaxed">
+            <p className="text-[11px] ad-text-3 leading-relaxed">
               Compare these values against the signed PandaDoc. Only click <span className="font-semibold">Confirm &amp; save</span> if everything matches — this marks the bank account as verified and eligible for ACH transfers.
             </p>
 
-            <div className="flex items-center justify-end gap-2 pt-3 border-t border-surface-200/60">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[var(--ad-border)]">
               <button
                 onClick={onClose}
                 disabled={submitting}
-                className="text-xs font-semibold text-brand-400 hover:text-gray-900 px-3 py-2"
+                className="text-xs font-semibold ad-text-3 hover:text-[var(--ad-text)] px-3 py-2"
               >Cancel</button>
               <button
                 onClick={onConfirm}
                 disabled={!canConfirm}
-                className="text-xs font-semibold text-white bg-brand-600 hover:bg-brand-700 rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >{submitting ? "Saving…" : "Confirm & save"}</button>
             </div>
           </div>
@@ -181,18 +181,18 @@ function PreviewField({
   return (
     <div>
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">{label}</p>
+        <p className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">{label}</p>
         {badge && (
           <span
             className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
               badge.kind === "ok"
-                ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                : "text-amber-700 bg-amber-50 border-amber-200"
+                ? "text-[var(--ad-pos)] bg-[rgba(52,211,153,0.10)] border-[rgba(52,211,153,0.28)]"
+                : "text-[#F4C152] bg-[rgba(244,193,82,0.10)] border border-[rgba(244,193,82,0.26)]"
             }`}
           >{badge.text}</span>
         )}
       </div>
-      <p className={`text-sm text-gray-900 mt-1 ${mono ? "font-mono" : ""}`}>{value}</p>
+      <p className={`text-sm ad-text-1 mt-1 ${mono ? "font-mono" : ""}`}>{value}</p>
     </div>
   );
 }

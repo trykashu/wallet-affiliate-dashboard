@@ -56,42 +56,40 @@ export default function AdminSettingsForm({
   return (
     <div className="grid gap-6 max-w-2xl">
       {/* Payout Settings Card */}
-      <div className="card p-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-5">Payout Configuration</h3>
+      <div className="ad-card p-6">
+        <h3 className="text-sm font-semibold ad-text-1 mb-5">Payout Configuration</h3>
 
         <div className="space-y-5">
           {/* Min payout */}
           <div>
-            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+            <label className="block text-xs ad-text-2 font-medium mb-1.5">
               Minimum Payout Amount
             </label>
             <div className="relative max-w-xs">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-400">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm ad-text-3">$</span>
               <input
                 type="number"
                 min={1}
                 step={1}
                 value={minPayout}
                 onChange={(e) => setMinPayout(Number(e.target.value))}
-                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
-                           focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+                className="w-full pl-7 pr-3 py-2 text-sm ad-input"
               />
             </div>
-            <p className="text-[10px] text-brand-400 mt-1">
+            <p className="text-[10px] ad-text-3 mt-1">
               Affiliates must have at least this amount in approved earnings to receive a payout.
             </p>
           </div>
 
           {/* Default provider */}
           <div>
-            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+            <label className="block text-xs ad-text-2 font-medium mb-1.5">
               Default Payout Provider
             </label>
             <select
               value={provider}
               onChange={(e) => setProvider(e.target.value as PayoutProvider)}
-              className="max-w-xs w-full text-sm rounded-xl border border-surface-200 bg-white text-gray-900 px-3 py-2
-                         focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+              className="max-w-xs w-full text-sm ad-select px-3 py-2"
             >
               {PROVIDERS.map((p) => (
                 <option key={p.value} value={p.value}>{p.label}</option>
@@ -106,13 +104,13 @@ export default function AdminSettingsForm({
               id="auto-approve"
               checked={autoApprove}
               onChange={(e) => setAutoApprove(e.target.checked)}
-              className="mt-0.5 rounded border-surface-200"
+              className="mt-0.5 rounded border-[var(--ad-border)] accent-[#5B6EF0]"
             />
             <div>
-              <label htmlFor="auto-approve" className="text-xs text-gray-700 font-medium cursor-pointer">
+              <label htmlFor="auto-approve" className="text-xs ad-text-2 font-medium cursor-pointer">
                 Auto-Approve Earnings
               </label>
-              <p className="text-[10px] text-brand-400 mt-0.5">
+              <p className="text-[10px] ad-text-3 mt-0.5">
                 When enabled, new earnings will be automatically approved instead of requiring manual review.
               </p>
             </div>
@@ -123,8 +121,7 @@ export default function AdminSettingsForm({
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-1.5 text-xs font-medium text-white bg-brand-600 hover:bg-brand-700
-                       rounded-lg px-4 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ad-btn-primary flex items-center gap-1.5"
           >
             {saving ? (
               <svg className="animate-spin w-3 h-3" fill="none" viewBox="0 0 24 24">
@@ -135,31 +132,31 @@ export default function AdminSettingsForm({
             Save Settings
           </button>
           {saved && (
-            <span className="text-xs text-accent font-medium">Settings saved successfully.</span>
+            <span className="text-xs text-[var(--ad-pos)] font-medium">Settings saved successfully.</span>
           )}
         </div>
       </div>
 
       {/* Payout Safety Limits Card */}
-      <div className="card p-6">
+      <div className="ad-card p-6">
         <div className="flex items-center gap-2 mb-1">
-          <svg className="w-4 h-4 text-brand-600" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <svg className="w-4 h-4 text-[var(--ad-text-2)]" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
           </svg>
-          <h3 className="text-sm font-semibold text-gray-900">Payout Safety Limits</h3>
+          <h3 className="text-sm font-semibold ad-text-1">Payout Safety Limits</h3>
         </div>
-        <p className="text-[10px] text-brand-400 mb-5">
+        <p className="text-[10px] ad-text-3 mb-5">
           These limits prevent unauthorized or excessive payouts via the Mercury API. All Mercury API calls are logged to the payout audit trail.
         </p>
 
         <div className="space-y-5">
           {/* Max single payout */}
           <div>
-            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+            <label className="block text-xs ad-text-2 font-medium mb-1.5">
               Max Single Payout ($)
             </label>
             <div className="relative max-w-xs">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-400">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm ad-text-3">$</span>
               <input
                 type="number"
                 min={100}
@@ -167,22 +164,21 @@ export default function AdminSettingsForm({
                 step={100}
                 value={maxSinglePayout}
                 onChange={(e) => setMaxSinglePayout(Number(e.target.value))}
-                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
-                           focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+                className="w-full pl-7 pr-3 py-2 text-sm ad-input"
               />
             </div>
-            <p className="text-[10px] text-brand-400 mt-1">
+            <p className="text-[10px] ad-text-3 mt-1">
               Individual payouts exceeding this amount will be blocked and logged.
             </p>
           </div>
 
           {/* Max daily aggregate */}
           <div>
-            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+            <label className="block text-xs ad-text-2 font-medium mb-1.5">
               Max Daily Aggregate ($)
             </label>
             <div className="relative max-w-xs">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-brand-400">$</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm ad-text-3">$</span>
               <input
                 type="number"
                 min={1000}
@@ -190,18 +186,17 @@ export default function AdminSettingsForm({
                 step={1000}
                 value={maxDailyAggregate}
                 onChange={(e) => setMaxDailyAggregate(Number(e.target.value))}
-                className="w-full pl-7 pr-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
-                           focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+                className="w-full pl-7 pr-3 py-2 text-sm ad-input"
               />
             </div>
-            <p className="text-[10px] text-brand-400 mt-1">
+            <p className="text-[10px] ad-text-3 mt-1">
               Total payouts in a 24-hour rolling window cannot exceed this amount.
             </p>
           </div>
 
           {/* Max batch size */}
           <div>
-            <label className="block text-xs text-gray-700 font-medium mb-1.5">
+            <label className="block text-xs ad-text-2 font-medium mb-1.5">
               Max Batch Size
             </label>
             <input
@@ -211,10 +206,9 @@ export default function AdminSettingsForm({
               step={1}
               value={maxBatchSize}
               onChange={(e) => setMaxBatchSize(Number(e.target.value))}
-              className="max-w-xs w-full px-3 py-2 text-sm rounded-xl border border-surface-200 bg-white text-gray-900
-                         focus:outline-none focus:ring-1 focus:ring-brand-600/30 focus:border-brand-400"
+              className="max-w-xs w-full px-3 py-2 text-sm ad-input"
             />
-            <p className="text-[10px] text-brand-400 mt-1">
+            <p className="text-[10px] ad-text-3 mt-1">
               Maximum number of payouts to process in a single batch execution.
             </p>
           </div>
@@ -222,25 +216,25 @@ export default function AdminSettingsForm({
       </div>
 
       {/* Tier Info Card (read-only) */}
-      <div className="card p-6">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Tier Thresholds</h3>
+      <div className="ad-card p-6">
+        <h3 className="text-sm font-semibold ad-text-1 mb-4">Tier Thresholds</h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between py-2 border-b border-surface-200/60">
+          <div className="flex items-center justify-between py-2 border-b border-[var(--ad-border)]">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-xs font-medium text-gray-700">Gold</span>
+              <span className="text-xs font-medium ad-text-2">Gold</span>
             </div>
-            <span className="text-xs text-brand-400">Default tier</span>
+            <span className="text-xs ad-text-3">Default tier</span>
           </div>
           <div className="flex items-center justify-between py-2">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-gradient-to-br from-slate-400 to-slate-600" />
-              <span className="text-xs font-medium text-gray-700">Platinum</span>
+              <span className="w-2 h-2 rounded-full bg-[var(--ad-text-2)]" />
+              <span className="text-xs font-medium ad-text-2">Platinum</span>
             </div>
-            <span className="text-xs text-brand-400">{fmt.currencyCompact(100000)} referred volume</span>
+            <span className="text-xs ad-text-3">{fmt.currencyCompact(100000)} referred volume</span>
           </div>
         </div>
-        <p className="text-[10px] text-brand-400 mt-3">
+        <p className="text-[10px] ad-text-3 mt-3">
           Tier upgrades are automatic based on referred volume, or can be overridden per affiliate.
         </p>
       </div>

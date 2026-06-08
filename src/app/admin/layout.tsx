@@ -1,8 +1,11 @@
 import { redirect }            from "next/navigation";
+import { GeistSans }           from "geist/font/sans";
+import { GeistMono }           from "geist/font/mono";
 import { createClient }        from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isAdminEmail }        from "@/lib/admin";
-import AppSidebar              from "@/components/layout/AppSidebar";
+import AdminSidebar            from "@/components/admin/AdminSidebar";
+import BalanceVisibilityToggle from "@/components/admin/BalanceVisibilityToggle";
 import type { NavItem }        from "@/components/layout/AppSidebar";
 
 export const dynamic = "force-dynamic";
@@ -63,43 +66,41 @@ export default async function AdminLayout({
   });
 
   return (
-    <div className="flex min-h-screen relative">
-      {/* Page-level ambient orbs */}
-      <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
-        <div className="ambient-orb w-[600px] h-[600px] bg-brand-600/[0.04] -top-48 -right-48" />
-        <div className="ambient-orb w-[500px] h-[500px] bg-accent/[0.03] -bottom-32 -left-32" style={{ animationDelay: "-7s" }} />
-      </div>
-
-      <AppSidebar
-        userEmail={user.email ?? ""}
-        navItems={adminNav}
-        isAdmin={true}
-        hideProfile
-        profileHref="/admin"
-      />
+    <div
+      data-admin-theme
+      className={`${GeistSans.variable} ${GeistMono.variable} flex min-h-screen relative`}
+      style={{
+        // Map the self-hosted Geist variables onto the admin font tokens so
+        // globals.css can stay token-driven (var(--font-admin)).
+        ["--font-admin" as string]: "var(--font-geist-sans)",
+        ["--font-admin-mono" as string]: "var(--font-geist-mono)",
+      } as React.CSSProperties}
+    >
+      <AdminSidebar userEmail={user.email ?? ""} navItems={adminNav} />
 
       <div className="flex-1 lg:pl-64 min-w-0 relative z-10">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-surface-200/60">
+        <header
+          className="sticky top-0 z-30 backdrop-blur-xl"
+          style={{ backgroundColor: "rgba(11, 14, 19, 0.8)", borderBottom: "1px solid var(--ad-border)" }}
+        >
           <div className="pl-16 pr-4 sm:pr-6 lg:pl-8 lg:pr-8 h-16 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2.5">
-                <h1 className="text-base font-semibold text-gray-900">Admin Panel</h1>
-                <span className="badge-amber text-[10px] px-2 py-0.5 rounded-xl border font-semibold">Admin</span>
+                <h1 className="text-base font-semibold ad-text-1">Admin Panel</h1>
+                <span className="ad-badge-accent">Admin</span>
               </div>
-              <p className="text-[11px] text-brand-400 hidden sm:block">{today}</p>
+              <p className="text-[11px] ad-text-3 hidden sm:block">{today}</p>
             </div>
-            <a
-              href="/dashboard"
-              className="flex items-center gap-1.5 text-xs font-medium text-brand-600 border border-brand-200
-                         hover:border-brand-400 hover:text-brand-700 bg-white rounded-lg px-3 py-2
-                         transition-colors"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-              </svg>
-              Back to Dashboard
-            </a>
+            <div className="flex items-center gap-2.5">
+              <BalanceVisibilityToggle />
+              <a href="/dashboard" className="ad-btn-ghost flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
+                </svg>
+                <span className="hidden sm:inline">Back to Dashboard</span>
+              </a>
+            </div>
           </div>
         </header>
 

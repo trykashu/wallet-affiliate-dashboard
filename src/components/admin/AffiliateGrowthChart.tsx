@@ -105,10 +105,10 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
       {/* Bar Chart: Affiliates Added MoM */}
-      <div className="card p-4 sm:p-6">
+      <div className="ad-card p-4 sm:p-6">
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-900">Affiliates Added</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Monthly contracts signed (PandaDoc completion date)</p>
+          <h3 className="text-sm font-semibold ad-text-1">Affiliates Added</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">Monthly contracts signed (PandaDoc completion date)</p>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
           {barTicks.map((tick) => {
@@ -117,9 +117,9 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
               <g key={tick}>
                 <line
                   x1={padX} y1={y} x2={W - padX} y2={y}
-                  stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4"
+                  stroke="var(--ad-border)" strokeWidth="1"
                 />
-                <text x={padX - 4} y={y + 3} fill="#9CA3AF" fontSize="8" textAnchor="end">
+                <text x={padX - 4} y={y + 3} fill="var(--ad-text-3)" fontSize="8" textAnchor="end">
                   {tick}
                 </text>
               </g>
@@ -135,7 +135,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
                 key={i}
                 x={x} y={y}
                 width={barW} height={Math.max(barHeight, 0)}
-                fill="#0C5147" rx="3"
+                fill="var(--ad-accent)" rx="3"
               />
             );
           })}
@@ -150,7 +150,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
               <text
                 key={`label-${i}`}
                 x={x} y={y}
-                fill="#0C5147" fontSize="10" fontWeight="600" textAnchor="middle"
+                fill="var(--ad-accent)" fontSize="10" fontWeight="600" textAnchor="middle"
               >
                 {count}
               </text>
@@ -162,7 +162,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
               key={m}
               x={padX + i * barSlotW + barSlotW / 2}
               y={H - 4}
-              fill="#64748B" fontSize="9" textAnchor="middle"
+              fill="var(--ad-text-3)" fontSize="9" textAnchor="middle"
             >
               {shortMonth(m)}
             </text>
@@ -171,16 +171,16 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
       </div>
 
       {/* Line Chart: Total Affiliates Over Time */}
-      <div className="card p-4 sm:p-6">
+      <div className="ad-card p-4 sm:p-6">
         <div className="mb-4">
-          <h3 className="text-sm font-semibold text-gray-900">Total Affiliates Over Time</h3>
-          <p className="text-xs text-brand-400 mt-0.5">Cumulative contracts signed</p>
+          <h3 className="text-sm font-semibold ad-text-1">Total Affiliates Over Time</h3>
+          <p className="text-[11px] ad-text-3 mt-0.5">Cumulative contracts signed</p>
         </div>
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full" preserveAspectRatio="xMidYMid meet">
           <defs>
             <linearGradient id="affiliateAreaGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#00DE8F" stopOpacity="0.18" />
-              <stop offset="100%" stopColor="#00DE8F" stopOpacity="0" />
+              <stop offset="0%" stopColor="var(--ad-accent)" stopOpacity="0.18" />
+              <stop offset="100%" stopColor="var(--ad-accent)" stopOpacity="0" />
             </linearGradient>
           </defs>
 
@@ -190,9 +190,9 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
               <g key={tick}>
                 <line
                   x1={padX} y1={y} x2={W - padX} y2={y}
-                  stroke="#E5E7EB" strokeWidth="1" strokeDasharray="4 4"
+                  stroke="var(--ad-border)" strokeWidth="1"
                 />
-                <text x={padX - 4} y={y + 3} fill="#9CA3AF" fontSize="8" textAnchor="end">
+                <text x={padX - 4} y={y + 3} fill="var(--ad-text-3)" fontSize="8" textAnchor="end">
                   {tick}
                 </text>
               </g>
@@ -203,13 +203,13 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
 
           <path
             d={linePath} fill="none"
-            stroke="#00DE8F" strokeWidth="2" strokeLinecap="round"
+            stroke="var(--ad-accent)" strokeWidth="2" strokeLinecap="round"
           />
 
           {linePoints.map((pt, i) => (
             <circle
               key={i} cx={pt.x} cy={pt.y} r="3"
-              fill="#ffffff" stroke="#00DE8F" strokeWidth="1.5"
+              fill="var(--ad-surface)" stroke="var(--ad-accent)" strokeWidth="1.5"
             />
           ))}
 
@@ -218,7 +218,7 @@ export default function AffiliateGrowthChart({ affiliates }: Props) {
               key={m}
               x={padX + (months.length > 1 ? (i / (months.length - 1)) * innerW : innerW / 2)}
               y={H - 4}
-              fill="#64748B" fontSize="9" textAnchor="middle"
+              fill="var(--ad-text-3)" fontSize="9" textAnchor="middle"
             >
               {shortMonth(m)}
             </text>

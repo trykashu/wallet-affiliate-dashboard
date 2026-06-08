@@ -110,28 +110,28 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
   }, [file, selectedId, preview]);
 
   return (
-    <div className="card p-6 space-y-4">
+    <div className="ad-card p-6 space-y-4">
       <div>
-        <h3 className="text-sm font-bold text-brand-400 uppercase tracking-wider">
+        <h3 className="text-sm font-bold ad-text-3 uppercase tracking-wider">
           Import Bank Details (PDF)
         </h3>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm ad-text-3 mt-1">
           Pick an affiliate, drop their signed bank-detail PDF (W9, PandaDoc copy, or typed form), preview the extracted fields, then save.
         </p>
       </div>
 
       {/* Affiliate picker */}
       <div className="space-y-2">
-        <label className="text-[10px] font-bold text-brand-400 uppercase tracking-wider">Affiliate</label>
+        <label className="text-[10px] font-bold ad-text-3 uppercase tracking-wider">Affiliate</label>
         {selected ? (
-          <div className="flex items-center justify-between p-3 bg-surface-100/60 border border-surface-200/60 rounded-xl">
+          <div className="flex items-center justify-between p-3 bg-[var(--ad-surface-2)] border border-[var(--ad-border)] rounded-xl">
             <div>
-              <p className="text-sm font-semibold text-gray-900">{selected.agent_name}</p>
-              <p className="text-[10px] text-brand-400">{selected.email}</p>
+              <p className="text-sm font-semibold ad-text-1">{selected.agent_name}</p>
+              <p className="text-[10px] ad-text-3">{selected.email}</p>
             </div>
             <button
               onClick={() => { setSelectedId(null); reset(); }}
-              className="text-[10px] font-semibold text-brand-600 underline decoration-dotted"
+              className="text-[10px] font-semibold ad-accent-text underline decoration-dotted"
             >
               Change
             </button>
@@ -143,20 +143,20 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by name, email, or business"
-              className="input-base w-full px-3 py-2 rounded-xl text-sm"
+              className="ad-input w-full px-3 py-2 rounded-xl text-sm"
             />
-            <div className="max-h-48 overflow-y-auto rounded-xl border border-surface-200/60 divide-y divide-surface-200/60">
+            <div className="max-h-48 overflow-y-auto rounded-xl border border-[var(--ad-border)] divide-y divide-[var(--ad-border)]">
               {filtered.length === 0 ? (
-                <p className="p-3 text-xs text-brand-400">No matches.</p>
+                <p className="p-3 text-xs ad-text-3">No matches.</p>
               ) : (
                 filtered.map((a) => (
                   <button
                     key={a.id}
                     onClick={() => { setSelectedId(a.id); reset(); }}
-                    className="w-full text-left px-3 py-2 hover:bg-surface-100/60 transition-colors"
+                    className="w-full text-left px-3 py-2 hover:bg-[var(--ad-surface-2)] transition-colors"
                   >
-                    <p className="text-sm text-gray-900">{a.agent_name}</p>
-                    <p className="text-[10px] text-brand-400">{a.email}{a.business_name ? ` · ${a.business_name}` : ""}</p>
+                    <p className="text-sm ad-text-1">{a.agent_name}</p>
+                    <p className="text-[10px] ad-text-3">{a.email}{a.business_name ? ` · ${a.business_name}` : ""}</p>
                   </button>
                 ))
               )}
@@ -167,12 +167,12 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
 
       {/* File picker */}
       {selected && (
-        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-surface-200 rounded-xl cursor-pointer hover:border-accent hover:bg-surface-100/60 transition-colors">
+        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-[var(--ad-border)] rounded-xl cursor-pointer hover:border-[var(--ad-accent)] hover:bg-[var(--ad-surface-2)] transition-colors">
           <div className="flex flex-col items-center justify-center pt-5 pb-6">
-            <svg className="w-8 h-8 mb-2 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-8 h-8 mb-2 ad-text-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            <p className="text-sm text-gray-600">{file ? file.name : "Click to select PDF (max 10MB)"}</p>
+            <p className="text-sm ad-text-3">{file ? file.name : "Click to select PDF (max 10MB)"}</p>
           </div>
           <input
             type="file"
@@ -191,14 +191,14 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
         <button
           onClick={runPreview}
           disabled={busy === "preview"}
-          className="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          className="ad-btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {busy === "preview" ? "Extracting…" : "Extract bank details from PDF"}
         </button>
       )}
 
       {error && (
-        <div className="bg-red-50 text-red-700 border border-red-200 rounded-xl px-4 py-3 text-sm">
+        <div className="bg-[rgba(242,112,110,0.10)] text-[var(--ad-neg)] border border-[rgba(242,112,110,0.28)] rounded-xl px-4 py-3 text-sm">
           {error}
         </div>
       )}
@@ -206,7 +206,7 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
       {/* Preview */}
       {preview && (
         <div className="space-y-3">
-          <div className="border border-surface-200/60 rounded-xl divide-y divide-surface-200/60">
+          <div className="border border-[var(--ad-border)] rounded-xl divide-y divide-[var(--ad-border)]">
             <PreviewField label="Account holder" value={preview.extracted.account_holder_name} />
             <PreviewField label="Routing number" value={preview.extracted.routing_number} valid={preview.extracted.routing_valid} />
             <PreviewField label="Account number" value={preview.extracted.account_number ? `••••${preview.extracted.account_number.slice(-4)}` : null} valid={preview.extracted.account_valid} />
@@ -224,16 +224,16 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
           </div>
 
           {preview.extracted.warnings.length > 0 && (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-              <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-1">Warnings</p>
-              <ul className="text-[11px] text-amber-700 list-disc list-inside space-y-0.5">
+            <div className="bg-[rgba(244,193,82,0.10)] border border-[rgba(244,193,82,0.26)] rounded-xl px-3 py-2">
+              <p className="text-[10px] font-bold text-[#F4C152] uppercase tracking-wider mb-1">Warnings</p>
+              <ul className="text-[11px] text-[#F4C152] list-disc list-inside space-y-0.5">
                 {preview.extracted.warnings.map((w, i) => <li key={i}>{w}</li>)}
               </ul>
             </div>
           )}
 
           {savedAction ? (
-            <div className="bg-accent/10 text-accent border border-accent/30 rounded-xl px-4 py-3 text-sm font-semibold">
+            <div className="bg-[rgba(52,211,153,0.10)] text-[var(--ad-pos)] border border-[rgba(52,211,153,0.28)] rounded-xl px-4 py-3 text-sm font-semibold">
               ✓ Bank details {savedAction} for {preview.affiliate.agent_name}.
             </div>
           ) : (
@@ -241,14 +241,14 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
               <button
                 onClick={save}
                 disabled={!preview.ready_to_save || busy === "save"}
-                className="btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ad-btn-primary px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 title={!preview.ready_to_save ? "Routing or account didn't validate — review warnings" : ""}
               >
                 {busy === "save" ? "Saving…" : "Save to payout account"}
               </button>
               <button
                 onClick={() => { setFile(null); reset(); }}
-                className="text-xs text-brand-600 hover:text-brand-700 underline decoration-dotted"
+                className="text-xs ad-accent-text hover:underline decoration-dotted"
               >
                 Discard and try another PDF
               </button>
@@ -256,7 +256,7 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
           )}
 
           {!preview.ready_to_save && (
-            <p className="text-[10px] text-amber-700">
+            <p className="text-[10px] text-[#F4C152]">
               Cannot save — extracted routing or account number didn&apos;t pass validation. Use the CSV upload above or PandaDoc Re-verify on this affiliate.
             </p>
           )}
@@ -269,11 +269,11 @@ export default function PdfBankUpload({ affiliates }: { affiliates: PdfBankAffil
 function PreviewField({ label, value, valid }: { label: string; value: string | null; valid?: boolean }) {
   return (
     <div className="px-3 py-2 flex items-center justify-between">
-      <span className="text-[10px] text-brand-400 uppercase tracking-wider font-medium">{label}</span>
-      <span className="text-sm font-mono text-gray-900 flex items-center gap-2">
-        {value ?? <span className="text-brand-400">—</span>}
-        {valid === true && <span className="text-accent text-xs">✓</span>}
-        {valid === false && <span className="text-red-500 text-xs">✗</span>}
+      <span className="text-[10px] ad-text-3 uppercase tracking-wider font-medium">{label}</span>
+      <span className="text-sm font-mono ad-text-1 flex items-center gap-2">
+        {value ?? <span className="ad-text-3">—</span>}
+        {valid === true && <span className="text-[var(--ad-pos)] text-xs">✓</span>}
+        {valid === false && <span className="text-[var(--ad-neg)] text-xs">✗</span>}
       </span>
     </div>
   );
