@@ -1,23 +1,23 @@
 /**
  * Payout cadence per affiliate brand. Most affiliates pay monthly on the
- * 15th; Payovas pays every other Monday (biweekly) so transactions have
- * time to clear.
+ * 15th; Payova is paid weekly — the prior Sat–Fri week is paid on the
+ * FOLLOWING Friday (e.g. the 5/30–6/5 week is paid 6/12).
  *
  * Pure functions — given a brand slug and the current date, returns the
  * projected next payout, the period it covers, and a human label.
  */
 
-export type PayoutCadence = "monthly_15" | "weekly_monday";
+export type PayoutCadence = "monthly_15" | "weekly_friday";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function getCadenceForBrand(brandSlug: string | null | undefined): PayoutCadence {
-  return brandSlug === "payova" ? "weekly_monday" : "monthly_15";
+  return brandSlug === "payova" ? "weekly_friday" : "monthly_15";
 }
 
 export function getCadenceLabel(cadence: PayoutCadence): string {
-  return cadence === "weekly_monday"
-    ? "Payouts run every Monday for the prior Mon–Sun week, paid the following Monday so transactions have time to clear."
+  return cadence === "weekly_friday"
+    ? "Payouts run weekly: the prior Saturday–Friday week is paid on the following Friday."
     : "Payouts are processed automatically on the 15th of each month.";
 }
 
@@ -43,8 +43,8 @@ function fmtMonthDay(d: Date): string {
 }
 
 export function getNextPayoutDate(cadence: PayoutCadence, now: Date = new Date()): NextPayout {
-  if (cadence === "weekly_monday") {
-    return nextWeeklyMonday(now);
+  if (cadence === "weekly_friday") {
+    return nextWeeklyFriday(now);
   }
   return nextMonthly15(now);
 }
@@ -79,21 +79,21 @@ function nextMonthly15(now: Date): NextPayout {
   };
 }
 
-function nextWeeklyMonday(now: Date): NextPayout {
-  // Find next Monday >= today. Monday = day-of-week 1 (Sun=0).
+function nextWeeklyFriday(now: Date): NextPayout {
+  // Next Friday >= today. Friday = day-of-week 5 (Sun=0).
   const dow = now.getDay();
-  const daysUntilMon = dow === 1 ? 0 : (8 - dow) % 7;
-  const payoutDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilMon);
+  const daysUntilFri = (5 - dow + 7) % 7;
+  const payoutDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysUntilFri);
 
-  // Period covered = the Mon–Sun week ending 8 days before payoutDate.
-  // 5/25 payout → 5/11 (Mon) – 5/17 (Sun)
-  const periodStart = new Date(payoutDate.getTime() - 14 * DAY_MS);
-  const periodEnd = new Date(payoutDate.getTime() - 8 * DAY_MS);
+  // Period covered = the prior full Sat–Fri week (ends the Friday before payout).
+  // 6/12 payout → 5/30 (Sat) – 6/5 (Fri)
+  const periodStart = new Date(payoutDate.getTime() - 13 * DAY_MS); // Saturday
+  const periodEnd = new Date(payoutDate.getTime() - 7 * DAY_MS);    // Friday
 
   const daysUntil = Math.max(0, Math.ceil((payoutDate.getTime() - now.getTime()) / DAY_MS));
 
-  // ISO-week period stamp keyed to the period start, not the payout date,
-  // so 5/11–5/17 = "2026-W20" regardless of when it's paid out.
+  // ISO-week stamp keyed to the period start (Saturday), matching the payout
+  // records written by the weekly cron (markPayovaWeekPaid).
   const isoWeek = isoWeekNumber(periodStart);
   const periodStamp = `${periodStart.getFullYear()}-W${String(isoWeek).padStart(2, "0")}`;
 
