@@ -4,9 +4,15 @@
  * Payova (whitelabel) affiliates are paid weekly through a SEPARATE, external
  * payout system — not the standard Mercury/admin flow. This module reflects
  * those external payments in the dashboard so the partner sees them as paid:
- * for a given Sat→Fri week it marks that week's Payova earnings `paid` and
- * writes one `completed` payout row per affiliate (amount = sum of the week's
- * earnings). It never moves money / never calls Mercury.
+ * for a given Sat→Fri week it marks the relevant Payova earnings `paid` and
+ * writes one `completed` payout row per affiliate. It never moves money /
+ * never calls Mercury.
+ *
+ * Cumulative sweep: a run pays ALL not-yet-paid earnings dated on/before the
+ * period's Friday — not just that one week. So if a prior week's external
+ * payment came in under our computed total and the difference was left unpaid
+ * (manual reconciliation), that remainder automatically rolls into the next
+ * payout.
  *
  * Idempotent: skips earnings already paid/linked, and skips an affiliate whose
  * payout for that period already exists. Safe to re-run.
@@ -124,11 +130,12 @@ export async function markPayovaWeekPaid(svc: any, opts: RunOpts): Promise<Payov
     }
   }
 
+  // Cumulative: sweep everything unpaid dated on/before this period's Friday,
+  // so any prior-week remainder (left unpaid during reconciliation) rolls in.
   const inWindow = (e: (typeof E)[number]) => {
     const raw = (e.transaction_ref && dateByRef.get(e.transaction_ref)) || e.created_at;
     if (!raw) return false;
-    const d = isoDate(new Date(raw));
-    return d >= weekStart && d <= weekEnd;
+    return isoDate(new Date(raw)) <= weekEnd;
   };
 
   // Group in-window earnings by affiliate.
