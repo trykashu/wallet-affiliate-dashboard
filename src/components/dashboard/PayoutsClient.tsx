@@ -102,9 +102,9 @@ export default function PayoutsClient({
               </svg>
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-blue-800">Bank Details Pending</h3>
+              <h3 className="text-sm font-semibold text-blue-800">Contract Details Pending</h3>
               <p className="text-sm text-blue-700 mt-1">
-                Your bank details will be imported automatically when your agreement is signed.
+                Contract details are being verified.
               </p>
             </div>
           </div>

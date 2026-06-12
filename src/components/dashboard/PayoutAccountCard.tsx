@@ -18,7 +18,7 @@ export default function PayoutAccountCard({ account }: Props) {
       <div className="card p-5">
         <h3 className="text-sm font-semibold text-gray-900 mb-1">Payout Account</h3>
         <p className="text-xs text-brand-400">
-          No payout account on file. Bank details will be collected when you sign your agreement.
+          Contract details are being verified.
         </p>
       </div>
     );
