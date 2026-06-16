@@ -126,11 +126,11 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
         return;
       }
 
-      // Success — self-edits go to is_verified:false until an admin confirms them.
+      // Success — self-edits are instantly active (verified).
       const last4 = data.last4 ?? accountNumber.slice(-4);
       setDisplayAccount({
         account_name: accountHolderName.trim(),
-        is_verified: false,
+        is_verified: true,
         last4,
         address1: address1.trim(),
         address2: address2.trim() || undefined,
@@ -176,14 +176,14 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
         </div>
       </div>
 
-      {/* Success / pending-verification message — self-edits await admin confirmation */}
+      {/* Success message — self-edits are instantly active */}
       {success && (
-        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 text-sm mb-4">
+        <div className="bg-accent/10 border border-accent/20 text-brand-700 rounded-lg p-4 text-sm mb-4">
           <div className="flex items-start gap-2">
-            <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <svg className="w-4 h-4 text-accent flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
-            Your updated bank details are pending verification and will be active once an admin confirms them.
+            Your bank details have been saved and are active for payouts.
           </div>
         </div>
       )}

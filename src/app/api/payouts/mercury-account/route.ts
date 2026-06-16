@@ -80,7 +80,9 @@ export async function POST(request: NextRequest) {
           country: "US",
         },
       },
-      { markVerified: false, source: "self_service" },
+      // Affiliate self-edits are instantly payable (verified). The bank change
+      // still re-syncs Mercury (provider_id cleared by the builder when changed).
+      { markVerified: true, source: "self_service" },
     );
 
     await db
@@ -97,7 +99,7 @@ export async function POST(request: NextRequest) {
       metadata: { changed_by: "self" },
     });
 
-    return NextResponse.json({ success: true, last4, pending_review: true });
+    return NextResponse.json({ success: true, last4, pending_review: false });
   } catch (err) {
     console.error("[mercury-account] save failed:", err);
     return NextResponse.json({ error: "Failed to save account" }, { status: 500 });

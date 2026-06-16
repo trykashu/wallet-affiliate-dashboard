@@ -96,9 +96,11 @@ export function buildBankAccountUpdate(
     routing_number: routingNumber,
     source: opts.source,
   };
-  if (opts.source === "self_service") {
+  // "Pending review" tracks verification, not who edited: an unverified save is
+  // pending; a verified save (admin, or instantly-payable self-edit) clears it.
+  if (!opts.markVerified) {
     metadata.pending_review = true;
-    metadata.pending_reason = "Affiliate updated bank details — pending verification";
+    metadata.pending_reason = "Bank details pending verification";
   } else {
     delete metadata.pending_review;
     delete metadata.pending_reason;

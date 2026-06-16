@@ -53,10 +53,16 @@ test("address changed -> bankChanged true, provider_id cleared", () => {
   assert.equal(row.provider_id, null);
 });
 
-test("affiliate self-edit -> is_verified false + pending_review metadata", () => {
+test("unverified save -> is_verified false + pending_review metadata", () => {
   const { row } = buildBankAccountUpdate(existing, baseInput, { markVerified: false, source: "self_service" });
   assert.equal(row.is_verified, false);
   assert.equal((row.metadata as { pending_review?: boolean }).pending_review, true);
+});
+
+test("instantly-payable self-edit (verified) -> is_verified true + no pending_review", () => {
+  const { row } = buildBankAccountUpdate(existing, baseInput, { markVerified: true, source: "self_service" });
+  assert.equal(row.is_verified, true);
+  assert.equal((row.metadata as { pending_review?: boolean }).pending_review, undefined);
 });
 
 test("new account (no existing) -> insert shape, bankChanged true, provider_id null", () => {
