@@ -6,6 +6,7 @@ import { fmt } from "@/lib/fmt";
 import AdminTierBadge from "@/components/admin/AdminTierBadge";
 import InviteAffiliateModal from "@/components/admin/InviteAffiliateModal";
 import BankPreviewDrawer, { type BankPreview } from "@/components/admin/BankPreviewDrawer";
+import EditBankDrawer from "@/components/admin/EditBankDrawer";
 import type { AffiliateWithCounts } from "@/app/admin/affiliates/page";
 import type { AffiliateStatus, AffiliateTier } from "@/types/database";
 
@@ -34,6 +35,7 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
     error: string | null;
   } | null>(null);
   const [refetchError,   setRefetchError]   = useState<string | null>(null);
+  const [editBankFor,    setEditBankFor]    = useState<AffiliateWithCounts | null>(null);
 
   // -- Actions --
 
@@ -430,6 +432,11 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                           On file
                         </span>
+                      ) : aff.bankPendingReview ? (
+                        <span className="ad-badge-amber inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 border">
+                          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                          Pending review
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-[var(--ad-neg)] bg-[rgba(242,112,110,0.10)] border border-[rgba(242,112,110,0.28)] rounded-full px-2 py-0.5">
                           <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -474,6 +481,18 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
                           </svg>
                         )}
                         View
+                      </button>
+
+                      {/* Edit bank details */}
+                      <button
+                        onClick={() => setEditBankFor(aff)}
+                        title="Manually edit bank details + address"
+                        className="ad-act"
+                      >
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125" />
+                        </svg>
+                        Edit bank
                       </button>
 
                       {/* Override Tier */}
@@ -589,6 +608,27 @@ export default function AffiliateTable({ affiliates }: { affiliates: AffiliateWi
         onClose={() => { if (previewState?.submitting !== true) setPreviewState(null); }}
         onConfirm={confirmRefetch}
       />
+
+      {editBankFor && (
+        <EditBankDrawer
+          affiliateId={editBankFor.id}
+          affiliateName={editBankFor.agent_name}
+          existing={{
+            account_name: editBankFor.bank_account_name,
+            last4: editBankFor.bank_last4,
+            address1: editBankFor.bank_address1,
+            address2: editBankFor.bank_address2,
+            city: editBankFor.bank_city,
+            region: editBankFor.bank_region,
+            postal_code: editBankFor.bank_postal_code,
+          }}
+          onClose={() => setEditBankFor(null)}
+          onSaved={() => {
+            setEditBankFor(null);
+            router.refresh();
+          }}
+        />
+      )}
     </>
   );
 }
