@@ -3,6 +3,15 @@
 **Date:** 2026-06-16
 **Status:** Approved (brainstorming) → ready for implementation plan
 
+> **Update 2026-06-16 (post-merge reversal):** affiliate self-edits are now **instantly
+> payable** (`is_verified=true`), not pending admin re-verification. The "require admin
+> re-verify" decision below (and the `markVerified:false` self-service path) was reversed per
+> request after shipping. Implementation: `pending_review` now keys on `!markVerified` (not on
+> `source`), and `/api/payouts/mercury-account` passes `markVerified:true`. Everything else holds
+> — Mercury re-sync still happens (the builder nulls `provider_id` on any bank/address change), and
+> the admin "Pending review" chip + Edit-bank verify flow remain for any genuinely-unverified
+> accounts. Tradeoff: a self-change to routing/account goes live with no admin oversight.
+
 ## Context / problem
 
 Admins need a way to **manually update an affiliate's bank details**, and affiliates need a
