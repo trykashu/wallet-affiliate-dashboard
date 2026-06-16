@@ -32,7 +32,7 @@ export default async function PayoutsPage() {
       .eq("is_verified", true)
       .maybeSingle(),
     db.from("payout_accounts")
-      .select("id, provider, account_name, account_number_last4, is_verified, metadata")
+      .select("id, provider, account_name, account_number_last4, is_verified, metadata, address1, address2, city, region, postal_code")
       .eq("affiliate_id", affiliateId)
       .eq("provider", "mercury")
       .maybeSingle(),
@@ -44,12 +44,20 @@ export default async function PayoutsPage() {
   const account        = (accountRaw   ?? null) as PayoutAccount | null;
   const minPayoutAmount = settingsRaw?.min_payout_amount ?? 25;
 
-  // Extract only display-safe fields from Mercury account — never pass full metadata to client
-  const mercuryAccountDisplay = mercuryAccountRaw
+  // Extract only display-safe fields from Mercury account — never pass full metadata to client.
+  // Address (address1/address2/city/region/postal_code) is non-sensitive and prefills the self-service
+  // bank form; account/routing numbers are NEVER returned to the client.
+  const mercuryRow = mercuryAccountRaw as Record<string, unknown> | null;
+  const mercuryAccountDisplay = mercuryRow
     ? {
-        account_name: (mercuryAccountRaw as Record<string, unknown>).account_name as string ?? "Bank Account",
-        is_verified: (mercuryAccountRaw as Record<string, unknown>).is_verified as boolean,
-        last4: (mercuryAccountRaw as Record<string, unknown>).account_number_last4 as string ?? undefined,
+        account_name: (mercuryRow.account_name as string) ?? "Bank Account",
+        is_verified: mercuryRow.is_verified as boolean,
+        last4: (mercuryRow.account_number_last4 as string) ?? undefined,
+        address1: (mercuryRow.address1 as string) ?? undefined,
+        address2: (mercuryRow.address2 as string) ?? undefined,
+        city: (mercuryRow.city as string) ?? undefined,
+        region: (mercuryRow.region as string) ?? undefined,
+        postal_code: (mercuryRow.postal_code as string) ?? undefined,
       }
     : null;
 
