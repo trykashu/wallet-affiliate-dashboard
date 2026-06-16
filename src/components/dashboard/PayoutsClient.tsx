@@ -122,12 +122,12 @@ export default function PayoutsClient({
           earnings={earnings}
           payouts={payouts}
         />
-        {(bankDetailsNeeded || mercuryAccount) && (
-          <BankAccountForm
-            existingAccount={mercuryAccount}
-            expandedByDefault={bankDetailsNeeded && !mercuryAccount?.is_verified}
-          />
-        )}
+        {/* Always render the bank section so affiliates always have a way to add/
+            update their details (and so view-as is a true representation). */}
+        <BankAccountForm
+          existingAccount={mercuryAccount}
+          expandedByDefault={bankDetailsNeeded && !mercuryAccount?.is_verified}
+        />
       </div>
 
       <PayoutHistory payouts={payouts} affiliateName={affiliateName} />

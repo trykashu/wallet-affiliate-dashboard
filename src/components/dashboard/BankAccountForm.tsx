@@ -217,6 +217,25 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
         </div>
       )}
 
+      {/* No account on file — always-available entry point to add details */}
+      {!displayAccount && !showForm && (
+        <div className="space-y-3">
+          <p className="text-sm text-brand-400">
+            No bank account on file yet. Add your details to receive ACH payouts.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setShowForm(true);
+              setSuccess(false);
+            }}
+            className="text-sm font-medium text-brand-600 hover:text-brand-700 transition-colors"
+          >
+            Add bank details
+          </button>
+        </div>
+      )}
+
       {/* Bank account form */}
       {showForm && (
         <form onSubmit={handleSubmit} className="space-y-4">
