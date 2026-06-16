@@ -6,6 +6,11 @@ interface ExistingAccount {
   account_name: string;
   is_verified: boolean;
   last4?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  region?: string;
+  postal_code?: string;
 }
 
 interface Props {
@@ -17,7 +22,14 @@ interface FormErrors {
   account_holder_name?: string;
   routing_number?: string;
   account_number?: string;
+  address1?: string;
+  city?: string;
+  region?: string;
+  postal_code?: string;
 }
+
+const STATE_RX = /^[A-Za-z]{2}$/;
+const ZIP_RX = /^\d{5}(-\d{4})?$/;
 
 export default function BankAccountForm({ existingAccount, expandedByDefault }: Props) {
   const [showForm, setShowForm] = useState(!existingAccount || !!expandedByDefault);
@@ -36,6 +48,13 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
   const [accountNumber, setAccountNumber] = useState("");
   const [accountType, setAccountType] = useState<"checking" | "savings">("checking");
 
+  // Address (Mercury requires it) — prefilled from the account on file when present.
+  const [address1, setAddress1] = useState(existingAccount?.address1 ?? "");
+  const [address2, setAddress2] = useState(existingAccount?.address2 ?? "");
+  const [city, setCity] = useState(existingAccount?.city ?? "");
+  const [region, setRegion] = useState(existingAccount?.region ?? "");
+  const [postalCode, setPostalCode] = useState(existingAccount?.postal_code ?? "");
+
   const validate = useCallback((): FormErrors => {
     const errs: FormErrors = {};
     if (!accountHolderName.trim()) {
@@ -51,8 +70,29 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
     } else if (!/^\d{4,17}$/.test(accountNumber)) {
       errs.account_number = "Account number must be 4-17 digits";
     }
+    if (address1.trim().length < 2) {
+      errs.address1 = "Street address is required";
+    }
+    if (city.trim().length < 2) {
+      errs.city = "City is required";
+    }
+    if (!STATE_RX.test(region.trim())) {
+      errs.region = "Enter a 2-letter state code";
+    }
+    if (!ZIP_RX.test(postalCode.trim())) {
+      errs.postal_code = "Enter a valid ZIP code";
+    }
     return errs;
-  }, [accountHolderName, routingNumber, accountNumber]);
+  }, [accountHolderName, routingNumber, accountNumber, address1, city, region, postalCode]);
+
+  const canSave =
+    accountHolderName.trim().length > 0 &&
+    /^\d{9}$/.test(routingNumber) &&
+    /^\d{4,17}$/.test(accountNumber) &&
+    address1.trim().length >= 2 &&
+    city.trim().length >= 2 &&
+    STATE_RX.test(region.trim()) &&
+    ZIP_RX.test(postalCode.trim());
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -72,6 +112,11 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
           account_holder_name: accountHolderName.trim(),
           routing_number: routingNumber,
           account_number: accountNumber,
+          address1: address1.trim(),
+          address2: address2.trim() || null,
+          city: city.trim(),
+          region: region.trim().toUpperCase(),
+          postal_code: postalCode.trim(),
         }),
       });
 
@@ -81,17 +126,22 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
         return;
       }
 
-      // Success
+      // Success — self-edits go to is_verified:false until an admin confirms them.
       const last4 = data.last4 ?? accountNumber.slice(-4);
       setDisplayAccount({
         account_name: accountHolderName.trim(),
-        is_verified: true,
+        is_verified: false,
         last4,
+        address1: address1.trim(),
+        address2: address2.trim() || undefined,
+        city: city.trim(),
+        region: region.trim().toUpperCase(),
+        postal_code: postalCode.trim(),
       });
       setSuccess(true);
       setShowForm(false);
 
-      // Reset form
+      // Reset sensitive bank fields (keep address state so re-opening the form prefills it)
       setAccountHolderName("");
       setRoutingNumber("");
       setAccountNumber("");
@@ -126,14 +176,14 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
         </div>
       </div>
 
-      {/* Success message */}
+      {/* Success / pending-verification message — self-edits await admin confirmation */}
       {success && (
-        <div className="bg-accent/10 border border-accent/30 text-brand-600 rounded-lg p-4 text-sm mb-4">
-          <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-accent flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-lg p-4 text-sm mb-4">
+          <div className="flex items-start gap-2">
+            <svg className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            Bank account saved successfully.
+            Your updated bank details are pending verification and will be active once an admin confirms them.
           </div>
         </div>
       )}
@@ -234,6 +284,99 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
             )}
           </div>
 
+          {/* Billing Address (required by Mercury for ACH) */}
+          <div>
+            <label htmlFor="address1" className="block text-sm font-medium text-gray-700 mb-1">
+              Street Address
+            </label>
+            <input
+              id="address1"
+              type="text"
+              value={address1}
+              onChange={(e) => setAddress1(e.target.value)}
+              placeholder="304 S. Jones Blvd"
+              autoComplete="address-line1"
+              className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-brand-400/50 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+            />
+            {errors.address1 && (
+              <p className="text-red-500 text-xs mt-1">{errors.address1}</p>
+            )}
+          </div>
+
+          {/* Address Line 2 (optional) */}
+          <div>
+            <label htmlFor="address2" className="block text-sm font-medium text-gray-700 mb-1">
+              Apt / Suite <span className="text-brand-400 font-normal">(optional)</span>
+            </label>
+            <input
+              id="address2"
+              type="text"
+              value={address2}
+              onChange={(e) => setAddress2(e.target.value)}
+              placeholder="Suite 100"
+              autoComplete="address-line2"
+              className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-brand-400/50 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+            />
+          </div>
+
+          {/* City / State / ZIP */}
+          <div className="grid grid-cols-6 gap-3">
+            <div className="col-span-3">
+              <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+                City
+              </label>
+              <input
+                id="city"
+                type="text"
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                placeholder="Las Vegas"
+                autoComplete="address-level2"
+                className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-brand-400/50 focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+              />
+              {errors.city && (
+                <p className="text-red-500 text-xs mt-1">{errors.city}</p>
+              )}
+            </div>
+            <div className="col-span-1">
+              <label htmlFor="region" className="block text-sm font-medium text-gray-700 mb-1">
+                State
+              </label>
+              <input
+                id="region"
+                type="text"
+                maxLength={2}
+                value={region}
+                onChange={(e) => setRegion(e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2))}
+                placeholder="NV"
+                autoComplete="address-level1"
+                className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-brand-400/50 uppercase focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+              />
+              {errors.region && (
+                <p className="text-red-500 text-xs mt-1">{errors.region}</p>
+              )}
+            </div>
+            <div className="col-span-2">
+              <label htmlFor="postal_code" className="block text-sm font-medium text-gray-700 mb-1">
+                ZIP
+              </label>
+              <input
+                id="postal_code"
+                type="text"
+                inputMode="numeric"
+                maxLength={10}
+                value={postalCode}
+                onChange={(e) => setPostalCode(e.target.value)}
+                placeholder="89107"
+                autoComplete="postal-code"
+                className="w-full rounded-xl border border-surface-200 bg-white px-4 py-2.5 text-gray-900 placeholder-brand-400/50 tabular-nums focus:border-brand-600 focus:ring-1 focus:ring-brand-600 text-sm"
+              />
+              {errors.postal_code && (
+                <p className="text-red-500 text-xs mt-1">{errors.postal_code}</p>
+              )}
+            </div>
+          </div>
+
           {/* Account Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -284,8 +427,8 @@ export default function BankAccountForm({ existingAccount, expandedByDefault }: 
           <div className="flex items-center gap-3 pt-1">
             <button
               type="submit"
-              disabled={submitting}
-              className="btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-60"
+              disabled={submitting || !canSave}
+              className="btn-primary text-sm flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>

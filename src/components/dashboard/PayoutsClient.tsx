@@ -15,6 +15,11 @@ interface MercuryAccountDisplay {
   account_name: string;
   is_verified: boolean;
   last4?: string;
+  address1?: string;
+  address2?: string;
+  city?: string;
+  region?: string;
+  postal_code?: string;
 }
 
 interface Props {
