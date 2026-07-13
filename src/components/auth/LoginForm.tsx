@@ -15,7 +15,9 @@ export default function LoginForm({ initialError }: LoginFormProps) {
   const [email,        setEmail]        = useState("");
   const [password,     setPassword]     = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [mode,         setMode]         = useState<Mode>("password");
+  // Magic link is the primary sign-in path: one email, one click, no password
+  // to remember. Password login stays available as the secondary mode.
+  const [mode,         setMode]         = useState<Mode>("magic");
   const [status,       setStatus]       = useState<Status>(initialError ? "error" : "idle");
   const [errorMsg,     setErrorMsg]     = useState(
     initialError ? `Sign-in failed: ${initialError}` : ""
@@ -110,12 +112,13 @@ export default function LoginForm({ initialError }: LoginFormProps) {
             </div>
             <h2 className="text-xl font-bold text-gray-900">Check your inbox</h2>
             <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-              We sent a magic link to{" "}
+              We sent a sign-in link to{" "}
               <span className="text-gray-900 font-medium">{email}</span>.
-              <br />It expires in 1 hour.
+              <br />Open it and press <span className="text-gray-900 font-medium">Continue to Dashboard</span>.
+              <br />The link works once and is valid for 24 hours.
             </p>
             <button
-              onClick={() => switchMode("password")}
+              onClick={() => switchMode("magic")}
               className="mt-6 text-sm text-brand-600 hover:text-brand-700 font-medium transition-colors"
             >
               ← Back to sign in
@@ -139,12 +142,12 @@ export default function LoginForm({ initialError }: LoginFormProps) {
           {/* Heading */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">
-              {mode === "password" ? "Sign in to Affiliate Portal" : "Forgot your password?"}
+              {mode === "password" ? "Sign in with password" : "Sign in to Affiliate Portal"}
             </h1>
             <p className="mt-1.5 text-sm text-gray-500">
               {mode === "password"
                 ? "Welcome back. Enter your credentials to continue."
-                : "No worries — we'll email you a magic sign-in link."}
+                : "Enter your email and we’ll send you a secure one-click sign-in link."}
             </p>
           </div>
 
@@ -282,15 +285,29 @@ export default function LoginForm({ initialError }: LoginFormProps) {
                 className="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold rounded-lg py-3 text-sm
                            disabled:opacity-60 flex items-center justify-center gap-2 transition-colors"
               >
-                {status === "loading" ? <Spinner label="Sending…" /> : "Send magic link"}
+                {status === "loading" ? <Spinner label="Sending…" /> : "Email me a sign-in link"}
               </button>
+
+              {/* Divider */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-surface-200/60" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-white px-3 text-xs text-gray-400">or</span>
+                </div>
+              </div>
 
               <button
                 type="button"
                 onClick={() => switchMode("password")}
-                className="w-full text-sm text-gray-500 hover:text-gray-700 transition-colors py-1"
+                className="w-full border border-surface-200 hover:bg-surface-100/60 text-gray-700
+                           font-medium rounded-lg py-3 text-sm flex items-center justify-center gap-2 transition-colors"
               >
-                ← Back to sign in
+                <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                </svg>
+                Sign in with password
               </button>
             </form>
           )}
