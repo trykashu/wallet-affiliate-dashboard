@@ -48,29 +48,41 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any;
 
-  // Guard: is this email an existing affiliate? (email-match trigger hazard)
-  const { data: affMatch } = await svc
+  // Guard: is this email an existing affiliate? Must use the SAME lower(trim())
+  // semantics as the on_auth_user_created trigger (migration 023). A plain
+  // ilike is case-insensitive but does NOT trim, so a whitespace-variant
+  // affiliate email ("x@y.com ") would slip past here, the invite would create
+  // an auth user, and the trigger's lower(trim()) match would mis-link that
+  // affiliate's user_id to the new delegate — escalating the delegate to full
+  // owner. So fetch candidates by a contains-match, then compare normalized.
+  const { data: affCandidates } = await svc
     .from("affiliates")
-    .select("id")
-    .ilike("email", email)
-    .maybeSingle();
+    .select("email")
+    .ilike("email", `%${email}%`);
+  const emailIsAffiliate = (affCandidates ?? []).some(
+    (a: { email: string }) => normalizeEmail(a.email) === email,
+  );
 
   const check = checkInviteAllowed({
     email,
     ownerEmail: ctx.affiliate.email,
-    emailIsAffiliate: !!affMatch,
+    emailIsAffiliate,
   });
   if (!check.ok) {
     return NextResponse.json({ error: check.error }, { status: 409 });
   }
 
-  // Pre-check the global-unique-email constraint for a friendly message.
-  const { data: existing } = await svc
+  // Pre-check the global-unique-email constraint (normalized) for a friendly
+  // message; the DB unique index on lower(trim(delegate_email)) is the real
+  // guard and is enforced again on insert below.
+  const { data: delegCandidates } = await svc
     .from("affiliate_delegates")
-    .select("id")
-    .ilike("delegate_email", email)
-    .maybeSingle();
-  if (existing) {
+    .select("delegate_email")
+    .ilike("delegate_email", `%${email}%`);
+  const alreadyDelegate = (delegCandidates ?? []).some(
+    (d: { delegate_email: string }) => normalizeEmail(d.delegate_email) === email,
+  );
+  if (alreadyDelegate) {
     return NextResponse.json(
       { error: "This email is already a delegate." },
       { status: 409 },
@@ -92,6 +104,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (insertErr || !inserted) {
+    // Unique-index race: the normalized pre-check missed a concurrent insert.
+    if (insertErr && (insertErr as { code?: string }).code === "23505") {
+      return NextResponse.json({ error: "This email is already a delegate." }, { status: 409 });
+    }
     return NextResponse.json({ error: "Could not create delegate." }, { status: 500 });
   }
 
