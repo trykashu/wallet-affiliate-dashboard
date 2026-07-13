@@ -2,13 +2,15 @@ import { redirect }             from "next/navigation";
 import { cookies }              from "next/headers";
 import { createClient }        from "@/lib/supabase/server";
 import { isAdminEmail }        from "@/lib/admin";
-import { VIEW_AS_COOKIE }      from "@/lib/affiliate-context";
+import { VIEW_AS_COOKIE, resolveDelegateContext } from "@/lib/affiliate-context";
+import { filterNavForDelegate } from "@/lib/delegates/delegate-nav";
 import AppSidebar              from "@/components/layout/AppSidebar";
 import AutoRefresh             from "@/components/layout/AutoRefresh";
 import RealtimeRefresh         from "@/components/layout/RealtimeRefresh";
 import NotificationBell        from "@/components/layout/NotificationBell";
+import DelegateBanner          from "@/components/dashboard/DelegateBanner";
 import PageTitle               from "@/components/ui/PageTitle";
-import type { Affiliate, WhitelabelBrand } from "@/types/database";
+import type { Affiliate, WhitelabelBrand, DelegatePermissions } from "@/types/database";
 import { BrandProvider } from "@/lib/brand-context";
 
 export const dynamic = "force-dynamic";
@@ -55,6 +57,9 @@ export default async function DashboardLayout({
   let affiliate: Affiliate | null = null;
   let isViewingAs = false;
   let viewingAsName: string | null = null;
+  let isDelegate = false;
+  let delegateOwnerName: string | null = null;
+  let delegatePerms: DelegatePermissions = { canViewEarnings: true, canViewPayouts: true };
 
   if (isAdmin && viewAsCookie?.value) {
     try {
@@ -91,6 +96,17 @@ export default async function DashboardLayout({
     const db = supabase as any; // eslint-disable-line @typescript-eslint/no-explicit-any
     const { data: affiliateRaw } = await db.from("affiliates").select("*").single();
     affiliate = affiliateRaw as Affiliate | null;
+  }
+
+  // Delegate mode: no affiliate row for this user — resolve the owner they delegate for.
+  if (!affiliate && user && !isAdmin) {
+    const deleg = await resolveDelegateContext(supabase, user.id);
+    if (deleg) {
+      affiliate         = deleg.affiliate;
+      isDelegate        = true;
+      delegateOwnerName = deleg.ownerName;
+      delegatePerms     = deleg.permissions;
+    }
   }
 
   if (!affiliate) {
@@ -156,6 +172,12 @@ export default async function DashboardLayout({
       })()
     : undefined;
 
+  const navItems = filterNavForDelegate([...AFFILIATE_NAV], {
+    isDelegate,
+    canViewEarnings: delegatePerms.canViewEarnings,
+    canViewPayouts:  delegatePerms.canViewPayouts,
+  });
+
   return (
     <div className="flex min-h-screen relative" style={brandStyle}>
       {/* Page-level ambient orbs */}
@@ -168,13 +190,17 @@ export default async function DashboardLayout({
         userEmail={user?.email ?? ""}
         userName={affiliate.agent_name}
         companyName={affiliate.business_name ?? undefined}
-        navItems={[...AFFILIATE_NAV]}
+        navItems={navItems}
         isAdmin={isAdmin && !isViewingAs}
         tier={affiliate.tier}
         brand={brand}
       />
 
       <div className="flex-1 lg:pl-64 min-w-0 relative z-10">
+
+        {isDelegate && delegateOwnerName && (
+          <DelegateBanner ownerName={delegateOwnerName} />
+        )}
 
         {/* -- View-as banner -- */}
         {isViewingAs && (
