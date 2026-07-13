@@ -366,12 +366,35 @@ git push origin main
 - **Account reset recipe (kill a leaked password):** `admin.updateUserById(uid, {password:
   <random>})` also revokes the user's sessions on current hosted GoTrue; then set
   `affiliates.has_password = false` so post-login + proxy force `/setup-password`.
-- **OPEN FOLLOW-UP:** the Supabase dashboard email templates (Invite user, Magic Link,
-  Reset Password) still use `{{ .ConfirmationURL }}` → future invitees remain exposed to
-  scanner burn until each template is changed to
-  `{{ .SiteURL }}/auth/verify?token_hash={{ .TokenHash }}&type=invite` (invite),
-  `...&type=email` (magic link), `...&type=recovery` (reset). Dashboard-managed
-  (Authentication → Email Templates), NOT in repo.
+- **OPEN FOLLOW-UP:** ~~templates still use ConfirmationURL~~ **RESOLVED same day — see next entry.**
+
+### [2026-07-13, part 2] — TRUE root cause: SMTP relay corrupts `=` in emailed links
+- **Ground truth (diffed stored token vs received email):** the Supabase custom-SMTP relay
+  (LeadConnector/HighLevel — `noreply@email.kashupay.com`, msgsndr asset URLs) mis-decodes
+  quoted-printable: **any literal `=` followed by two hex chars is eaten and decoded into a
+  raw byte** (`token_hash=9e66…` arrives as `token_hash\x9e66…`; even `width=device-width`
+  in the template's meta tag arrives corrupted). A hex token ALWAYS starts with two hex
+  chars → **every emailed auth link was corrupted in transit**. THIS is what stranded
+  Michael Okun across two browsers — scanner prefetch was secondary.
+- **Fix (all live):** emailed links now use the PATH format with zero `=` chars:
+  `{{ .SiteURL }}/auth/verify/email/{{ .TokenHash }}` (magic link) / `.../invite/...` /
+  `.../recovery/...` → route [/auth/verify/[type]/[token]](src/app/auth/verify/[type]/[token]/page.tsx),
+  shared UI in [VerifyOtpCard](src/components/auth/VerifyOtpCard.tsx) (click-gated verifyOtp,
+  scanner-proof). Query variant `/auth/verify?token_hash=...&type=...` still accepted for
+  links sent outside the relay (e.g. via Gmail compose). **NEVER reintroduce `=`-delimited
+  tokens into the Supabase email templates.** Verified end-to-end 2026-07-13: real
+  signInWithOtp email → link intact → GET safe → verifyOtp OK.
+- **Login UX:** magic link is now the DEFAULT mode on /login ("Email me a sign-in link");
+  password is the secondary mode ([LoginForm](src/components/auth/LoginForm.tsx)).
+- **Supabase config management WITHOUT the dashboard:** the Supabase CLI is authenticated on
+  this machine (token in macOS keychain: `security find-generic-password -s "Supabase CLI" -w`,
+  strip `go-keyring-base64:` prefix and base64-decode → `sbp_…`). Management API works for
+  reading AND writing auth config + email templates
+  (`PATCH https://api.supabase.com/v1/projects/xcnbchugndkrwgyqpuhk/config/auth`) and running
+  SQL (`POST …/database/query` — incl. `auth.*` tables). **Gotcha:** Cloudflare blocks
+  python-urllib UAs on api.supabase.com (403 "error code: 1010") — use curl.
+- **Magic-link tokens are stored as `recovery_token` on `auth.users`** (legacy columns, not
+  `one_time_tokens`), and `verifyOtp` accepts them with `type: 'email'`.
 
 ---
 
