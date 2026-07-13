@@ -396,6 +396,49 @@ git push origin main
 - **Magic-link tokens are stored as `recovery_token` on `auth.users`** (legacy columns, not
   `one_time_tokens`), and `verifyOtp` accepts them with `type: 'email'`.
 
+### [2026-07-13, part 3] — Delegate Access (affiliate invites teammates)
+- **What:** an affiliate can invite "delegates" (teammates/VAs) who log in with their own
+  auth account and see the OWNER's dashboard. Default delegate = **referrals + conversions
+  only, no financial info**; two opt-in per-delegate flags (`can_view_earnings`,
+  `can_view_payouts`, both default OFF) unlock those surfaces. Money-movement (bank edit,
+  Stripe connect) + delegate management are **always owner-only**. Ported from MRP's
+  `partner_delegates`. Design/plan: [docs/plans/2026-07-13-delegate-access-design.md](docs/plans/2026-07-13-delegate-access-design.md),
+  [docs/plans/2026-07-13-delegate-access.md](docs/plans/2026-07-13-delegate-access.md).
+- **Resolution model (CRITICAL):** `get_my_affiliate_id()` stays a strict 1:1
+  `auth.uid() → affiliates.id`. A delegate is NOT resolved by RLS — instead
+  [`resolveDelegateContext()`](src/lib/affiliate-context.ts) uses the **service client** to map
+  the delegate's `auth.uid()` → owner affiliate (mirrors the existing view-as branch). So
+  delegates get `db = service client`; this is safe ONLY because every dashboard query is
+  explicitly `.eq("affiliate_id", affiliateId)` (same discipline view-as already relies on). New
+  DB objects (migration `025`): table `affiliate_delegates`, security-definer RPC
+  `accept_delegate_invite()` (stamps `delegate_user_id`/`accepted_at` on first login by exact
+  `lower(trim())` email match — no `ilike`), owner-only RLS select policy.
+- **Integration gotchas found & handled:**
+  1. **`dashboard/layout.tsx` duplicates affiliate resolution** (separate from
+     `getAffiliateContext`) — a delegate hit `<AccountPending>` until a delegate branch was added
+     there too. Both call the shared `resolveDelegateContext`.
+  2. **`proxy.ts` needed NO change** — a delegate has no affiliate row, so `.single()` returns
+     null and the password gate / admin-redirect all no-op and let them through. (The design
+     predicted a proxy change; it turned out unnecessary. Verify, don't assume.)
+  3. **Email-collision escalation (must-fix from review):** the invite guard originally used
+     `ilike("email", email)` (case-insensitive but NOT trimmed) while the
+     `on_auth_user_created` trigger matches `lower(trim())`. A whitespace-variant unclaimed
+     affiliate email could slip past the guard → invite mints an auth user → the trigger
+     mis-links that affiliate to the delegate → delegate becomes full owner. **Fix:** fetch
+     candidates by contains-`ilike` then compare `normalizeEmail()` in JS, and handle the
+     `23505` unique-index race on insert. **Lesson: any app-side email guard MUST use the same
+     `lower(trim())` semantics as the trigger, never a bare `ilike`.**
+- **Enforcement:** nav-hiding ([`filterNavForDelegate`](src/lib/delegates/delegate-nav.ts)) +
+  server-side page guards (`earnings`/`payouts` pages `redirect("/dashboard")` on missing perm —
+  direct-URL protection, not just nav) + read-only payouts (bank form replaced with a note in
+  `PayoutsClient`) + `isDelegate → 403` on `payouts/mercury-account` & `payouts/stripe-connect`
+  writes. Overview/`StatsRow` show only counts/volume/funnel (conversions), no commission `$`, so
+  no scrub needed. There is **no** payout-request route (`api/payouts/request/` is empty; payouts
+  are automatic) — bank-edit + stripe-connect are the only affiliate money-movement writes.
+- **v1 limitations (documented):** one email = one affiliate globally (unique index); a person
+  who is themselves an affiliate can't also be a delegate; invites use Supabase (24h) not a
+  durable token.
+
 ---
 
 ## 7. Feature Roadmap Status
