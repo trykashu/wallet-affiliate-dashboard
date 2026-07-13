@@ -93,6 +93,21 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Delegate flow: no affiliate row for this user — they may be an invited
+  // delegate. accept_delegate_invite() (SECURITY DEFINER, reads auth.uid()/jwt)
+  // stamps delegate_user_id/accepted_at and returns the owner affiliate id.
+  if (!affiliate) {
+    const { data: delegateAffId } = await supabase.rpc("accept_delegate_invite");
+    if (delegateAffId) {
+      const next = request.nextUrl.searchParams.get("next");
+      const safeNext =
+        next && next.startsWith("/") && !next.startsWith("//") && !next.includes("://")
+          ? next
+          : "/dashboard";
+      return NextResponse.redirect(`${origin}${safeNext}`);
+    }
+  }
+
   // Honor ?next= param with open-redirect protection
   const next = request.nextUrl.searchParams.get("next");
   const safeNext =
