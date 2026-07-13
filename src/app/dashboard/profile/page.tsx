@@ -2,13 +2,24 @@ import { getAffiliateContext } from "@/lib/affiliate-context";
 import { fmt } from "@/lib/fmt";
 import TierBadge from "@/components/ui/TierBadge";
 import UpdatePasswordForm from "@/components/dashboard/UpdatePasswordForm";
+import DelegateAccessCard, { type DelegateRow } from "@/components/dashboard/DelegateAccessCard";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProfilePage() {
   const ctx = await getAffiliateContext();
   if (!ctx) return null;
-  const { affiliate } = ctx;
+  const { affiliate, isDelegate, affiliateId, db } = ctx;
+
+  let delegates: DelegateRow[] = [];
+  if (!isDelegate) {
+    const { data } = await db
+      .from("affiliate_delegates")
+      .select("id, delegate_name, delegate_email, delegate_user_id, accepted_at, can_view_earnings, can_view_payouts")
+      .eq("affiliate_id", affiliateId)
+      .order("invited_at", { ascending: false });
+    delegates = (data ?? []) as DelegateRow[];
+  }
 
   return (
     <>
@@ -58,19 +69,23 @@ export default async function ProfilePage() {
         </div>
 
         {/* Password section */}
-        <div className="card p-6 flex flex-col gap-5">
-          <div>
-            <h3 className="text-sm font-semibold text-gray-900">Update Password</h3>
-            <p className="text-xs text-brand-400 mt-0.5">
-              {affiliate.has_password
-                ? "Change your current password"
-                : "Set a password to log in with email + password"}
-            </p>
-          </div>
+        {!isDelegate && (
+          <div className="card p-6 flex flex-col gap-5">
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900">Update Password</h3>
+              <p className="text-xs text-brand-400 mt-0.5">
+                {affiliate.has_password
+                  ? "Change your current password"
+                  : "Set a password to log in with email + password"}
+              </p>
+            </div>
 
-          <UpdatePasswordForm />
-        </div>
+            <UpdatePasswordForm />
+          </div>
+        )}
       </div>
+
+      {!isDelegate && <DelegateAccessCard initialDelegates={delegates} />}
     </>
   );
 }
