@@ -23,6 +23,27 @@ export default function AuthConfirmPage() {
         console.log("[auth/confirm] Search:", window.location.search);
         console.log("[auth/confirm] Full URL:", window.location.href.substring(0, 120));
 
+        // Supabase reports verification failures as params in the hash
+        // (#error=access_denied&error_code=otp_expired&error_description=...).
+        // Surface the real reason instead of falling through to the generic message.
+        const hashParams = new URLSearchParams(hash.startsWith("#") ? hash.substring(1) : hash);
+        const searchErr = new URLSearchParams(window.location.search);
+        const errCode = hashParams.get("error_code") ?? searchErr.get("error_code");
+        const errDesc = hashParams.get("error_description") ?? searchErr.get("error_description");
+        const err = hashParams.get("error") ?? searchErr.get("error");
+        if (err || errCode) {
+          console.error("[auth/confirm] Supabase error params:", err, errCode, errDesc);
+          setStatus("error");
+          if (errCode === "otp_expired") {
+            setErrorMsg(
+              "This link has expired or was already used. Links can only be used once — sometimes email security software opens them before you do. Go back to the login page and request a fresh link with “Forgot password?”"
+            );
+          } else {
+            setErrorMsg(errDesc?.replace(/\+/g, " ") || "Could not verify your invite link. Please request a new invite.");
+          }
+          return;
+        }
+
         const supabase = createBrowserClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
           process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -99,7 +120,9 @@ export default function AuthConfirmPage() {
         }
 
         setStatus("error");
-        setErrorMsg("Could not verify your invite link. Please try again or request a new invite.");
+        setErrorMsg(
+          "Could not verify your invite link — it may have already been used, sometimes by email security software that opens links automatically. Go back to the login page and request a fresh link with “Forgot password?”, or ask us for a new invite."
+        );
       } catch (err) {
         console.error("[auth/confirm] Unexpected error:", err);
         setStatus("error");
