@@ -344,6 +344,35 @@ git push origin main
   variants (`text-brand-400/60`) and double-border badges (`border border-x`) BEFORE blanket
   token swaps, or they get mangled / missed.
 
+### [2026-07-13] — Invite links burned by email scanners → click-to-verify page
+- **Symptom (Michael Okun case):** invite link AND follow-up magic links all failed with
+  "Could not verify your invite link", across two browsers, minutes after being sent.
+- **Root causes (two, stacking):** (1) email security software (Gmail prefetch / Microsoft
+  SafeLinks) GETs Supabase's `{SUPABASE_URL}/auth/v1/verify?token=...` link and burns the
+  single-use token before the user clicks; (2) magic links use PKCE — the `?code=` exchange
+  needs the code-verifier cookie from the requesting browser, so opening the link in a
+  different browser always fails.
+- **Fix:** [/auth/verify](src/app/auth/verify/page.tsx) — a click-to-verify page. Emailed
+  URLs carry `?token_hash=...&type=...`; page load consumes NOTHING (`detectSessionInUrl`
+  ignores token_hash); the token is only verified when the user clicks the button, which
+  calls `supabase.auth.verifyOtp({ token_hash, type })` (anon key, no PKCE dependence,
+  works cross-browser). Also [/auth/confirm](src/app/auth/confirm/page.tsx) now parses
+  Supabase's `#error_code=otp_expired` hash params instead of showing a generic failure.
+- **Generating links for /auth/verify (admin-side):** `svc.auth.admin.generateLink({type, email})`
+  → use `data.properties.hashed_token` in `{APP_URL}/auth/verify?token_hash=...&type=...`.
+  CRITICAL: `type: 'invite'` only works for never-registered users — for an existing user
+  it errors "already been registered"; use `type: 'recovery'` (or magiclink → verify type
+  'email'). Token: 24h, single-use, only consumed on successful verifyOtp.
+- **Account reset recipe (kill a leaked password):** `admin.updateUserById(uid, {password:
+  <random>})` also revokes the user's sessions on current hosted GoTrue; then set
+  `affiliates.has_password = false` so post-login + proxy force `/setup-password`.
+- **OPEN FOLLOW-UP:** the Supabase dashboard email templates (Invite user, Magic Link,
+  Reset Password) still use `{{ .ConfirmationURL }}` → future invitees remain exposed to
+  scanner burn until each template is changed to
+  `{{ .SiteURL }}/auth/verify?token_hash={{ .TokenHash }}&type=invite` (invite),
+  `...&type=email` (magic link), `...&type=recovery` (reset). Dashboard-managed
+  (Authentication → Email Templates), NOT in repo.
+
 ---
 
 ## 7. Feature Roadmap Status
