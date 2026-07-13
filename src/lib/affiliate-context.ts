@@ -24,7 +24,7 @@ import { cookies }             from "next/headers";
 import { createServiceClient } from "./supabase/service";
 import { createClient }        from "./supabase/server";
 import { isAdminEmail }        from "./admin";
-import type { Affiliate, WhitelabelBrand } from "@/types/database";
+import type { Affiliate, WhitelabelBrand, DelegatePermissions } from "@/types/database";
 
 /** Default Kashu signup landing URL — used when an affiliate's whitelabel brand
  *  has no `signup_base_url` configured (or the affiliate has no brand at all). */
@@ -38,6 +38,14 @@ export interface AffiliateContext {
   isViewingAs:    boolean;
   viewingAsName:  string | null;
   brand:          WhitelabelBrand | null;
+  /** True when the effective session is a delegate acting on the owner's account. */
+  isDelegate:          boolean;
+  /** The delegate's own email (null unless isDelegate). */
+  delegateEmail:       string | null;
+  /** The owner affiliate's display name, for the delegate banner (null unless isDelegate). */
+  delegateOwnerName:   string | null;
+  /** What the delegate may see. For a real owner: both true (no restriction). */
+  delegatePermissions: DelegatePermissions;
 }
 
 export const VIEW_AS_COOKIE = "wallet_view_as";
@@ -106,6 +114,10 @@ export async function getAffiliateContext(): Promise<AffiliateContext | null> {
         isViewingAs:    true,
         viewingAsName:  viewAs.affiliate_name,
         brand,
+        isDelegate:          false,
+        delegateEmail:       null,
+        delegateOwnerName:   null,
+        delegatePermissions: { canViewEarnings: true, canViewPayouts: true },
       };
     }
     // Not an admin — fall through to normal mode (ignore the cookie)
@@ -148,6 +160,10 @@ export async function getAffiliateContext(): Promise<AffiliateContext | null> {
       isViewingAs:    false,
       viewingAsName:  null,
       brand,
+      isDelegate:          false,
+      delegateEmail:       null,
+      delegateOwnerName:   null,
+      delegatePermissions: { canViewEarnings: true, canViewPayouts: true },
     };
   }
 
@@ -168,5 +184,9 @@ export async function getAffiliateContext(): Promise<AffiliateContext | null> {
     isViewingAs:    false,
     viewingAsName:  null,
     brand,
+    isDelegate:          false,
+    delegateEmail:       null,
+    delegateOwnerName:   null,
+    delegatePermissions: { canViewEarnings: true, canViewPayouts: true },
   };
 }

@@ -71,6 +71,27 @@ export interface Affiliate {
   pandadoc_id: string | null;
 }
 
+export interface AffiliateDelegate {
+  id:                string;
+  affiliate_id:      string;
+  delegate_email:    string;
+  delegate_name:     string;
+  delegate_user_id:  string | null;
+  has_password:      boolean;
+  can_view_earnings: boolean;
+  can_view_payouts:  boolean;
+  invited_by:        string | null;
+  invited_at:        string;
+  accepted_at:       string | null;
+  created_at:        string;
+  updated_at:        string;
+}
+
+export interface DelegatePermissions {
+  canViewEarnings: boolean;
+  canViewPayouts:  boolean;
+}
+
 export interface ReferredUser {
   id: string;
   affiliate_id: string;
