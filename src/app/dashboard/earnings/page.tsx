@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { getAffiliateContext } from "@/lib/affiliate-context";
 import type { Earning, Transaction, LeaderboardSnapshot } from "@/types/database";
 import EarningsCard from "@/components/dashboard/EarningsCard";
@@ -25,6 +26,7 @@ function previousPeriod(): string {
 export default async function EarningsPage() {
   const ctx = await getAffiliateContext();
   if (!ctx) return null;
+  if (ctx.isDelegate && !ctx.delegatePermissions.canViewEarnings) redirect("/dashboard");
   const { db, affiliate, affiliateId, brand } = ctx;
 
   // ── Fetch all earnings with user name join ──────────────────

@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { getAffiliateContext } from "@/lib/affiliate-context";
 import { logSecurityEvent } from "@/lib/audit-log";
 import { saveBankDetails } from "@/lib/payouts/save-bank-details";
 
@@ -39,6 +40,12 @@ export async function POST(request: NextRequest) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // Money-movement is owner-only — delegates can never modify payout settings.
+  const ctx = await getAffiliateContext();
+  if (ctx?.isDelegate) {
+    return NextResponse.json({ error: "Delegates can't modify payout settings." }, { status: 403 });
   }
 
   let body: unknown;

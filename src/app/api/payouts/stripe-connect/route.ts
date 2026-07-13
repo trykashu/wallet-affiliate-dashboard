@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
+import { getAffiliateContext } from "@/lib/affiliate-context";
 
 function getStripe() {
   const key = process.env.STRIPE_SECRET_KEY;
@@ -154,6 +155,12 @@ export async function POST(request: NextRequest) {
 
   if (!user) {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Money-movement is owner-only — delegates can never modify payout settings.
+  const ctx = await getAffiliateContext();
+  if (ctx?.isDelegate) {
+    return NextResponse.json({ error: "Delegates can't modify payout settings." }, { status: 403 });
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

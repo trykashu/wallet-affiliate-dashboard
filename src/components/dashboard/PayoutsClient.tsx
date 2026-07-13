@@ -32,6 +32,7 @@ interface Props {
   minPayoutAmount?:  number;
   bankDetailsNeeded: boolean;
   brandSlug?:        string | null;
+  isDelegate?:       boolean;
 }
 
 export default function PayoutsClient({
@@ -44,6 +45,7 @@ export default function PayoutsClient({
   minPayoutAmount = 25,
   bankDetailsNeeded,
   brandSlug,
+  isDelegate = false,
 }: Props) {
   const cadence = useMemo(() => getCadenceForBrand(brandSlug), [brandSlug]);
   const cadenceCopy = getCadenceLabel(cadence);
@@ -123,11 +125,20 @@ export default function PayoutsClient({
           payouts={payouts}
         />
         {/* Always render the bank section so affiliates always have a way to add/
-            update their details (and so view-as is a true representation). */}
-        <BankAccountForm
-          existingAccount={mercuryAccount}
-          expandedByDefault={bankDetailsNeeded && !mercuryAccount?.is_verified}
-        />
+            update their details (and so view-as is a true representation).
+            Delegates see payouts read-only — no bank editing. */}
+        {isDelegate ? (
+          <div className="card p-5 flex items-center">
+            <p className="text-sm text-brand-400">
+              Bank details are managed by the account owner.
+            </p>
+          </div>
+        ) : (
+          <BankAccountForm
+            existingAccount={mercuryAccount}
+            expandedByDefault={bankDetailsNeeded && !mercuryAccount?.is_verified}
+          />
+        )}
       </div>
 
       <PayoutHistory payouts={payouts} affiliateName={affiliateName} />

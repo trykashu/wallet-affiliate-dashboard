@@ -13,6 +13,7 @@ export default async function PayoutsPage() {
 
   const ctx = await getAffiliateContext();
   if (!ctx) redirect("/login");
+  if (ctx.isDelegate && !ctx.delegatePermissions.canViewPayouts) redirect("/dashboard");
 
   const { db, affiliateId, affiliate, brand } = ctx;
 
@@ -80,6 +81,7 @@ export default async function PayoutsPage() {
         minPayoutAmount={minPayoutAmount}
         bankDetailsNeeded={!!affiliate.bank_details_needed}
         brandSlug={brand?.slug ?? null}
+        isDelegate={ctx.isDelegate}
       />
     </>
   );
