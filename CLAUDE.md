@@ -130,7 +130,7 @@ fmt.relative(date)      → 2h ago        (activity feeds)
 | **RLS** | `get_my_affiliate_id()` helper; affiliates see own data; service role for webhooks/admin |
 | **Patterns** | Prop drilling (no state lib), `supabase as any` cast, `force-dynamic` on all pages, `useMemo` for all computations |
 | **Charts** | Pure inline SVG with cubic bezier paths — NO chart library |
-| **Tier system** | Gold (5% commission) / Platinum ($250K+ volume, 10% commission) |
+| **Tier system** | Gold (5%) / Platinum ($100K+ volume, 10%) / Custom (bespoke) / Master (20%, sub-affiliate network) — rates are % of Kashu's fee |
 | **Funnel** | 5-stage: signed_up → transaction_run → funds_in_wallet → ach_initiated → funds_in_bank |
 
 ### Key Files
@@ -439,6 +439,44 @@ git push origin main
   who is themselves an affiliate can't also be a delegate; invites use Supabase (24h) not a
   durable token.
 
+### [2026-08-19] — Master Tier (T3) + sub-affiliate structure
+- **What:** 4th affiliate tier `master` ("Master Tier - T3" in Airtable, 20% of Kashu's fee,
+  manually assigned). A master's referral traffic is subdivided by **sub-affiliate IDs** —
+  opaque strings stamped on GHL opportunities via link params, flowing GHL → Launch List
+  `Sub Aff ID` column → `referred_users.sub_affiliate_id` (mig 026). **Subs are NOT affiliate
+  rows** — no login, no payout; the master earns everything and pays subs outside this system.
+  Design/plan: [design](docs/plans/2026-08-19-master-partner-sub-affiliates-design.md),
+  [plan](docs/plans/2026-08-19-master-partner-sub-affiliates.md).
+- **Key architectural win:** because subs are just IDs on the master's own `referred_users`,
+  the master is a completely normal affiliate — **zero RLS/auth/context changes** (mig 025's
+  "never widen `get_my_affiliate_id()`" rule held). The whole feature is: tier value + one
+  synced column + a grouping view ([rollup.ts](src/lib/sub-affiliates/rollup.ts), pure + tested)
+  + master-only page `/dashboard/sub-affiliates` (tier-gated redirect; delegate earnings hidden)
+  + `sub_affiliate_labels` (owner-RLS, upsert via `/api/sub-affiliates/label`, owner+master only).
+- **Widening `AffiliateTier` is self-enumerating:** tsc's `Record<AffiliateTier, …>`
+  exhaustiveness found every badge/config site, including one the plan missed
+  (`EarningsTable.TIER_STYLES`). But **if-chains with defaults DON'T self-enumerate** — the
+  admin `BatchBuilderSection.rateForEarning` fell through to the custom branch and displayed
+  0% for master earnings (caught in review, fixed). Lesson: after widening a union, grep
+  `tier ===` fall-through chains, not just Records.
+- **Sticky-tier bug class:** `refresh-leaderboard.computeTier` early-returns custom/master;
+  without that a master gets "upgraded" to platinum by the monthly recompute. The other two
+  upgrade paths (transactions sync :544, wallet webhook :240) gate on `tier === "gold"` and
+  were safe unchanged. Statement path: `commissionRatePct` is now table-driven via
+  `COMMISSION_RATES` (side effect: `custom` with no rate now yields 0%, was 5% — more correct);
+  `displayTier`/`tierStyle` widened so master PDFs say "Master"/20%.
+- **Airtable single-select gotcha:** the Metadata API PATCH on a singleSelect field errors
+  ("Changing a field's type…") with our PAT — adding an option requires the **typecast trick**:
+  POST a throwaway record with the new value + `"typecast": true`, then DELETE it. Option
+  `Master Tier - T3` = `selML3gKiCogoTiCj`; Launch List `Sub Aff ID` = `fldJqPo9rao2KkMQG`;
+  PTL `Commission Owed` formula now has a Master × 0.20 branch (unknown tiers still fall to 0 —
+  add a branch there whenever a tier is added, or ops silently under-accounts).
+- **Known cap (documented, not fixed):** dashboard pages fetch unbounded (Supabase default
+  1000-row response cap) — a master with >1000 Transfer-In transactions would understate
+  per-sub volume. Revisit with `.range()` paging; flagged in page comment.
+- **Out of scope v1:** demo-route parity, Sub column on Users page, per-sub drill-down,
+  GHL-side wiring (link param → opportunity custom field → Airtable) — that lives in HighLevel/n8n.
+
 ---
 
 ## 7. Feature Roadmap Status
@@ -476,7 +514,8 @@ git push origin main
 ```sql
 -- 13 tables
 affiliates            (id, user_id, agent_name, business_name, email, tier, status, referred_volume_total, attribution_id, ...)
-referred_users        (id, affiliate_id, full_name, email, status_slug, first_transaction_amount, first_transaction_fee, wallet_user_id, ...)
+referred_users        (id, affiliate_id, full_name, email, status_slug, first_transaction_amount, first_transaction_fee, wallet_user_id, sub_affiliate_id, ...)
+sub_affiliate_labels  (id, affiliate_id, sub_affiliate_id, label — master's friendly names for sub IDs; owner-scoped RLS)
 funnel_statuses       (id, slug, label, color, sort_order)
 funnel_events         (id, referred_user_id, from_status, to_status, created_at)
 earnings              (id, affiliate_id, referred_user_id, amount, transaction_fee_amount, tier_at_earning, status, ...)
