@@ -13,6 +13,7 @@ const TIER_BADGE: Record<AffiliateTier, { label: string; class: string }> = {
   gold:     { label: "Gold",     class: "bg-amber-50 text-amber-700 border-amber-200" },
   platinum: { label: "Platinum", class: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border-slate-300" },
   custom:   { label: "Custom",   class: "bg-purple-500/10 text-purple-700 border-purple-500/20" },
+  master:   { label: "Master",   class: "bg-brand-600/10 text-brand-600 border-brand-600/25" },
 };
 
 export default function TierProgressCard({
@@ -99,6 +100,35 @@ export default function TierProgressCard({
               {ratePct ? `${ratePct}%` : "—"}
             </p>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Master → manually designated; no volume progression
+  if (tier === "master") {
+    return (
+      <div className="card p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900">Master Partner</h3>
+            <p className="text-[10px] text-brand-400 mt-0.5 uppercase tracking-wider font-medium">
+              20% commission on Kashu&apos;s fee
+            </p>
+          </div>
+          <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold border rounded-full px-2.5 py-1 ${tierInfo.class}`}>
+            {tierInfo.label} Tier
+          </span>
+        </div>
+        <div className="flex items-end justify-between mb-2">
+          <div>
+            <p className="text-[10px] text-brand-400 uppercase tracking-wider font-medium mb-1">Lifetime Volume</p>
+            <p className="text-stat font-bold text-gray-900 tabular-nums">{fmt.currencyCompact(referredVolume)}</p>
+          </div>
+          <span className="text-[10px] font-semibold text-accent">Sub-Affiliate Network</span>
+        </div>
+        <div className="h-2 rounded-full bg-accent/10 overflow-hidden">
+          <div className="h-full rounded-full bg-gradient-to-r from-accent to-accent/60" style={{ width: "100%" }} />
         </div>
       </div>
     );

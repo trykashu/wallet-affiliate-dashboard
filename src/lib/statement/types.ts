@@ -4,7 +4,7 @@ export interface StatementData {
   period_label: string;          // "April 2026"
   affiliate: {
     name: string;
-    tier: "gold" | "platinum";
+    tier: "gold" | "platinum" | "master";
     address1: string;
     address2: string | null;
     city: string;

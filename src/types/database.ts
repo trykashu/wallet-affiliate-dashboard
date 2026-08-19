@@ -16,7 +16,7 @@ export type FunnelStatusSlug =
 
 export type AffiliateStatus = 'active' | 'suspended' | 'pending' | 'archived';
 
-export type AffiliateTier = 'gold' | 'platinum' | 'custom';
+export type AffiliateTier = 'gold' | 'platinum' | 'custom' | 'master';
 
 export type EarningStatus = 'pending' | 'approved' | 'paid' | 'reversed';
 
@@ -92,6 +92,15 @@ export interface DelegatePermissions {
   canViewPayouts:  boolean;
 }
 
+export interface SubAffiliateLabel {
+  id:               string;
+  affiliate_id:     string;
+  sub_affiliate_id: string;
+  label:            string;
+  created_at:       string;
+  updated_at:       string;
+}
+
 export interface ReferredUser {
   id: string;
   affiliate_id: string;
@@ -103,6 +112,9 @@ export interface ReferredUser {
   first_transaction_fee: number | null;
   first_transaction_at: string | null;
   wallet_user_id: string | null;
+  /** Sub-affiliate ID from the GHL opportunity (via Launch List "Sub Aff ID").
+   *  NULL = direct referral. Only meaningful for master-tier affiliates. */
+  sub_affiliate_id: string | null;
   created_at: string;
   updated_at: string;
 }

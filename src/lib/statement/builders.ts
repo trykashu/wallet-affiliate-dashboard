@@ -1,4 +1,5 @@
 import type { AffiliateTier } from "@/types/database";
+import { COMMISSION_RATES } from "@/lib/tier";
 
 export function buildStatementNumber(period: string, affiliateId: string): string {
   return `KS-${period}-${affiliateId.slice(0, 6).toUpperCase()}`;
@@ -20,5 +21,5 @@ export function commissionRatePct(
   customRate: number | null,
 ): number {
   if (customRate != null) return Math.round(customRate * 1000) / 10; // 0.075 → 7.5
-  return tier === "platinum" ? 10 : 5;
+  return Math.round(COMMISSION_RATES[tier] * 1000) / 10; // gold 5, platinum 10, master 20
 }

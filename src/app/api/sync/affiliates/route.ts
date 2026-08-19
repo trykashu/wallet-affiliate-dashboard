@@ -11,7 +11,7 @@
  *   Agent Email          → email
  *   Agent Phone Number   → phone
  *   Agreement Status     → agreement_status
- *   Affiliate Tier       → tier (mapped to gold/platinum)
+ *   Affiliate Tier       → tier (mapped to gold/platinum/custom/master)
  */
 
 import { NextResponse } from "next/server";
@@ -27,11 +27,12 @@ const TIER_MAP: Record<string, string> = {
   "Gold Tier - T2": "gold",
   "Platinum Tier - T1": "platinum",
   "Custom - T0": "custom",
+  "Master Tier - T3": "master",
 };
 
-function mapTier(raw: unknown): "gold" | "platinum" | "custom" {
+function mapTier(raw: unknown): "gold" | "platinum" | "custom" | "master" {
   if (typeof raw === "string" && TIER_MAP[raw]) {
-    return TIER_MAP[raw] as "gold" | "platinum" | "custom";
+    return TIER_MAP[raw] as "gold" | "platinum" | "custom" | "master";
   }
   return "gold";
 }

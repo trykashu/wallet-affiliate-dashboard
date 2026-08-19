@@ -26,6 +26,7 @@ const TIER_BADGE: Record<AffiliateTier, { label: string; class: string }> = {
   gold:     { label: "Gold",     class: "bg-amber-50 text-amber-700 border-amber-200" },
   platinum: { label: "Platinum", class: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border-slate-300" },
   custom:   { label: "Custom",   class: "bg-purple-500/10 text-purple-700 border-purple-500/20" },
+  master:   { label: "Master",   class: "bg-brand-600/10 text-brand-600 border-brand-600/25" },
 };
 
 export default function EarningsCard({ summary, tier, referredVolume, customCommissionRate, customCommissionBasis, brandSlug }: Props) {
@@ -52,9 +53,11 @@ export default function EarningsCard({ summary, tier, referredVolume, customComm
               ? "5% commission on Kashu's fee"
               : tier === "platinum"
                 ? "10% commission on Kashu's fee"
-                : customCommissionRate && customCommissionBasis
-                  ? `${(customCommissionRate * 100).toFixed(2).replace(/\.?0+$/, "")}% commission on ${customCommissionBasis === "tpv" ? "TPV" : "Kashu's fee"}`
-                  : "Custom commission terms"}
+                : tier === "master"
+                  ? "20% commission on Kashu's fee"
+                  : customCommissionRate && customCommissionBasis
+                    ? `${(customCommissionRate * 100).toFixed(2).replace(/\.?0+$/, "")}% commission on ${customCommissionBasis === "tpv" ? "TPV" : "Kashu's fee"}`
+                    : "Custom commission terms"}
           </p>
         </div>
         <span className={`inline-flex items-center gap-1.5 text-[10px] font-semibold border rounded-full px-2.5 py-1 ${tierInfo.class}`}>
@@ -160,7 +163,7 @@ export default function EarningsCard({ summary, tier, referredVolume, customComm
         </div>
       )}
 
-      {tier === "custom" && (
+      {(tier === "custom" || tier === "master") && (
         <div className="px-5 py-3.5 border-t border-surface-200/60">
           <div className="flex items-center justify-between text-xs">
             <span className="text-brand-400 font-medium">Lifetime referred volume</span>

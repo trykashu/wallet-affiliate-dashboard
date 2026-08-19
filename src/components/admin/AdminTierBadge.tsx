@@ -14,6 +14,7 @@ const TIER_CONFIG: Record<AffiliateTier, { label: string; color: string; bg: str
   gold:     { label: "Gold",     color: "#F4C152", bg: "rgba(244,193,82,0.10)", border: "rgba(244,193,82,0.26)", dot: "#F4C152" },
   platinum: { label: "Platinum", color: "var(--ad-text-1)", bg: "var(--ad-surface-2)", border: "var(--ad-border-strong)", dot: "#9CA2AE" },
   custom:   { label: "Custom",   color: "var(--ad-accent-strong)", bg: "var(--ad-accent-soft)", border: "var(--ad-accent-border)", dot: "var(--ad-accent)" },
+  master:   { label: "Master",   color: "#7DD3FC", bg: "rgba(125,211,252,0.10)", border: "rgba(125,211,252,0.26)", dot: "#7DD3FC" },
 };
 
 export default function AdminTierBadge({ tier, size = "sm" }: Props) {

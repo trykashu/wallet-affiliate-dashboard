@@ -274,7 +274,7 @@ interface TierStyle {
   dot: string;
   label: string;
 }
-function tierStyle(tier: "gold" | "platinum"): TierStyle {
+function tierStyle(tier: "gold" | "platinum" | "master"): TierStyle {
   if (tier === "platinum") {
     return {
       bg: COLORS.slateBg,
@@ -282,6 +282,9 @@ function tierStyle(tier: "gold" | "platinum"): TierStyle {
       dot: COLORS.slateDot,
       label: "Platinum",
     };
+  }
+  if (tier === "master") {
+    return { bg: COLORS.slateBg, text: COLORS.slateText, dot: COLORS.slateDot, label: "Master" };
   }
   return {
     bg: COLORS.amberBg,

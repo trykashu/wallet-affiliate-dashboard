@@ -142,8 +142,10 @@ export async function generateStatement(svc: any, payoutId: string): Promise<Sta
 
   // 4. Build StatementData
   const ratePct = commissionRatePct(affiliate.tier, affiliate.custom_commission_rate);
-  const displayTier: "gold" | "platinum" =
-    affiliate.tier === "platinum" ? "platinum" : "gold";
+  const displayTier: "gold" | "platinum" | "master" =
+    affiliate.tier === "platinum" ? "platinum"
+    : affiliate.tier === "master" ? "master"
+    : "gold";
 
   const rowsWithSortKey = earnings.map((e) => {
     const dateRaw = e.transaction_ref ? txnDateMap.get(e.transaction_ref) ?? null : null;

@@ -15,8 +15,9 @@ function currentPeriod(): string {
 }
 
 function computeTier(currentTier: AffiliateTier, volume: number, tierOverride: boolean): AffiliateTier {
-  // Custom tier is manually assigned and never overwritten by volume math.
+  // Custom and master tiers are manually assigned and never overwritten by volume math.
   if (currentTier === "custom") return "custom";
+  if (currentTier === "master") return "master";
   // Sticky promotions: once an affiliate reaches platinum (via volume,
   // override, or manual set), they stay platinum even if volume drops.
   if (currentTier === "platinum") return "platinum";

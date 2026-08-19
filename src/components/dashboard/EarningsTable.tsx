@@ -25,6 +25,7 @@ const TIER_STYLES: Record<AffiliateTier, { label: string; className: string }> =
   gold:     { label: "Gold",     className: "bg-amber-50 text-amber-700 border border-amber-200" },
   platinum: { label: "Platinum", className: "bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 border border-slate-300" },
   custom:   { label: "Custom",   className: "bg-purple-500/10 text-purple-700 border border-purple-500/20" },
+  master:   { label: "Master",   className: "bg-brand-600/10 text-brand-600 border border-brand-600/25" },
 };
 
 const FILTER_OPTIONS: { label: string; value: EarningStatus | "all" }[] = [
