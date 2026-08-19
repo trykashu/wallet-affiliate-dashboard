@@ -1,5 +1,5 @@
 /**
- * Wallet Affiliate tier logic — Gold/Platinum.
+ * Wallet Affiliate tier logic — Gold/Platinum/Custom/Master.
  *
  * Fee structure:
  *   Kashu charges a flat fee on TPV (default 8.5%, configurable to 7.5%).
@@ -38,10 +38,10 @@ export const COMMISSION_RATES: Record<AffiliateTier, number> = {
 
 /**
  * Determine the tier based on total referred transaction volume.
- * NOTE: Only returns 'gold' or 'platinum'. The 'custom' tier is manually
- * assigned and is never derived from volume.
+ * NOTE: Only returns 'gold' or 'platinum'. The 'custom' and 'master' tiers
+ * are manually assigned and never derived from volume.
  */
-export function getTierForVolume(referredVolume: number): Exclude<AffiliateTier, "custom"> {
+export function getTierForVolume(referredVolume: number): Exclude<AffiliateTier, "custom" | "master"> {
   if (referredVolume >= TIER_THRESHOLDS.platinum) return "platinum";
   return "gold";
 }
@@ -64,7 +64,8 @@ export interface CustomCommission {
 /**
  * Calculate the affiliate earning from a transaction.
  *
- * Gold / Platinum: percentage of Kashu's fee (table-driven via COMMISSION_RATES).
+ * Gold / Platinum / Master: percentage of Kashu's fee (table-driven via
+ *                  COMMISSION_RATES).
  * Custom:          must pass `customCommission`; uses partner's rate + basis.
  *                  Without customCommission, returns 0.
  */

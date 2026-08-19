@@ -51,7 +51,7 @@ export default async function AdminPayoutsPage() {
     amount: number;
     transaction_fee_amount: number;
     transaction_ref: string | null;
-    tier_at_earning: "gold" | "platinum" | "custom";
+    tier_at_earning: "gold" | "platinum" | "custom" | "master";
     custom_commission_rate: number | null;
     custom_commission_basis: "tpv" | "kashu_fee" | null;
   };

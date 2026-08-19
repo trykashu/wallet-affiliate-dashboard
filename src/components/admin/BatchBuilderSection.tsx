@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
+import { COMMISSION_RATES } from "@/lib/tier";
 import Money from "./Money";
 import BankPreviewDrawer, { type BankPreview } from "@/components/admin/BankPreviewDrawer";
 
@@ -13,7 +14,7 @@ export interface BatchBuilderEarning {
   cash_collected: number;               // Kashu fee on the underlying txn
   tpv: number;                          // underlying transaction Total Payment Volume
   transaction_date: string | null;      // YYYY-MM-DD or null
-  tier_at_earning: "gold" | "platinum" | "custom";
+  tier_at_earning: "gold" | "platinum" | "custom" | "master";
   custom_commission_rate: number | null;        // e.g. 0.075 for 7.5%
   custom_commission_basis: "tpv" | "kashu_fee" | null;
 }
@@ -48,7 +49,7 @@ interface AffiliateRow {
   tpv: number;               // sum of underlying TPV
   earning_ids: string[];
   /** Dominant tier across this affiliate's earnings in this month; "mixed" if not all the same. */
-  tier: "gold" | "platinum" | "custom" | "mixed";
+  tier: "gold" | "platinum" | "custom" | "master" | "mixed";
   /** Numeric rate as a fraction (e.g. 0.05 = 5%). Null if mixed. */
   rate: number | null;
   /** What the rate applies to. */
@@ -58,6 +59,7 @@ interface AffiliateRow {
 function rateForEarning(e: BatchBuilderEarning): { rate: number; basis: "tpv" | "kashu_fee" } {
   if (e.tier_at_earning === "platinum") return { rate: 0.10, basis: "kashu_fee" };
   if (e.tier_at_earning === "gold")     return { rate: 0.05, basis: "kashu_fee" };
+  if (e.tier_at_earning === "master")   return { rate: COMMISSION_RATES.master, basis: "kashu_fee" };
   // custom
   return {
     rate: e.custom_commission_rate ?? 0,
@@ -75,6 +77,7 @@ function rateLabel(rate: number | null, basis: "tpv" | "kashu_fee" | "mixed" | n
 function tierBadgeClass(tier: AffiliateRow["tier"]): string {
   if (tier === "platinum") return "bg-[var(--ad-surface-2)] text-[var(--ad-text-1)] border-[var(--ad-border-strong)]";
   if (tier === "custom")   return "bg-[var(--ad-accent-soft)] text-[var(--ad-accent-strong)] border-[var(--ad-accent-border)]";
+  if (tier === "master")   return "bg-[rgba(125,211,252,0.10)] text-[#7DD3FC] border-[rgba(125,211,252,0.26)]";
   if (tier === "mixed")    return "bg-[rgba(244,193,82,0.10)] text-[#F4C152] border-[rgba(244,193,82,0.26)]";
   return "bg-[rgba(244,193,82,0.10)] text-[#F4C152] border-[rgba(244,193,82,0.26)]"; // gold default
 }
