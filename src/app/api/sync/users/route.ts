@@ -43,6 +43,7 @@ interface UserRow {
   full_name: string | null;
   email: string | null;
   phone: string | null;
+  sub_affiliate_id: string | null;
   status_slug: FunnelStatusSlug;
   created_at?: string;
 }
@@ -83,6 +84,8 @@ function buildUserRow(
     full_name: (f["Client Name"] as string) || null,
     email: userEmail,
     phone: (f["Phone"] as string) || null,
+    // Sub-affiliate attribution (master partners): trim; blank/missing → null.
+    sub_affiliate_id: ((f["Sub Aff ID"] as string) || "").trim() || null,
     status_slug: statusSlug,
   };
 
