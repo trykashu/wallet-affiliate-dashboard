@@ -4,7 +4,7 @@ import { createClient }        from "@/lib/supabase/server";
 import { isAdminEmail }        from "@/lib/admin";
 import { VIEW_AS_COOKIE, resolveDelegateContext } from "@/lib/affiliate-context";
 import { filterNavForDelegate } from "@/lib/delegates/delegate-nav";
-import AppSidebar              from "@/components/layout/AppSidebar";
+import AppSidebar, { type NavItem } from "@/components/layout/AppSidebar";
 import AutoRefresh             from "@/components/layout/AutoRefresh";
 import RealtimeRefresh         from "@/components/layout/RealtimeRefresh";
 import NotificationBell        from "@/components/layout/NotificationBell";
@@ -172,7 +172,13 @@ export default async function DashboardLayout({
       })()
     : undefined;
 
-  const navItems = filterNavForDelegate([...AFFILIATE_NAV], {
+  const baseNav: NavItem[] = [...AFFILIATE_NAV];
+  if (affiliate.tier === "master") {
+    // Insert Sub-Affiliates right after Users (master-tier only).
+    const usersIdx = baseNav.findIndex((n) => n.href === "/dashboard/users");
+    baseNav.splice(usersIdx + 1, 0, { label: "Sub-Affiliates", href: "/dashboard/sub-affiliates", icon: "chart" });
+  }
+  const navItems = filterNavForDelegate(baseNav, {
     isDelegate,
     canViewEarnings: delegatePerms.canViewEarnings,
     canViewPayouts:  delegatePerms.canViewPayouts,
