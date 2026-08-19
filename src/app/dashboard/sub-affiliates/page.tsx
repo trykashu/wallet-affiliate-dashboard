@@ -15,7 +15,9 @@ export default async function SubAffiliatesPage() {
   if (affiliate.tier !== "master") redirect("/dashboard");
   const showEarnings = !isDelegate || delegatePermissions.canViewEarnings;
 
-  // Fetch the COMPLETE sets — the rollup silently understates if fed a partial roster.
+  // Fetch the full sets (no explicit pagination, matching the users/earnings pages; note
+  // Supabase's default 1000-row response cap applies — revisit with .range() paging if a
+  // master's transactions exceed it, since the rollup silently understates on partial data).
   const [{ data: users }, { data: txns }, { data: earnings }, { data: labels }] = await Promise.all([
     db.from("referred_users")
       .select("id, sub_affiliate_id, status_slug, first_transaction_amount, created_at")

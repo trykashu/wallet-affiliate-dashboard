@@ -16,9 +16,11 @@ export default function SubAffiliateRoster({ rows, showEarnings, canEditLabels }
   const [editing, setEditing] = useState<string | null>(null);
   const [draft, setDraft]     = useState("");
   const [saving, setSaving]   = useState(false);
+  const [error, setError]     = useState<string | null>(null);
 
   async function saveLabel(subId: string) {
     setSaving(true);
+    setError(null);
     try {
       const res = await fetch("/api/sub-affiliates/label", {
         method: "POST",
@@ -28,7 +30,11 @@ export default function SubAffiliateRoster({ rows, showEarnings, canEditLabels }
       if (res.ok) {
         setEditing(null);
         router.refresh();
+      } else {
+        setError("Couldn't save — try again");
       }
+    } catch {
+      setError("Couldn't save — try again");
     } finally {
       setSaving(false);
     }
@@ -85,22 +91,30 @@ export default function SubAffiliateRoster({ rows, showEarnings, canEditLabels }
                     ) : editing === r.subId ? (
                       <form
                         onSubmit={(e) => { e.preventDefault(); saveLabel(r.subId); }}
-                        className="flex items-center gap-2"
+                        className="flex flex-col gap-1"
                       >
-                        <input
-                          autoFocus
-                          value={draft}
-                          onChange={(e) => setDraft(e.target.value)}
-                          maxLength={120}
-                          placeholder="Name this sub-affiliate"
-                          className="input-base rounded-xl text-sm px-2.5 py-1 w-44"
-                        />
-                        <button type="submit" disabled={saving} className="btn-primary text-xs px-2.5 py-1 rounded-xl">
-                          {saving ? "…" : "Save"}
-                        </button>
-                        <button type="button" onClick={() => setEditing(null)} className="text-xs text-brand-400 hover:text-gray-900 transition-colors">
-                          Cancel
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <input
+                            autoFocus
+                            value={draft}
+                            onChange={(e) => setDraft(e.target.value)}
+                            maxLength={120}
+                            placeholder="Name this sub-affiliate"
+                            aria-label="Sub-affiliate label"
+                            className="input-base rounded-xl text-sm px-2.5 py-1 w-44"
+                          />
+                          <button type="submit" disabled={saving} className="btn-primary text-xs px-2.5 py-1 rounded-xl">
+                            {saving ? "…" : "Save"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setEditing(null); setError(null); }}
+                            className="text-xs text-brand-400 hover:text-gray-900 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        {error && <p className="text-xs text-red-600">{error}</p>}
                       </form>
                     ) : (
                       <div className="flex items-center gap-2 min-w-0">
@@ -114,7 +128,7 @@ export default function SubAffiliateRoster({ rows, showEarnings, canEditLabels }
                         </div>
                         {canEditLabels && (
                           <button
-                            onClick={() => { setEditing(r.subId); setDraft(r.label ?? ""); }}
+                            onClick={() => { setEditing(r.subId); setDraft(r.label ?? ""); setError(null); }}
                             className="text-[10px] text-brand-400 hover:text-brand-600 font-medium flex-shrink-0 transition-colors"
                             aria-label={`Edit label for ${r.subId}`}
                           >

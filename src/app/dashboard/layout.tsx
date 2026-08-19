@@ -174,9 +174,10 @@ export default async function DashboardLayout({
 
   const baseNav: NavItem[] = [...AFFILIATE_NAV];
   if (affiliate.tier === "master") {
-    // Insert Sub-Affiliates right after Users (master-tier only).
+    // Insert Sub-Affiliates right after Users (master-tier only); append at end if Users is ever removed.
     const usersIdx = baseNav.findIndex((n) => n.href === "/dashboard/users");
-    baseNav.splice(usersIdx + 1, 0, { label: "Sub-Affiliates", href: "/dashboard/sub-affiliates", icon: "chart" });
+    const idx = usersIdx >= 0 ? usersIdx + 1 : baseNav.length;
+    baseNav.splice(idx, 0, { label: "Sub-Affiliates", href: "/dashboard/sub-affiliates", icon: "chart" });
   }
   const navItems = filterNavForDelegate(baseNav, {
     isDelegate,
