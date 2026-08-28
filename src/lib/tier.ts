@@ -85,3 +85,51 @@ export function calculateEarning(
   const kashuFee = calculateKashuFee(tpv, feeRate);
   return Math.round(kashuFee * getCommissionRate(tier) * 100) / 100;
 }
+
+/**
+ * Resolve the fee Kashu actually collected on a transaction.
+ *
+ * Since 2026-08-28 affiliate commission rides real collected revenue rather
+ * than the funnel list price. The authoritative per-deal figure is the Airtable
+ * "User Transactions"."Actual Fee Assessed" (Softpoint total − base) — the same
+ * value the nightly audit stamps onto Partner Transaction Log."Revenue
+ * Collected". Verified equal on every comparable row.
+ *
+ * Mirrors the PTL "Cash Collected" formula:
+ *   IF({Revenue Collected} > 0, {Revenue Collected}, Amount × Funnel %)
+ *
+ * The funnel calculation is ONLY a fallback, for transactions newer than the
+ * last nightly audit and for Payova deals the Kashu-only audit cannot see.
+ */
+export function resolveCollectedFee(
+  actualFeeAssessed: number | null | undefined,
+  tpv: number,
+  funnelPercent: number | null | undefined,
+): number {
+  const actual = Number(actualFeeAssessed);
+  if (Number.isFinite(actual) && actual > 0) return actual;
+  const pct = Number(funnelPercent);
+  const rate = Number.isFinite(pct) && pct > 0 ? pct / 100 : KASHU_FEE_RATES.default;
+  return Math.round(tpv * rate * 100) / 100;
+}
+
+/**
+ * Affiliate earning from an already-resolved collected fee.
+ *
+ * Prefer this over calculateEarning(), which derives the fee from list price
+ * and therefore overstates commission on any discounted or overridden deal.
+ * `tpv` is still required because a custom partner may be paid on TPV basis.
+ */
+export function calculateEarningFromFee(
+  collectedFee: number,
+  tpv: number,
+  tier: AffiliateTier,
+  customCommission?: CustomCommission,
+): number {
+  if (tier === "custom") {
+    if (!customCommission) return 0;
+    const base = customCommission.basis === "tpv" ? tpv : collectedFee;
+    return Math.round(base * customCommission.rate * 100) / 100;
+  }
+  return Math.round(collectedFee * getCommissionRate(tier) * 100) / 100;
+}

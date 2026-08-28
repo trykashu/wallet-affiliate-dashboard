@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords } from "@/lib/airtable";
-import { calculateEarning, calculateKashuFee, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
+import { calculateEarningFromFee, resolveCollectedFee, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
 import { dedupAirtableTransactions, decideEarningAction } from "@/lib/sync/anneal-transactions";
 import { buildResolverIndex, resolveReferredUser } from "@/lib/sync/referred-user-match";
 import type { AffiliateTier, FunnelStatusSlug } from "@/types/database";
@@ -151,6 +151,9 @@ export async function GET() {
 
     const rows: TxnRow[] = [];
     let skippedNoReferrer = 0;
+    // Airtable record id -> fee Kashu actually collected (Softpoint), with the
+    // funnel price as fallback. Commission rides this, never the list price.
+    const collectedFeeByRecord = new Map<string, number>();
     let matchedByContactId = 0;
     let matchedByEmail = 0;
     let unresolvedReferredUser = 0;
@@ -169,6 +172,7 @@ export async function GET() {
       date: string | null;
       currentStatusSlug: FunnelStatusSlug;
       airtableRecordId: string;
+      collectedFee: number;
     }[] = [];
     // Track first-transaction updates for referred_users
     const firstTxnUpdates: {
@@ -178,6 +182,7 @@ export async function GET() {
       date: string | null;
       currentStatusSlug: FunnelStatusSlug;
       firstTxnAlreadyRecorded: boolean;
+      collectedFee: number;
     }[] = [];
 
     for (const record of records) {
@@ -233,6 +238,10 @@ export async function GET() {
           ? NaN
           : Number(String(funnelRaw).replace(/[^0-9.\-]/g, ""));
       const funnelPercent = Number.isFinite(funnelParsed) ? funnelParsed : null;
+      collectedFeeByRecord.set(
+        record.id,
+        resolveCollectedFee(Number(fields["Actual Fee Assessed"]), amount, funnelPercent),
+      );
 
       // Self-referral check: flag if the transaction email matches the affiliate's email
       const affiliateRecord = affiliateById.get(affiliateId);
@@ -303,6 +312,7 @@ export async function GET() {
               date: dateTxn,
               currentStatusSlug: referredUser.status_slug,
               airtableRecordId: record.id,
+              collectedFee: collectedFeeByRecord.get(record.id) ?? 0,
             });
           }
 
@@ -328,6 +338,7 @@ export async function GET() {
                 date: dateTxn,
                 currentStatusSlug: referredUser.status_slug,
                 firstTxnAlreadyRecorded: !!referredUser.first_transaction_at,
+                collectedFee: collectedFeeByRecord.get(record.id) ?? 0,
               });
             }
           }
@@ -494,12 +505,18 @@ export async function GET() {
         if (!row) continue;
         if (row.amount <= 0 || row.self_referral) continue;
 
-        const expectedKashuFee = calculateKashuFee(row.amount);
+        const expectedKashuFee = collectedFeeByRecord.get(e.transaction_ref) ?? 0;
+        if (expectedKashuFee <= 0) continue; // no basis to re-derive against
         const customCommission =
           e.tier_at_earning === "custom" && e.custom_commission_rate !== null && e.custom_commission_basis
             ? { rate: Number(e.custom_commission_rate), basis: e.custom_commission_basis }
             : undefined;
-        const expectedAmount = calculateEarning(row.amount, e.tier_at_earning, "default", customCommission);
+        const expectedAmount = calculateEarningFromFee(
+          expectedKashuFee,
+          row.amount,
+          e.tier_at_earning,
+          customCommission,
+        );
 
         const amountDrift = Math.abs(Number(e.amount) - expectedAmount) > 0.005;
         const feeDrift = Math.abs(Number(e.transaction_fee_amount) - expectedKashuFee) > 0.005;
@@ -596,7 +613,7 @@ export async function GET() {
       // Otherwise we'd clobber the original first-txn metadata with whatever
       // transaction happens to come through the sync at the moment we self-heal.
       if (!update.firstTxnAlreadyRecorded) {
-        const kashuFee = calculateKashuFee(update.amount); // 8.5% of TPV
+        const kashuFee = update.collectedFee; // fee actually collected
         updatePayload.first_transaction_amount = update.amount;
         updatePayload.first_transaction_fee = kashuFee;
         updatePayload.first_transaction_at = update.date || new Date().toISOString();
@@ -661,8 +678,13 @@ export async function GET() {
         tier === "custom" && aff?.custom_commission_rate !== null && aff?.custom_commission_rate !== undefined && aff?.custom_commission_basis
           ? { rate: aff.custom_commission_rate, basis: aff.custom_commission_basis }
           : undefined;
-      const earningAmount = calculateEarning(eligible.amount, tier, "default", customCommission);
-      const kashuFeeForEarning = calculateKashuFee(eligible.amount);
+      const kashuFeeForEarning = eligible.collectedFee;
+      const earningAmount = calculateEarningFromFee(
+        kashuFeeForEarning,
+        eligible.amount,
+        tier,
+        customCommission,
+      );
 
       const earningRow: Record<string, unknown> = {
         affiliate_id: eligible.affiliateId,
