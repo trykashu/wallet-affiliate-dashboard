@@ -13,21 +13,15 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords, type AirtableRecord } from "@/lib/airtable";
-import { preserveAdvancedStage } from "@/lib/funnel-stage";
+import { preserveAdvancedStage, AIRTABLE_STATUS_MAP } from "@/lib/funnel-stage";
 import type { FunnelStatusSlug } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
 const BATCH_SIZE = 50;
 
-const STATUS_MAP: Record<string, FunnelStatusSlug> = {
-  Waitlist: "waitlist",
-  "Booked Call": "booked_call",
-  "Sent Onboarding": "sent_onboarding",
-  "Signed Up": "signed_up",
-  "Run Volume": "transaction_run",
-};
-
+// Status mapping lives in @/lib/funnel-stage (AIRTABLE_STATUS_MAP) so it stays
+// covered by tests — an unmapped status silently degrades to DEFAULT_STATUS.
 const DEFAULT_STATUS: FunnelStatusSlug = "signed_up";
 
 /** Extract first value from a lookup array field, or return as string. */
@@ -76,7 +70,7 @@ function buildUserRow(
 
   // Best-effort status mapping — default to signed_up if unknown
   const statusRaw = (f["Status"] as string) || null;
-  const statusSlug = statusRaw ? (STATUS_MAP[statusRaw] ?? DEFAULT_STATUS) : DEFAULT_STATUS;
+  const statusSlug = statusRaw ? (AIRTABLE_STATUS_MAP[statusRaw] ?? DEFAULT_STATUS) : DEFAULT_STATUS;
 
   const row: UserRow = {
     wallet_user_id: walletUserId,

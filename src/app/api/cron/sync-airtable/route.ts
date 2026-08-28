@@ -38,6 +38,9 @@ export async function GET(request: NextRequest) {
 
   const baseUrl = getBaseUrl();
   const results: Record<string, unknown> = {};
+  // Steps 3 and 4 continue on failure, but a failure must still be VISIBLE:
+  // returning 200 here is how a dead HighLevel sync went unnoticed for months.
+  const failedSteps: string[] = [];
 
   try {
     // Step 1: Sync affiliates first (users depend on affiliate lookup)
@@ -76,8 +79,9 @@ export async function GET(request: NextRequest) {
     results.highlevel = highlevelData;
 
     if (!highlevelRes.ok) {
-      // HighLevel sync failure is non-fatal — log but continue
+      // Non-fatal for the run, but recorded so the cron reports failure.
       console.error("[cron/sync-airtable] HighLevel sync failed:", highlevelData);
+      failedSteps.push("highlevel");
     }
 
     // Step 4: Sync transactions
@@ -88,8 +92,18 @@ export async function GET(request: NextRequest) {
     results.transactions = transactionsData;
 
     if (!transactionsRes.ok) {
-      // Transactions sync failure is non-fatal — log but continue
+      // Non-fatal for the run, but recorded so the cron reports failure.
       console.error("[cron/sync-airtable] Transactions sync failed:", transactionsData);
+      failedSteps.push("transactions");
+    }
+
+    if (failedSteps.length > 0) {
+      // Non-2xx so the failure surfaces in Vercel cron monitoring instead of
+      // being buried in logs. Earlier steps already committed their work.
+      return NextResponse.json(
+        { success: false, failed_steps: failedSteps, ...results },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({

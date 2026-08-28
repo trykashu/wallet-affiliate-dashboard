@@ -2,8 +2,13 @@
  * GET /api/sync/highlevel
  *
  * Fetches all opportunities from the HighLevel User Pipeline, filters for
- * those with the "MFC Affiliate" custom field populated, matches them to
- * affiliates by business_name or agent_name, and upserts referred_users.
+ * those with the "Referrer" custom field populated, matches them to affiliates
+ * by attribution_id, and upserts referred_users.
+ *
+ * NOTE: attribution lives in the "Referrer" field, which holds the affiliate's
+ * attribution_id (e.g. "8RWS4OA2IRDmp4"). Do NOT use "MFC Affiliate"
+ * (bY9JdohKL671KIoECxTV) — it holds free-text business names that match no
+ * attribution_id, and is not a reliable attribution source.
  *
  * Also logs funnel events for stage transitions and creates earnings
  * for users at transaction_run stage or later.
@@ -12,28 +17,19 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { calculateEarning, calculateKashuFee } from "@/lib/tier";
-import { preserveAdvancedStage } from "@/lib/funnel-stage";
+import { preserveAdvancedStage, GHL_STAGE_MAP } from "@/lib/funnel-stage";
 import type { FunnelStatusSlug, AffiliateTier } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
 const BATCH_SIZE = 50;
-const MFC_AFFILIATE_FIELD_ID = "bY9JdohKL671KIoECxTV";
+/** Opportunity custom field "Referrer" — holds the affiliate attribution_id. */
+const REFERRER_FIELD_ID = "MM9Q4dVku39BJD3rY3MB";
 const PIPELINE_ID = "zNiCun5Y5koEsWmN9bDo";
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
 const PAGE_LIMIT = 100;
 
-const STAGE_MAP: Record<string, FunnelStatusSlug> = {
-  "646161a6-5828-45fb-aa54-afe4a934ff01": "waitlist",          // Waitlist
-  "f3c920bf-e4cf-484b-8668-78a5d4c32b98": "booked_call",       // Booked Call
-  "e401618b-380a-4251-ad29-af83ca4763f1": "sent_onboarding",   // Sent Onboarding
-  "4dfbdc90-34bf-4fda-98bf-bd132d3e6ccb": "signed_up",         // Signed Up
-  "e6dbdff4-e956-4e9d-bf0e-ec6ac650021f": "transaction_run",   // TXN Run
-  "0d45590d-a3ca-4007-b4c1-e0e5e0593db0": "funds_in_wallet",   // Funds in Wallet
-  "c31b2be3-ae36-4ea1-b79c-bb4150dbe9f9": "ach_initiated",     // ACH Initiated
-  "cbe0c9e9-52a2-4ce3-a5f2-f881812fd11b": "funds_in_bank",     // Completed
-};
 
 // Stages at or after transaction_run (eligible for earnings)
 const EARNING_ELIGIBLE_STAGES: Set<FunnelStatusSlug> = new Set([
@@ -123,10 +119,10 @@ async function fetchAllOpportunities(
   return { opportunities, apiCalls };
 }
 
-/** Extract the MFC Affiliate field value from an opportunity's custom fields. */
-function getMfcAffiliate(opp: GHLOpportunity): string | null {
+/** Extract the Referrer (affiliate attribution_id) from an opportunity. */
+function getReferrerCode(opp: GHLOpportunity): string | null {
   if (!opp.customFields) return null;
-  const field = opp.customFields.find((f) => f.id === MFC_AFFILIATE_FIELD_ID);
+  const field = opp.customFields.find((f) => f.id === REFERRER_FIELD_ID);
   return field?.fieldValueString?.trim() || null;
 }
 
@@ -145,12 +141,12 @@ export async function GET() {
     // Step 1: Fetch all opportunities from GHL
     const { opportunities, apiCalls } = await fetchAllOpportunities(apiKey, locationId);
 
-    // Step 2: Filter for opportunities with MFC Affiliate populated
-    const withAffiliate: { opp: GHLOpportunity; mfcAffiliate: string }[] = [];
+    // Step 2: Filter for opportunities with a Referrer code populated
+    const withAffiliate: { opp: GHLOpportunity; referrerCode: string }[] = [];
     for (const opp of opportunities) {
-      const mfc = getMfcAffiliate(opp);
-      if (mfc) {
-        withAffiliate.push({ opp, mfcAffiliate: mfc });
+      const code = getReferrerCode(opp);
+      if (code) {
+        withAffiliate.push({ opp, referrerCode: code });
       }
     }
 
@@ -159,17 +155,14 @@ export async function GET() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: affiliates } = await (db as any)
       .from("affiliates")
-      .select("id, business_name, agent_name, tier");
+      .select("id, attribution_id, tier");
 
-    const affiliatesByBiz = new Map<string, { id: string; tier: AffiliateTier }>();
-    const affiliatesByName = new Map<string, { id: string; tier: AffiliateTier }>();
-
+    // attribution_id → affiliate. Keyed case-insensitively so a transcription
+    // variant still resolves; codes are otherwise matched verbatim.
+    const affiliatesByCode = new Map<string, { id: string; tier: AffiliateTier }>();
     for (const a of affiliates || []) {
-      if (a.business_name) {
-        affiliatesByBiz.set(a.business_name.toLowerCase(), { id: a.id, tier: a.tier });
-      }
-      if (a.agent_name) {
-        affiliatesByName.set(a.agent_name.toLowerCase(), { id: a.id, tier: a.tier });
+      if (a.attribution_id) {
+        affiliatesByCode.set(a.attribution_id.trim().toLowerCase(), { id: a.id, tier: a.tier });
       }
     }
 
@@ -191,21 +184,30 @@ export async function GET() {
     const affiliateTiers: Record<string, AffiliateTier> = {};
     let unmatched = 0;
     const unmatchedNames: string[] = [];
+    let unmappedStages = 0;
+    const unmappedStageIds: string[] = [];
 
-    for (const { opp, mfcAffiliate } of withAffiliate) {
-      const key = mfcAffiliate.toLowerCase();
-      const match = affiliatesByBiz.get(key) || affiliatesByName.get(key);
+    for (const { opp, referrerCode } of withAffiliate) {
+      const match = affiliatesByCode.get(referrerCode.toLowerCase());
 
       if (!match) {
         unmatched++;
-        if (!unmatchedNames.includes(mfcAffiliate)) {
-          unmatchedNames.push(mfcAffiliate);
+        if (!unmatchedNames.includes(referrerCode)) {
+          unmatchedNames.push(referrerCode);
         }
         continue;
       }
 
-      const stageSlug = STAGE_MAP[opp.pipelineStageId];
-      if (!stageSlug) continue; // Unknown stage, skip
+      const stageSlug = GHL_STAGE_MAP[opp.pipelineStageId];
+      if (!stageSlug) {
+        // A stage with no mapping silently discards an attributed referral —
+        // surface it instead of dropping it on the floor.
+        unmappedStages++;
+        if (!unmappedStageIds.includes(opp.pipelineStageId)) {
+          unmappedStageIds.push(opp.pipelineStageId);
+        }
+        continue;
+      }
 
       const contactId = opp.contact?.id || opp.contactId;
       const contactName = opp.contact?.name || opp.name;
@@ -370,10 +372,12 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       total_fetched: opportunities.length,
-      with_mfc_affiliate: withAffiliate.length,
+      with_referrer: withAffiliate.length,
       matched_to_affiliate: rows.length,
       unmatched,
-      unmatched_names: unmatchedNames.length > 0 ? unmatchedNames : undefined,
+      unmatched_codes: unmatchedNames.length > 0 ? unmatchedNames : undefined,
+      skipped_unmapped_stage: unmappedStages > 0 ? unmappedStages : undefined,
+      unmapped_stage_ids: unmappedStageIds.length > 0 ? unmappedStageIds : undefined,
       upserted,
       funnel_events_created: funnelEventsCreated,
       earnings_created: earningsCreated,
