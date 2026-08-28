@@ -1,11 +1,11 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildAnnealPlan, isUnpaidStatus, type MonthAudit } from "./ptl-audit";
+import { auditPtlVsUt, buildAnnealPlan, isUnpaidStatus, type ATRecord, type MonthAudit } from "./ptl-audit";
 
 function month(over: Partial<MonthAudit> = {}): MonthAudit {
   return {
     month: "2026-05", ptl_count: 0, ptl_sum: 0, ut_match_sum: 0,
-    orphans: [], drifts: [], missing: [], ...over,
+    orphans: [], drifts: [], missing: [], unattributed: [], ...over,
   };
 }
 
@@ -66,4 +66,45 @@ test("buildAnnealPlan: paid drift/orphan never in action sets", () => {
   assert.equal(plan.toCorrect.length, 0);
   assert.equal(plan.skipped.orphans.length, 1);
   assert.equal(plan.skipped.paidDrifts.length, 1);
+});
+
+// Regression: a Transfer In whose Referrer lookup is blank used to be skipped
+// outright by the UT pass, so the audit reported a clean bill of health while
+// 835 transactions — and every commission on them — were invisible. Blank
+// attribution is itself the finding.
+test("auditPtlVsUt: blank-Referrer Transfer Ins are reported, not skipped", () => {
+  const ut: ATRecord[] = [
+    { id: "recBlank", createdTime: "", fields: {
+      "Transaction Type": "Transfer In", "Amount": 10000,
+      "Transaction ID": "TXN-BLANK", "Date Txn Started": "2026-07-04T00:00:00.000Z",
+      "Email": ["user@example.com"],
+    } },
+    { id: "recOk", createdTime: "", fields: {
+      "Transaction Type": "Transfer In", "Amount": 500, "Referrer": ["SrA330bKOH4FYf"],
+      "Transaction ID": "TXN-OK", "Date Txn Started": "2026-07-05T00:00:00.000Z",
+    } },
+  ];
+  const months = auditPtlVsUt([], ut);
+  const jul = months.find((m) => m.month === "2026-07");
+  assert.ok(jul, "expected a 2026-07 bucket");
+
+  assert.equal(jul.unattributed.length, 1, "blank-Referrer row must surface");
+  assert.equal(jul.unattributed[0].transaction_id, "TXN-BLANK");
+  assert.equal(jul.unattributed[0].amount, 10000);
+
+  // The attributed one is a normal "missing from PTL" finding, not unattributed.
+  assert.equal(jul.missing.length, 1);
+  assert.equal(jul.missing[0].transaction_id, "TXN-OK");
+});
+
+test("auditPtlVsUt: non-Transfer-In rows are not counted as unattributed", () => {
+  const ut: ATRecord[] = [
+    { id: "recRefund", createdTime: "", fields: {
+      "Transaction Type": "Refund", "Amount": 100,
+      "Transaction ID": "TXN-REF", "Date Txn Started": "2026-07-04T00:00:00.000Z",
+    } },
+  ];
+  const months = auditPtlVsUt([], ut);
+  const jul = months.find((m) => m.month === "2026-07");
+  assert.equal(jul?.unattributed.length ?? 0, 0);
 });

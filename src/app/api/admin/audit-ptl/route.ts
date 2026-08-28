@@ -33,9 +33,11 @@ export async function GET() {
         acc.orphans += m.orphans.length;
         acc.drifts += m.drifts.length;
         acc.missing += m.missing.length;
+        acc.unattributed += m.unattributed.length;
+        acc.unattributed_amount += m.unattributed.reduce((t, r) => t + r.amount, 0);
         return acc;
       },
-      { orphans: 0, drifts: 0, missing: 0 },
+      { orphans: 0, drifts: 0, missing: 0, unattributed: 0, unattributed_amount: 0 },
     );
     return NextResponse.json({
       ok: true,

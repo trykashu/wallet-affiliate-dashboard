@@ -9,6 +9,12 @@
  *   - missing:  UT Transfer In rows with a referrer that should be in PTL
  *               but aren't. Excludes Payova (whitelabel — separate flow)
  *               and 1ATEST (test attribution).
+ *   - unattributed: UT Transfer In rows whose Referrer lookup is EMPTY. These
+ *               can never appear in `missing` (there is no referrer to match on)
+ *               and were previously skipped silently — which is how a broken
+ *               upstream Referrer mapping hid 835 transactions, and every
+ *               commission owed on them, behind a clean-looking audit.
+ *               Blank attribution is itself the finding.
  */
 
 export interface ATRecord {
@@ -41,6 +47,14 @@ export interface MissingRow {
   transaction_date: string;
 }
 
+export interface UnattributedRow {
+  ut_id: string;
+  user_email: string;
+  amount: number;
+  transaction_id: string;
+  transaction_date: string;
+}
+
 export interface MonthAudit {
   month: string;                 // "2026-05"
   ptl_count: number;
@@ -49,6 +63,8 @@ export interface MonthAudit {
   orphans: OrphanRow[];
   drifts: DriftRow[];
   missing: MissingRow[];
+  /** Transfer Ins with no Referrer at all — invisible to `missing` by construction. */
+  unattributed: UnattributedRow[];
 }
 
 export interface AuditConfig {
@@ -87,7 +103,7 @@ export function auditPtlVsUt(
   function getBucket(month: string): MonthAudit {
     let b = months.get(month);
     if (!b) {
-      b = { month, ptl_count: 0, ptl_sum: 0, ut_match_sum: 0, orphans: [], drifts: [], missing: [] };
+      b = { month, ptl_count: 0, ptl_sum: 0, ut_match_sum: 0, orphans: [], drifts: [], missing: [], unattributed: [] };
       months.set(month, b);
     }
     return b;
@@ -143,9 +159,22 @@ export function auditPtlVsUt(
   for (const u of utRecords) {
     const type = (u.fields["Transaction Type"] as string | undefined) ?? "";
     if (type !== "Transfer In") continue;
+    const txnDate = (u.fields["Date Txn Started"] as string | undefined) ?? "";
     const refArr = u.fields["Referrer"] as string[] | undefined;
     const ref = refArr?.[0]?.trim();
-    if (!ref) continue;
+    if (!ref) {
+      // No attribution at all. Record it rather than dropping it — a blank
+      // Referrer means the commission pipeline never even saw this transaction.
+      const emails = u.fields["Email"] as string[] | undefined;
+      getBucket(getMonth(txnDate) ?? "unknown").unattributed.push({
+        ut_id: u.id,
+        user_email: emails?.[0] ?? "",
+        amount: Number(u.fields["Amount"]) || 0,
+        transaction_id: ((u.fields["Transaction ID"] as string | undefined) ?? "").trim(),
+        transaction_date: txnDate,
+      });
+      continue;
+    }
     if (config.excludedReferrers.has(ref)) continue;
     const txnId = ((u.fields["Transaction ID"] as string | undefined) ?? "").trim();
     if (!txnId) continue;
