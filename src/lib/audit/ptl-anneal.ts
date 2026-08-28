@@ -27,14 +27,35 @@ export function buildPtlFieldsFromUt(
     "Partner Match": [affiliateRecordId],
     "User Email": emailArr?.[0] ?? null,
   };
-  const last4Num = Number(last4Raw);
-  if (last4Raw !== undefined && last4Raw !== null && last4Raw !== "" && !Number.isNaN(last4Num)) {
-    fields["Last 4 of Card"] = last4Num;
+  // "Last 4 of Card" is singleLineText in the PTL. It must be written as a
+  // string: a Number is rejected outright (422) and would strip leading zeros.
+  // Upstream stores this either bare ("8835") or decorated ("AMEX •••• 1009"),
+  // so take the trailing digit run and keep it verbatim.
+  const last4Str = last4Raw === undefined || last4Raw === null ? "" : String(last4Raw).trim();
+  const last4Match = last4Str.match(/(\d{1,4})\s*$/);
+  if (last4Match) {
+    fields["Last 4 of Card"] = last4Match[1];
   }
   if (ut.fields["Card Issuer"]) fields["Card Issuer"] = ut.fields["Card Issuer"];
 
   // Strip nulls/empties — Airtable rejects null on some types.
   return Object.fromEntries(Object.entries(fields).filter(([, v]) => v !== null && v !== ""));
+}
+
+/**
+ * A partner never earns commission on their own deposit. Mirrors the
+ * self_referral rule in /api/sync/transactions, which excludes these from both
+ * affiliate volume and earnings — without it the PTL booked them as "Owed".
+ * Airtable returns lookup fields as arrays, so accept either shape.
+ */
+export function isSelfReferral(userEmail: unknown, agentEmail: unknown): boolean {
+  const norm = (v: unknown): string => {
+    const s = Array.isArray(v) ? v[0] : v;
+    return typeof s === "string" ? s.trim().toLowerCase() : "";
+  };
+  const u = norm(userEmail);
+  const a = norm(agentEmail);
+  return u !== "" && a !== "" && u === a;
 }
 
 const PTL_TABLE = "tbluxSVVoAuhEWLd7";
@@ -88,9 +109,15 @@ export async function createPtlRowFromUt(
   const affFilter = encodeURIComponent(`{Attribution ID}='${esc(referrer)}'`);
   const affRes = await fetch(`${AT}/${affiliateBase}/${AFFILIATES_TABLE}?filterByFormula=${affFilter}&maxRecords=1`, { headers: auth, cache: "no-store" });
   if (!affRes.ok) throw new AnnealError(`Affiliates fetch ${affRes.status}`, 502);
-  const affJ = (await affRes.json()) as { records?: Array<{ id: string }> };
-  const affiliateRecordId = affJ.records?.[0]?.id;
+  const affJ = (await affRes.json()) as { records?: Array<{ id: string; fields?: Record<string, unknown> }> };
+  const affiliateRecord = affJ.records?.[0];
+  const affiliateRecordId = affiliateRecord?.id;
   if (!affiliateRecordId) throw new AnnealError(`No Kashu Affiliates row for referrer ${referrer}`, 404);
+
+  // Refuse self-funded transactions: the partner is the customer here.
+  if (isSelfReferral(ut.fields["Email"], affiliateRecord?.fields?.["Agent Email"])) {
+    throw new AnnealError(`Self-referral for ${referrer} — partner cannot earn on their own deposit`, 422);
+  }
 
   const cleaned = buildPtlFieldsFromUt(ut, affiliateRecordId);
   const createRes = await fetch(`${AT}/${affiliateBase}/${PTL_TABLE}`, {

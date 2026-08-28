@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildPtlFieldsFromUt } from "./ptl-anneal";
+import { buildPtlFieldsFromUt, isSelfReferral } from "./ptl-anneal";
 
 const utRow = {
   id: "utX",
@@ -28,7 +28,7 @@ test("buildPtlFieldsFromUt: maps core fields and template defaults", () => {
   assert.equal(f["Transaction Date"], "2026-05-01");
   assert.deepEqual(f["Partner Match"], ["recAff1"]);
   assert.equal(f["User Email"], "user@x.com");
-  assert.equal(f["Last 4 of Card"], 1234);
+  assert.equal(f["Last 4 of Card"], "1234"); // text, not Number — see regression test below
   assert.equal(f["Card Issuer"], "Visa");
 });
 
@@ -51,4 +51,48 @@ test("buildPtlFieldsFromUt: drops non-numeric Last 4 (NaN guard)", () => {
     "recAff3",
   );
   assert.equal("Last 4 of Card" in f, false);
+});
+
+// Regression: "Last 4 of Card" is singleLineText in the PTL, but the builder
+// coerced it with Number(). That rejected every numeric value with a 422
+// ("cannot accept the provided value"), destroyed leading zeros ("0318" -> 318),
+// and silently dropped the 635 rows stored as "AMEX •••• 1009".
+test("buildPtlFieldsFromUt: Last 4 is written as text, digits extracted", () => {
+  const base = { id: "recX", createdTime: "", fields: {} as Record<string, unknown> };
+  const f = (last4: unknown) =>
+    buildPtlFieldsFromUt({ ...base, fields: { "Transaction ID": "T1", "Amount": 100, "Last 4": last4 } }, "recAff");
+
+  assert.equal(f("8835")["Last 4 of Card"], "8835");
+  assert.equal(f(8835)["Last 4 of Card"], "8835");
+  assert.equal(f("0318")["Last 4 of Card"], "0318", "leading zero must survive");
+  assert.equal(f("AMEX •••• 1009")["Last 4 of Card"], "1009");
+  assert.equal(f("VISA •••• 3561")["Last 4 of Card"], "3561");
+  assert.equal(f("MASTERCARD •••• 2279")["Last 4 of Card"], "2279");
+});
+
+test("buildPtlFieldsFromUt: omits Last 4 when there are no digits", () => {
+  const base = { id: "recX", createdTime: "", fields: {} as Record<string, unknown> };
+  const f = (last4: unknown) =>
+    buildPtlFieldsFromUt({ ...base, fields: { "Transaction ID": "T1", "Amount": 100, "Last 4": last4 } }, "recAff");
+
+  for (const v of ["", null, undefined, "N/A", "   "]) {
+    assert.equal("Last 4 of Card" in f(v), false, `expected omission for ${JSON.stringify(v)}`);
+  }
+});
+
+// A partner cannot earn commission on their own deposit. /api/sync/transactions
+// already enforces this (self_referral flag, excluded from volume and earnings),
+// but the PTL path had no equivalent guard, so self-funded transactions were
+// booked as "Owed" — 44 rows, $719.12, before this was added.
+test("isSelfReferral: matches on normalised email", () => {
+  assert.equal(isSelfReferral("Agent@Kashu.com ", "agent@kashu.com"), true);
+  assert.equal(isSelfReferral(["agent@kashu.com"], "agent@kashu.com"), true);
+  assert.equal(isSelfReferral("agent@kashu.com", "someone@else.com"), false);
+});
+
+test("isSelfReferral: absent emails are never a self-referral", () => {
+  assert.equal(isSelfReferral(undefined, "agent@kashu.com"), false);
+  assert.equal(isSelfReferral("agent@kashu.com", undefined), false);
+  assert.equal(isSelfReferral("", ""), false);
+  assert.equal(isSelfReferral(null, null), false);
 });
