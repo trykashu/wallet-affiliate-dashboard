@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { createServiceClient } from "@/lib/supabase/service";
-import { calculateEarning, calculateKashuFee, getTierForVolume } from "@/lib/tier";
+import { resolveCollectedFee, getTierForVolume } from "@/lib/tier";
 import {
   checkUserMilestone,
-  checkEarningsMilestone,
   checkVolumeMilestone,
 } from "@/lib/milestones";
 import type { FunnelStatusSlug } from "@/types/database";
@@ -203,8 +202,9 @@ async function handleTransactionCompleted(
   }
 
   const transactionAmount = data.transaction_amount ?? 0;
-  const kashuFee = calculateKashuFee(transactionAmount); // 8.5% of TPV
-  const earningAmount = calculateEarning(transactionAmount, affiliate.tier);
+  // No Softpoint fee is available at webhook time, so this is the funnel-price
+  // fallback. /api/sync/transactions replaces it with the actual collected fee.
+  const kashuFee = resolveCollectedFee(null, transactionAmount, null);
 
   // Update referred_user with first transaction data
   await db
@@ -217,15 +217,15 @@ async function handleTransactionCompleted(
     })
     .eq("id", referredUser.id);
 
-  // Insert earning (status: pending)
-  await db.from("earnings").insert({
-    affiliate_id: affiliate.id,
-    referred_user_id: referredUser.id,
-    amount: earningAmount,
-    transaction_fee_amount: kashuFee,
-    tier_at_earning: affiliate.tier,
-    status: "pending" as const,
-  });
+  // Deliberately does NOT create an earning.
+  //
+  // Earnings are owned by /api/sync/transactions, which keys each one to a real
+  // Airtable transaction via earnings.transaction_ref (unique-indexed) and
+  // prices it on the fee Kashu actually collected, banded against cumulative
+  // referred volume. This webhook has neither: no transaction id to key on, and
+  // no Softpoint fee yet. An earning written here would carry a NULL
+  // transaction_ref, which slips past the partial unique index and would be
+  // double-counted when the sync later creates the properly-keyed row.
 
   // Update affiliate's referred_volume_total
   const previousVolume = affiliate.referred_volume_total;
@@ -265,36 +265,10 @@ async function handleTransactionCompleted(
     });
   }
 
-  // Check earnings milestone — get total earnings for affiliate
-  const { data: earningsAgg } = await db
-    .from("earnings")
-    .select("amount")
-    .eq("affiliate_id", affiliate.id);
-
-  if (earningsAgg) {
-    const totalEarnings = earningsAgg.reduce((sum, e) => sum + e.amount, 0);
-    const previousTotal = totalEarnings - earningAmount;
-    const earningsMilestone = checkEarningsMilestone(
-      totalEarnings,
-      previousTotal
-    );
-    if (earningsMilestone) {
-      await db.from("notifications").insert({
-        affiliate_id: affiliate.id,
-        type: "system_announcement" as const,
-        title: earningsMilestone.title,
-        body: earningsMilestone.body,
-      });
-    }
-  }
-
-  // Insert earning notification
-  await db.from("notifications").insert({
-    affiliate_id: affiliate.id,
-    type: "earning_credited" as const,
-    title: "New earning from referral transaction",
-    body: `You earned $${earningAmount.toFixed(2)} from a referred user's transaction of $${transactionAmount.toFixed(2)}.`,
-  });
+  // Earning-credited and earnings-milestone notifications are intentionally not
+  // sent here: no earning is created at webhook time, so announcing one would be
+  // premature and the milestone total would be unchanged. Both belong with
+  // earning creation in /api/sync/transactions.
 }
 
 async function handleWalletFunded(

@@ -10,9 +10,10 @@
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords } from "@/lib/airtable";
-import { calculateEarningFromFee, resolveCollectedFee, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
+import { resolveCollectedFee, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
 import { dedupAirtableTransactions, decideEarningAction } from "@/lib/sync/anneal-transactions";
 import { buildResolverIndex, resolveReferredUser } from "@/lib/sync/referred-user-match";
+import { buildCumulativeVolumeIndex, calculateBandedEarning } from "@/lib/commission-bands";
 import type { AffiliateTier, FunnelStatusSlug } from "@/types/database";
 
 export const dynamic = "force-dynamic";
@@ -476,6 +477,21 @@ export async function GET() {
       transactionsDeleted = deleted?.length ?? 0;
     }
 
+    // Commission is MARGINAL: 5% of the collected fee on referred volume up to
+    // $100k, 10% beyond it, with the crossing transaction split proportionally.
+    // Indexed over every Transfer-In (self-referrals excluded), because volume
+    // that earned no commission still counts toward the band.
+    const cumulativeVolume = buildCumulativeVolumeIndex(
+      rows.map((r) => ({
+        airtableRecordId: r.airtable_record_id,
+        affiliateId: r.affiliate_id,
+        amount: r.amount,
+        transactionDate: r.transaction_date,
+        transactionType: r.transaction_type,
+        selfReferral: r.self_referral,
+      })),
+    );
+
     // Step 5d: ANNEAL — re-derive earning amounts for pending/approved when
     // the underlying transaction amount has drifted from what was originally
     // recorded. (status='paid' / 'reversed' are immutable.)
@@ -511,9 +527,10 @@ export async function GET() {
           e.tier_at_earning === "custom" && e.custom_commission_rate !== null && e.custom_commission_basis
             ? { rate: Number(e.custom_commission_rate), basis: e.custom_commission_basis }
             : undefined;
-        const expectedAmount = calculateEarningFromFee(
+        const expectedAmount = calculateBandedEarning(
           expectedKashuFee,
           row.amount,
+          cumulativeVolume.get(e.transaction_ref) ?? 0,
           e.tier_at_earning,
           customCommission,
         );
@@ -679,9 +696,10 @@ export async function GET() {
           ? { rate: aff.custom_commission_rate, basis: aff.custom_commission_basis }
           : undefined;
       const kashuFeeForEarning = eligible.collectedFee;
-      const earningAmount = calculateEarningFromFee(
+      const earningAmount = calculateBandedEarning(
         kashuFeeForEarning,
         eligible.amount,
+        cumulativeVolume.get(eligible.airtableRecordId) ?? 0,
         tier,
         customCommission,
       );
