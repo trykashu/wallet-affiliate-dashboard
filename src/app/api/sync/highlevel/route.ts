@@ -10,13 +10,17 @@
  * (bY9JdohKL671KIoECxTV) — it holds free-text business names that match no
  * attribution_id, and is not a reliable attribution source.
  *
- * Also logs funnel events for stage transitions and creates earnings
- * for users at transaction_run stage or later.
+ * Also logs funnel events for stage transitions.
+ *
+ * This route deliberately does NOT create earnings and does NOT write
+ * first_transaction_* fields. A GHL opportunity has no transaction id, and
+ * its monetary value is a sales ESTIMATE, not a settled amount. Earnings are
+ * owned by /api/sync/transactions, which keys each earning to a real Airtable
+ * transaction via earnings.transaction_ref (unique-indexed, migration 009).
  */
 
 import { NextResponse } from "next/server";
 import { createServiceClient } from "@/lib/supabase/service";
-import { calculateEarning, calculateKashuFee } from "@/lib/tier";
 import { preserveAdvancedStage, GHL_STAGE_MAP } from "@/lib/funnel-stage";
 import type { FunnelStatusSlug, AffiliateTier } from "@/types/database";
 
@@ -29,15 +33,6 @@ const PIPELINE_ID = "zNiCun5Y5koEsWmN9bDo";
 const GHL_BASE_URL = "https://services.leadconnectorhq.com";
 const GHL_API_VERSION = "2021-07-28";
 const PAGE_LIMIT = 100;
-
-
-// Stages at or after transaction_run (eligible for earnings)
-const EARNING_ELIGIBLE_STAGES: Set<FunnelStatusSlug> = new Set([
-  "transaction_run",
-  "funds_in_wallet",
-  "ach_initiated",
-  "funds_in_bank",
-]);
 
 interface GHLCustomField {
   id: string;
@@ -174,14 +169,10 @@ export async function GET() {
       email: string;
       phone: string | null;
       status_slug: FunnelStatusSlug;
-      first_transaction_amount: number | null;
-      first_transaction_fee: number | null;
-      first_transaction_at: string | null;
       created_at?: string;
     }
 
     const rows: UserRow[] = [];
-    const affiliateTiers: Record<string, AffiliateTier> = {};
     let unmatched = 0;
     const unmatchedNames: string[] = [];
     let unmappedStages = 0;
@@ -215,11 +206,9 @@ export async function GET() {
 
       if (!contactId || !contactEmail) continue;
 
-      const isEarningEligible = EARNING_ELIGIBLE_STAGES.has(stageSlug);
-      const monetaryValue = opp.monetaryValue || null;
-
-      affiliateTiers[match.id] = match.tier;
-
+      // The CRM's monetary value is deliberately ignored here: it is a sales
+      // estimate, and writing it to first_transaction_amount was overwriting
+      // real settled amounts. /api/sync/transactions owns those fields.
       rows.push({
         wallet_user_id: contactId,
         affiliate_id: match.id,
@@ -227,9 +216,6 @@ export async function GET() {
         email: contactEmail,
         phone: opp.contact?.phone || null,
         status_slug: stageSlug,
-        first_transaction_amount: isEarningEligible && monetaryValue ? monetaryValue : null,
-        first_transaction_fee: isEarningEligible && monetaryValue ? calculateKashuFee(monetaryValue) : null,
-        first_transaction_at: isEarningEligible && monetaryValue ? new Date().toISOString() : null,
         created_at: opp.createdAt,
       });
     }
@@ -332,43 +318,6 @@ export async function GET() {
       if (!error) funnelEventsCreated += batch.length;
     }
 
-    // Step 9: Create earnings for records at transaction_run or later
-    let earningsCreated = 0;
-    for (const row of rows) {
-      if (!EARNING_ELIGIBLE_STAGES.has(row.status_slug)) continue;
-      if (!row.first_transaction_amount || row.first_transaction_amount <= 0) continue;
-
-      const referredUserId = upsertedLookup[row.wallet_user_id];
-      if (!referredUserId) continue;
-
-      // Check if earning already exists for this referred_user
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existingEarning } = await (db as any)
-        .from("earnings")
-        .select("id")
-        .eq("referred_user_id", referredUserId)
-        .limit(1);
-
-      if (existingEarning && existingEarning.length > 0) continue;
-
-      const tier = affiliateTiers[row.affiliate_id] || "gold";
-      const tpv = row.first_transaction_amount!;
-      const kashuFee = calculateKashuFee(tpv);
-      const earningAmount = calculateEarning(tpv, tier);
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (db as any).from("earnings").insert({
-        affiliate_id: row.affiliate_id,
-        referred_user_id: referredUserId,
-        amount: earningAmount,
-        transaction_fee_amount: kashuFee,
-        tier_at_earning: tier,
-        status: "pending",
-      });
-
-      if (!error) earningsCreated++;
-    }
-
     return NextResponse.json({
       success: true,
       total_fetched: opportunities.length,
@@ -380,7 +329,6 @@ export async function GET() {
       unmapped_stage_ids: unmappedStageIds.length > 0 ? unmappedStageIds : undefined,
       upserted,
       funnel_events_created: funnelEventsCreated,
-      earnings_created: earningsCreated,
       errors: upsertErrors.length > 0 ? upsertErrors : undefined,
       api_calls: apiCalls,
     });
