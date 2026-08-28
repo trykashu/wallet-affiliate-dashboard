@@ -12,11 +12,13 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { fetchAllRecords } from "@/lib/airtable";
 import { calculateEarning, calculateKashuFee, getTierForVolume, TIER_THRESHOLDS } from "@/lib/tier";
 import { dedupAirtableTransactions, decideEarningAction } from "@/lib/sync/anneal-transactions";
+import { buildResolverIndex, resolveReferredUser } from "@/lib/sync/referred-user-match";
 import type { AffiliateTier, FunnelStatusSlug } from "@/types/database";
 
 export const dynamic = "force-dynamic";
 
 const AIRTABLE_TABLE_ID = "tblyWtDBeiZAqDm8P";
+const LAUNCH_LIST_TABLE_ID = "tblV03MwocMeq3wYl";
 const BATCH_SIZE = 50;
 
 // Funnel stages ordered for "is before" comparison
@@ -99,12 +101,18 @@ export async function GET() {
       }
     }
 
-    // Step 3: Pre-load all referred_users by email
+    // Step 3: Pre-load referred_users and index them by BOTH the stable
+    // Contact ID (via the Launch List) and email. Email alone is not a reliable
+    // key — see @/lib/sync/referred-user-match.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data: referredUsers } = await (db as any)
       .from("referred_users")
-      .select("id, email, affiliate_id, status_slug, first_transaction_at, created_at");
+      .select("id, email, wallet_user_id, affiliate_id, status_slug, first_transaction_at, created_at");
 
+    const { records: launchListRecords } = await fetchAllRecords(baseId, LAUNCH_LIST_TABLE_ID);
+    const resolverIndex = buildResolverIndex(referredUsers || [], launchListRecords);
+
+    // Retained for the legacy self-heal pass further down.
     const referredUserByEmail = new Map<string, {
       id: string;
       affiliate_id: string;
@@ -143,6 +151,9 @@ export async function GET() {
 
     const rows: TxnRow[] = [];
     let skippedNoReferrer = 0;
+    let matchedByContactId = 0;
+    let matchedByEmail = 0;
+    let unresolvedReferredUser = 0;
     let skippedNoMatch = 0;
     let skippedNotTransferIn = 0;
     let skippedSelfReferral = 0;
@@ -237,12 +248,18 @@ export async function GET() {
         first_transaction_at: string | null;
         created_at: string;
       } | null = null;
-      if (email) {
-        const ru = referredUserByEmail.get(email.toLowerCase());
-        if (ru) {
-          referredUserId = ru.id;
-          referredUser = ru;
-        }
+      const resolved = resolveReferredUser(
+        fields["Launch List Link"] as string[] | undefined,
+        email,
+        resolverIndex,
+      );
+      if (resolved.user) {
+        referredUserId = resolved.user.id;
+        referredUser = resolved.user;
+        if (resolved.via === "wallet_id") matchedByContactId++;
+        else matchedByEmail++;
+      } else if (email || fields["Launch List Link"]) {
+        unresolvedReferredUser++;
       }
 
       rows.push({
@@ -683,6 +700,9 @@ export async function GET() {
       earnings_warnings: earningsWarnings.length > 0 ? earningsWarnings : undefined,
       matched: rows.length,
       skipped_no_referrer: skippedNoReferrer,
+      referred_user_matched_by_contact_id: matchedByContactId,
+      referred_user_matched_by_email: matchedByEmail,
+      referred_user_unresolved: unresolvedReferredUser,
       skipped_no_match: skippedNoMatch,
       skipped_not_transfer_in: skippedNotTransferIn,
       skipped_self_referral: skippedSelfReferral,
