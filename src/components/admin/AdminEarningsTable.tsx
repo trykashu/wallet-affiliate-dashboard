@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
 import AdminTierBadge from "@/components/admin/AdminTierBadge";
 import Money from "./Money";
-import { COMMISSION_RATES } from "@/lib/tier";
 import type { EarningStatus, AffiliateTier } from "@/types/database";
 
 function isContractSigned(status: string | null): boolean {
@@ -249,7 +248,7 @@ export default function AdminEarningsTable({
               <th className="ad-th hidden md:table-cell">User</th>
               <th className="ad-th hidden xl:table-cell">Tier</th>
               <th className="ad-th text-right">TPV</th>
-              <th className="ad-th text-right hidden lg:table-cell">Funnel %</th>
+              <th className="ad-th text-right hidden lg:table-cell">Collected %</th>
               <th className="ad-th text-right hidden lg:table-cell">Cash Collected</th>
               <th className="ad-th text-right hidden lg:table-cell">Comm %</th>
               <th className="ad-th text-right">Commission</th>
@@ -310,8 +309,11 @@ export default function AdminEarningsTable({
                   </td>
                   <td className="ad-td text-right hidden lg:table-cell">
                     <span className="text-xs ad-text-3 tabular-nums">
-                      {e.funnel_percent != null
-                        ? `${Number(e.funnel_percent).toFixed(Number(e.funnel_percent) % 1 === 0 ? 0 : 2).replace(/\.?0+$/, "")}%`
+                      {/* Effective rate Kashu actually collected, derived from the
+                          booked fee — NOT the funnel list price, which is 8.5% on
+                          every row and hides per-deal discounts and overrides. */}
+                      {e.tpv != null && e.tpv > 0 && e.transaction_fee_amount != null
+                        ? `${((Number(e.transaction_fee_amount) / Number(e.tpv)) * 100).toFixed(2).replace(/\.?0+$/, "")}%`
                         : "—"}
                     </span>
                   </td>
@@ -320,7 +322,12 @@ export default function AdminEarningsTable({
                   </td>
                   <td className="ad-td text-right hidden lg:table-cell">
                     <span className="text-xs ad-text-3 tabular-nums">
-                      {(COMMISSION_RATES[e.tier_at_earning] * 100).toFixed(0)}%
+                      {/* Effective commission rate. Under marginal banding this is
+                          not the tier rate: a transaction straddling the $100k
+                          threshold lands between 5% and 10%. */}
+                      {Number(e.transaction_fee_amount) > 0
+                        ? `${((Number(e.amount) / Number(e.transaction_fee_amount)) * 100).toFixed(2).replace(/\.?0+$/, "")}%`
+                        : "—"}
                     </span>
                   </td>
                   <td className="ad-td text-right">
