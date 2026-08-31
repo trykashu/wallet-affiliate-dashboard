@@ -157,7 +157,7 @@ export default function BankPreviewDrawer({
               <button
                 onClick={onConfirm}
                 disabled={!canConfirm}
-                className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >{submitting ? "Saving…" : "Confirm & save"}</button>
             </div>
           </div>

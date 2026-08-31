@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { isFinanceEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
+import { parseExecuteScope } from "@/lib/payouts/execute-scope";
 import { sendACHTransfer, getOrCreateRecipient } from "@/lib/mercury";
 import { generateStatement } from "@/lib/statement/generate";
 import type { Payout, PayoutAccount } from "@/types/database";
@@ -49,12 +50,25 @@ export async function POST(request: Request) {
     );
   }
 
-  // Optional batch_id scope
+  // Optional scope: batch_id and/or payout_ids. A malformed scope is rejected
+  // rather than widened — silently falling back to "all requested" would send
+  // real ACH transfers the operator did not ask for.
   let batchId: string | null = null;
-  try {
-    const body = await request.json();
-    if (typeof body?.batch_id === "string") batchId = body.batch_id;
-  } catch { /* no body — execute all requested */ }
+  let payoutIds: string[] | null = null;
+  {
+    let body: unknown = undefined;
+    try { body = await request.json(); } catch { /* no body — execute all requested */ }
+    try {
+      const scope = parseExecuteScope(body);
+      batchId = scope.batchId;
+      payoutIds = scope.payoutIds;
+    } catch (e) {
+      return NextResponse.json(
+        { error: e instanceof Error ? e.message : "Invalid scope" },
+        { status: 400 },
+      );
+    }
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any;
@@ -68,6 +82,7 @@ export async function POST(request: Request) {
   // Get requested payouts (optionally scoped to one batch)
   let query = svc.from("payouts").select("*").eq("status", "requested");
   if (batchId) query = query.eq("batch_id", batchId);
+  if (payoutIds) query = query.in("id", payoutIds);
   const { data: requestedPayouts, error: fetchError } = await query;
 
   if (fetchError) {

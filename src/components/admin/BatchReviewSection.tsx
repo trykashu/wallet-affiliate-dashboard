@@ -141,7 +141,7 @@ export default function BatchReviewSection({ batches, isFinance }: Props) {
                 onClick={() => handleApprove(b)}
                 disabled={!isFinance || busyBatchId === b.batch_id}
                 title={isFinance ? "Approve & queue for Mercury" : "Finance team only"}
-                className="ad-ad-btn-primary text-xs px-3 py-1.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="ad-btn-primary text-xs px-3 py-1.5 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >{busyBatchId === b.batch_id ? "Working…" : "Approve"}</button>
             </div>
           </div>

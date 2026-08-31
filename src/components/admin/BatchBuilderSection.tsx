@@ -314,7 +314,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
           <button
             onClick={openDrawer}
             disabled={submittableEarningIds.length === 0 || submitting}
-            className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="ad-btn-primary text-xs rounded-xl px-3 py-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Submit for review ({submittableRows.length})
           </button>
@@ -547,7 +547,7 @@ export default function BatchBuilderSection({ earnings, affiliates, availableMon
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || submittableEarningIds.length === 0}
-                  className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >{submitting ? "Submitting…" : "Send to Finance"}</button>
               </div>
             </div>

@@ -30,6 +30,55 @@ export default function PayoutBatchManager({
 
   const processingPayouts = payouts.filter((p) => p.status === "processing");
 
+  /**
+   * Retry a failed payout: re-queue it, then actually send it.
+   *
+   * Flipping the status alone only makes the payout eligible for a later
+   * execute-batch run — which looked like "retry did nothing". The execute call
+   * is scoped to this one payout id so it cannot fire other payouts queued in
+   * the same batch.
+   */
+  const handleRetry = useCallback(async (payoutId: string, amount: number) => {
+    if (!confirm(
+      `Retry this payout of $${amount.toFixed(2)}?\n\nThis re-queues it and sends a real ACH transfer via Mercury.`
+    )) return;
+
+    setUpdatingId(payoutId);
+    try {
+      const requeue = await fetch("/api/admin/payouts/update-status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payout_id: payoutId, status: "requested" }),
+      });
+      if (!requeue.ok) {
+        const d = await requeue.json().catch(() => null);
+        throw new Error(d?.error || `Could not re-queue payout (${requeue.status})`);
+      }
+
+      const exec = await fetch("/api/admin/payouts/execute-batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ payout_ids: [payoutId] }),
+      });
+      const body = await exec.json().catch(() => ({}));
+      if (!exec.ok) {
+        const detail = body?.detail ? ` — ${body.detail}` : "";
+        throw new Error(`${body?.error ?? `Execute failed (${exec.status})`}${detail}`);
+      }
+      if (Array.isArray(body?.errors) && body.errors.length > 0) {
+        throw new Error(body.errors.join("\n"));
+      }
+      router.refresh();
+    } catch (e) {
+      // The payout stays `requested` on a send failure, so it can be retried
+      // again or picked up by the next batch run — nothing is lost.
+      alert(`Retry failed.\n\n${e instanceof Error ? e.message : String(e)}`);
+      router.refresh();
+    } finally {
+      setUpdatingId(null);
+    }
+  }, [router]);
+
   const handleUpdateStatus = useCallback(async (payoutId: string, newStatus: PayoutStatus) => {
     if (!confirm(`Mark this payout as "${newStatus}"?`)) return;
 
@@ -211,7 +260,7 @@ export default function PayoutBatchManager({
                         )}
                         {p.status === "failed" && (
                           <button
-                            onClick={() => handleUpdateStatus(p.id, "requested")}
+                            onClick={() => handleRetry(p.id, Number(p.amount) || 0)}
                             disabled={updatingId === p.id}
                             className="ad-act ad-act-amber text-[10px]
                                        rounded px-2 py-1 transition-all disabled:opacity-50"

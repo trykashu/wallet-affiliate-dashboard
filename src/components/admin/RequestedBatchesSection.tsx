@@ -128,7 +128,7 @@ export default function RequestedBatchesSection({ batches }: Props) {
                 <button
                   onClick={() => handleExecute(b)}
                   disabled={busyBatchId === b.batch_id}
-                  className="ad-ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="ad-btn-primary text-xs rounded-xl px-3 py-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >{busyBatchId === b.batch_id ? "Executing…" : "Execute via Mercury"}</button>
               </div>
             </div>
