@@ -6,6 +6,7 @@
  * (best-effort). Returns a structured result.
  */
 import React from "react";
+import { buildStatementAirtableFields } from "./airtable-fields";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { StatementDocument } from "@/lib/statement/StatementDocument";
 import {
@@ -264,22 +265,17 @@ export async function generateStatement(svc: any, payoutId: string): Promise<Sta
         }
       }
 
-      const fields: Record<string, unknown> = {
-        Name: data.statement_number,
-        "Attribution ID": attributionId,
-        Period: payout.period,
-        "Generated At": new Date().toISOString(),
-        PDF: [{ url: supabaseUrl, filename: `${data.statement_number}.pdf` }],
-        "Statement URL": supabaseUrl,
-        "Total Fees Collected": totals.total_fees,
-        "Commission Due": totals.commission_due,
-        "Statement Number": data.statement_number,
-        // Statements are generated post-wire (either auto on execute-batch
-        // success, or manually by an AM after the wire fires), so the
-        // commission is already paid by the time this row exists.
-        "Commission Status": "Paid",
-      };
-      if (affiliateRecordId) fields.Affiliate = [affiliateRecordId];
+      const fields = buildStatementAirtableFields({
+        statementNumber: data.statement_number,
+        attributionId,
+        period: payout.period,
+        statementUrl: supabaseUrl,
+        totalFees: totals.total_fees,
+        commissionDue: totals.commission_due,
+        affiliateRecordId,
+        generatedAt: new Date(),
+        isNew: !existingId,
+      });
 
       let writeRes: Response;
       if (existingId) {
