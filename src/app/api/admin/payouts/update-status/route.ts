@@ -1,8 +1,11 @@
 /**
  * POST /api/admin/payouts/update-status
  *
- * Admin-only: manually update a payout's status.
- * Accepts { payout_id: string, status: "completed" | "failed" }
+ * Finance-only: manually update a payout's status.
+ * Accepts { payout_id: string, status: "completed" | "failed" | "requested" }
+ *
+ * "requested" is the Retry path for a failed payout — it re-queues the payout
+ * for the next execute-batch run. It does NOT itself call Mercury.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -12,10 +15,11 @@ import { createServiceClient } from "@/lib/supabase/service";
 import { isFinanceEmail } from "@/lib/admin";
 import { logSecurityEvent } from "@/lib/audit-log";
 import { markEarningsPaidForPayout } from "@/lib/payouts/mark-paid";
+import { canTransitionPayoutStatus } from "@/lib/payouts/status-transitions";
 
 const UpdateSchema = z.object({
   payout_id: z.string().uuid(),
-  status: z.enum(["completed", "failed"]),
+  status: z.enum(["completed", "failed", "requested"]),
 });
 
 export async function POST(request: NextRequest) {
@@ -38,6 +42,25 @@ export async function POST(request: NextRequest) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const svc = createServiceClient() as any;
   const { payout_id, status } = parsed.data;
+
+  // Guard the transition. Retry (-> requested) is only valid from `failed`;
+  // permitting it from `completed` would reopen a settled payout and allow the
+  // same earnings to be paid twice.
+  const { data: current } = await svc
+    .from("payouts")
+    .select("status")
+    .eq("id", payout_id)
+    .maybeSingle();
+
+  if (!current) {
+    return NextResponse.json({ error: "Payout not found" }, { status: 404 });
+  }
+  if (!canTransitionPayoutStatus(current.status, status)) {
+    return NextResponse.json(
+      { error: `Cannot change a ${current.status} payout to ${status}` },
+      { status: 409 },
+    );
+  }
 
   const { error: updateError } = await svc
     .from("payouts")

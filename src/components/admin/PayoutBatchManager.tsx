@@ -40,10 +40,15 @@ export default function PayoutBatchManager({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ payout_id: payoutId, status: newStatus }),
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        // Surface the server's reason. A generic message here hid a 400 for
+        // months: Retry posted "requested", which the API enum rejected.
+        const detail = await res.json().catch(() => null);
+        throw new Error(detail?.error || `Request failed (${res.status})`);
+      }
       router.refresh();
-    } catch {
-      alert("Failed to update payout status. Please try again.");
+    } catch (e) {
+      alert(`Could not update payout status.\n\n${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setUpdatingId(null);
     }
