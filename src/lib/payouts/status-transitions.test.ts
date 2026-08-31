@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { canTransitionPayoutStatus } from "./status-transitions";
+import { canTransitionPayoutStatus, needsRequeue } from "./status-transitions";
 
 // The Retry button sends "requested", which the API enum rejected outright —
 // so retry could never work. Reinstating it narrowly: retry is only meaningful
@@ -29,4 +29,19 @@ test("unknown current status still permits completed/failed but never requested"
   assert.equal(canTransitionPayoutStatus(null, "completed"), true);
   assert.equal(canTransitionPayoutStatus(undefined, "failed"), true);
   assert.equal(canTransitionPayoutStatus(null, "requested"), false);
+});
+
+// A payout already sitting in `requested` is queued but unsent — the UI offers
+// no way to send it, which is why an operator would otherwise have to bounce it
+// through `failed` first. Sending it directly must skip the re-queue, since
+// requested -> requested is not a legal transition.
+test("needsRequeue: only a failed payout is re-queued before sending", () => {
+  assert.equal(needsRequeue("failed"), true);
+  assert.equal(needsRequeue("requested"), false);
+});
+
+test("needsRequeue: settled or in-flight payouts are never re-queued", () => {
+  for (const s of ["completed", "processing", "pending_review", null, undefined]) {
+    assert.equal(needsRequeue(s), false, `${s}`);
+  }
 });

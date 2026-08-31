@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
 import { interpretExecuteResponse } from "@/lib/payouts/execute-result";
+import { needsRequeue } from "@/lib/payouts/status-transitions";
 import Money from "./Money";
 import type { PayoutStatus } from "@/types/database";
 
@@ -39,21 +40,26 @@ export default function PayoutBatchManager({
    * is scoped to this one payout id so it cannot fire other payouts queued in
    * the same batch.
    */
-  const handleRetry = useCallback(async (payoutId: string, amount: number) => {
+  const handleSend = useCallback(async (payoutId: string, amount: number, currentStatus: string) => {
+    const verb = currentStatus === "failed" ? "Retry" : "Send";
     if (!confirm(
-      `Retry this payout of $${amount.toFixed(2)}?\n\nThis re-queues it and sends a real ACH transfer via Mercury.`
+      `${verb} this payout of $${amount.toFixed(2)}?\n\nThis sends a real ACH transfer via Mercury.`
     )) return;
 
     setUpdatingId(payoutId);
     try {
-      const requeue = await fetch("/api/admin/payouts/update-status", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payout_id: payoutId, status: "requested" }),
-      });
-      if (!requeue.ok) {
-        const d = await requeue.json().catch(() => null);
-        throw new Error(d?.error || `Could not re-queue payout (${requeue.status})`);
+      // Only a failed payout needs re-queueing; one already `requested` is
+      // queued but unsent, and requested -> requested is not a legal transition.
+      if (needsRequeue(currentStatus)) {
+        const requeue = await fetch("/api/admin/payouts/update-status", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payout_id: payoutId, status: "requested" }),
+        });
+        if (!requeue.ok) {
+          const d = await requeue.json().catch(() => null);
+          throw new Error(d?.error || `Could not re-queue payout (${requeue.status})`);
+        }
       }
 
       const exec = await fetch("/api/admin/payouts/execute-batch", {
@@ -68,7 +74,7 @@ export default function PayoutBatchManager({
     } catch (e) {
       // The payout stays `requested` on a send failure, so it can be retried
       // again or picked up by the next batch run — nothing is lost.
-      alert(`Retry failed.\n\n${e instanceof Error ? e.message : String(e)}`);
+      alert(`Send failed.\n\n${e instanceof Error ? e.message : String(e)}`);
       router.refresh();
     } finally {
       setUpdatingId(null);
@@ -254,14 +260,14 @@ export default function PayoutBatchManager({
                             </button>
                           </>
                         )}
-                        {p.status === "failed" && (
+                        {(p.status === "failed" || p.status === "requested") && (
                           <button
-                            onClick={() => handleRetry(p.id, Number(p.amount) || 0)}
+                            onClick={() => handleSend(p.id, Number(p.amount) || 0, p.status)}
                             disabled={updatingId === p.id}
                             className="ad-act ad-act-amber text-[10px]
                                        rounded px-2 py-1 transition-all disabled:opacity-50"
                           >
-                            {updatingId === p.id ? "..." : "Retry"}
+                            {updatingId === p.id ? "..." : p.status === "failed" ? "Retry" : "Send"}
                           </button>
                         )}
                       </div>

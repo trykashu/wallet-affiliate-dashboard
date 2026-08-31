@@ -22,3 +22,14 @@ export function canTransitionPayoutStatus(
   // reconcile transfers made outside the app.
   return true;
 }
+
+/**
+ * Whether a payout must be re-queued before it can be sent.
+ *
+ * A `failed` payout has to move back to `requested` first. One already in
+ * `requested` is queued but unsent, so it is sent directly — attempting the
+ * transition would be rejected, since requested -> requested is not legal.
+ */
+export function needsRequeue(status: string | null | undefined): boolean {
+  return status === "failed";
+}
