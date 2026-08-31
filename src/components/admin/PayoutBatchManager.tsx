@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { fmt } from "@/lib/fmt";
+import { interpretExecuteResponse } from "@/lib/payouts/execute-result";
 import Money from "./Money";
 import type { PayoutStatus } from "@/types/database";
 
@@ -61,13 +62,8 @@ export default function PayoutBatchManager({
         body: JSON.stringify({ payout_ids: [payoutId] }),
       });
       const body = await exec.json().catch(() => ({}));
-      if (!exec.ok) {
-        const detail = body?.detail ? ` — ${body.detail}` : "";
-        throw new Error(`${body?.error ?? `Execute failed (${exec.status})`}${detail}`);
-      }
-      if (Array.isArray(body?.errors) && body.errors.length > 0) {
-        throw new Error(body.errors.join("\n"));
-      }
+      const outcome = interpretExecuteResponse(exec.ok, exec.status, body);
+      if (!outcome.ok) throw new Error(outcome.message);
       router.refresh();
     } catch (e) {
       // The payout stays `requested` on a send failure, so it can be retried
